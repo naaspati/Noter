@@ -3,6 +3,7 @@ package sam.apps.jbook_reader.datamaneger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -14,8 +15,14 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javafx.scene.control.TreeItem;
+
 class EntryDecoder {
-	List<Entry> decode(Path path) throws Exception {
+	private BiConsumer<TreeItem<String>, Entry> mapFiller;
+	
+	List<Entry> decode(Path path, BiConsumer<TreeItem<String>, Entry> mapFiller) throws Exception {
+		this.mapFiller = mapFiller;
+		
 		Document doc = 
 				DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
@@ -70,7 +77,7 @@ class EntryDecoder {
 			}
 		}
 		
-		return new Entry(title, content, lastmodified, children);
+		return new Entry(title, content, lastmodified, mapFiller, children);
 	}
 
 }

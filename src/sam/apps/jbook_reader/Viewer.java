@@ -2,9 +2,12 @@ package sam.apps.jbook_reader;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
 import javafx.beans.property.SimpleObjectProperty;
@@ -24,6 +27,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -88,11 +92,18 @@ public class Viewer extends Application {
 		else 
 			stage.setMaximized(true);
 
+		try {
+			stage.getIcons().add(new Image("notebook.png"));
+		} catch (Exception e2) {}
+		
 		stage.show();
 		stage.setOnCloseRequest(e -> {
 			exit();
 			e.consume();
 		});
+		Optional.ofNullable(getParameters().getRaw())
+		.filter(l -> !l.isEmpty())
+		.ifPresent(list -> Platform.runLater(() -> list.forEach(s -> tabsContainer.addTab(Paths.get(s)))));
 	}
 
 	private TreeItem<String> getSelectedItem() {

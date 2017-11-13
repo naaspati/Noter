@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import javafx.scene.control.TreeItem;
@@ -22,7 +23,8 @@ public class DataManeger {
 	private Path jbookPath;
 	private TreeItem<String> rootItem;
 
-	final Map<TreeItem<String>, Entry> map = new HashMap<>();
+	private final Map<TreeItem<String>, Entry> map = new HashMap<>();
+	private final BiConsumer<TreeItem<String>, Entry> mapFiller = map::put;
 	private final List<Entry> rootEntries;
 
 	protected DataManeger() {
@@ -30,16 +32,14 @@ public class DataManeger {
 	}
 
 	protected DataManeger(Path jbookPath) throws Exception {
-		rootEntries = new EntryDecoder().decode(jbookPath);
-		rootEntries.forEach(e -> e.setManeger(this));
+		rootEntries = new EntryDecoder().decode(jbookPath, mapFiller);
 		this.jbookPath = jbookPath;
 	}
 	public void reload() throws Exception {
 		if(jbookPath == null)
 			return;
 		rootEntries.clear();
-		rootEntries.addAll(new EntryDecoder().decode(jbookPath));
-		rootEntries.forEach(e -> e.setManeger(this));
+		rootEntries.addAll(new EntryDecoder().decode(jbookPath, mapFiller));
 		fillRootItem();
 	}
 	public boolean isModified() {
@@ -75,7 +75,7 @@ public class DataManeger {
 	}
 
 	public TreeItem<String> add(TreeItem<String> parent, String title) {
-		Entry e = new Entry(title, this);
+		Entry e = new Entry(title, mapFiller);
 
 		Entry pe = map.get(parent);
 		if(pe == null) {
@@ -138,5 +138,8 @@ public class DataManeger {
 	public void setJbookPath(Path path) {
 		jbookPath = path;
 		
+	}
+	public void put(TreeItem<String> item, Entry entry) {
+		map.put(item, entry);
 	}
 }

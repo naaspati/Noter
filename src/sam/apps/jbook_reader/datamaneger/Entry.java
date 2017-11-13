@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 
 import javafx.scene.control.TreeItem;
 
@@ -16,23 +17,20 @@ class Entry {
 	private transient TreeItem<String> item;
 	private transient Entry parent;
 	private transient char[] chars;
-	private transient DataManeger maneger;
+	private BiConsumer<TreeItem<String>, Entry> collector;
 
-	public Entry(String title, String content, long lastModified, List<Entry> children) {
+	public Entry(String title, String content, long lastModified,BiConsumer<TreeItem<String>, Entry> collector, List<Entry> children) {
 		this.title = title;
 		this.content = content;
 		this.lastModified = lastModified;
 		this.children = children;
+		this.collector = collector;
 	}
-	public Entry(String title, String content) {
-		this(title, content, System.currentTimeMillis(), null);
+	public Entry(String title, String content, BiConsumer<TreeItem<String>, Entry> collector) {
+		this(title, content, System.currentTimeMillis(), collector, null);
 	}
-	public Entry(String title, DataManeger maneger) {
-		this(title, (String)null);
-		this.maneger = maneger;
-	}
-	public void setManeger(DataManeger maneger) {
-		this.maneger = maneger;
+	public Entry(String title, BiConsumer<TreeItem<String>, Entry> collector) {
+		this(title, (String)null, collector);
 	}
 	public long getLastModified() {
 		return lastModified;
@@ -44,7 +42,9 @@ class Entry {
 		return children;
 	}
 	public Entry getParent() { return parent; }
-	public void setParent(Entry parent) { this.parent = parent; }
+	private void setParent(Entry parent) { 
+		this.parent = parent;
+	}
 	public String getTitle() { return title; }
 	public boolean setTitle(String title) {
 		if(Objects.equals(title, this.title))
@@ -95,7 +95,7 @@ class Entry {
 	public TreeItem<String> getItem() {
 		if(item == null) {
 			item = new TreeItem<String>(title);
-			maneger.map.put(item, this);
+			collector.accept(item, this);
 
 			if(children != null) {
 				children.stream()

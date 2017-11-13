@@ -22,4 +22,4 @@ bin
 hs_err_pid*
 
 
-session.properties
+compiled/session.properties
