@@ -1,0 +1,41 @@
+
+.tabs-box {
+	-fx-padding:5 50 5 5;
+}
+.tab {
+	-fx-background-color:white;
+	-fx-padding:5 10 5 10;	
+	-fx-border-width: 0.1;
+	-fx-border-color:black;
+}
+.tab.active {
+	-fx-border-width: 0 0 2 0, 0.1;
+	-fx-border-color:cyan, black;
+	-fx-background-color:lightyellow;
+}
+.tab.modified {
+	-fx-border-width: 0 0 2 0,0 0 3 0, 0.1;
+	-fx-border-color:cyan, green, black;
+}
+.tab > .close {
+	-fx-background-color:red;
+	-fx-background-radius:50%;
+	-fx-padding:-3 3 0 3;
+	-fx-text-fill:white;
+	-fx-font-weight:bold;
+}
+
+.tabs-box-scroll {
+-fx-background-color:transparent;
+-fx-alignment:center;
+-fx-padding:0 3 0 10;	
+}
+.tabs-box-scroll .button {
+	-fx-base:black;
+	-fx-font-weight:bold;
+	-fx-font-size:15;
+	-fx-shape:"M 4.1562528,85.551706 C 2.0187515,86.827826 -50.154926,57.714138 -50.191328,55.224948 -50.22773,52.735757 1.0723019,22.108871 3.2462051,23.321941 c 2.1739033,1.213071 3.047549,60.953644 0.9100477,62.229765 z";
+}
+.tabs-box-scroll .button-right {
+	-fx-rotate: 180;
+}	
