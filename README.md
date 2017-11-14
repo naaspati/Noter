@@ -9,3 +9,7 @@ A Small App to keep your notes
 
 
 ![app image](https://github.com/naaspati/Noter/blob/master/Animation%20(0).gif)
+
+
+### download
+[download noter.jar](https://github.com/naaspati/Noter/raw/master/compiled/noter.jar)
