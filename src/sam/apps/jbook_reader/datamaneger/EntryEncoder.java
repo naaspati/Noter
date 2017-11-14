@@ -20,6 +20,7 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import javafx.scene.control.TreeItem;
 import sam.properties.session.Session;
 
 class EntryEncoder {
@@ -56,8 +57,8 @@ class EntryEncoder {
 		append("title", entry.getTitle(), element, doc);
 		append("lastmodified", String.valueOf(entry.getLastModified()), element, doc);
 		append("content", entry.getContent(), element, doc);
-
-		List<Entry> entries = entry.getChildren();
+		
+		List<TreeItem<String>> entries = entry.getChildren();
 
 		if(entries == null || entries.isEmpty())
 			return;
@@ -65,8 +66,8 @@ class EntryEncoder {
 		Element childrenElement = doc.createElement("children");
 		element.appendChild(childrenElement);
 
-		for (Entry e : entries) 
-			serialize(e, childrenElement, doc);
+		for (TreeItem<String> e : entries) 
+			serialize((Entry)e, childrenElement, doc);
 	}
 	private void append(String tag, String value, Element element, Document doc) {
 		if(value == null)

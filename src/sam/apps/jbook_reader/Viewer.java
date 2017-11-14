@@ -1,5 +1,7 @@
 package sam.apps.jbook_reader;
 
+import static sam.apps.jbook_reader.Creater.*;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,16 +21,17 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -48,7 +51,6 @@ public class Viewer extends Application {
 	public static void main( String[] args ) {
 		launch(args);
 	}
-
 	private final TreeView<String> bookmarks = new TreeView<>();
 	private final Editor editor = new Editor();
 	private final TabContainer tabsContainer = new TabContainer();
@@ -95,7 +97,7 @@ public class Viewer extends Application {
 		try {
 			stage.getIcons().add(new Image("notebook.png"));
 		} catch (Exception e2) {}
-		
+
 		stage.show();
 		stage.setOnCloseRequest(e -> {
 			exit();
@@ -126,29 +128,28 @@ public class Viewer extends Application {
 			System.exit(0);
 	}
 	private Node getMenubar() {
-		MenuBar menubar = new MenuBar(getFileMenu());
+		MenuBar menubar = new MenuBar(getFileMenu(), getBookmarkMenu());
 		return menubar;
 	}
-
 	private Menu getFileMenu() {
 		BooleanBinding fileNull = currentFile.isNull();
 		BooleanBinding tabNull = currentTab.isNull();
-		BooleanBinding isZero = tabsContainer.tabsCountProperty().isEqualTo(0);
+		BooleanBinding selectedZero = tabsContainer.tabsCountProperty().isEqualTo(0);
 
 		Menu closeSpecific;
 
 		Menu menu = new Menu("_File", null, 
-				menuitem("_New", new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN), e -> tabsContainer.addBlankTab()),
+				menuitem("_New", e -> tabsContainer.addBlankTab()),
 				menuitem("_Open...", new KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN), e -> Actions.open(tabsContainer)),
 				menuitem("Open Containing Folder", e -> Actions.open_containing_folder(getHostServices(), getCurrentTab()), fileNull),
 				menuitem("Reload From Disk", e -> Actions.reload_from_disk(getCurrentTab()), fileNull),
 				menuitem("_Save", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN), e -> Actions.save(getCurrentTab(), false), fileNull),
-				menuitem("Save _As", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> {Actions.save_as(getCurrentTab(), false); updateTab();}, tabNull),
-				menuitem("Sav_e All", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN), e -> {Actions.save_all(tabsContainer); updateTab();}, tabNull),
-				menuitem("Rename", e -> {Actions.rename(getCurrentTab()); updateTab();}, fileNull),
+				menuitem("Save _As", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> {Actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
+				menuitem("Sav_e All", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
+				menuitem("Rename", e -> {Actions.rename(getCurrentTab()); updateCurrentFile();}, fileNull),
 				new SeparatorMenuItem(),
-				menuitem("_Close",new KeyCodeCombination(KeyCode.W, KeyCombination.SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), isZero),
-				menuitem("Close All",new KeyCodeCombination(KeyCode.W, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> tabsContainer.closeAll(), isZero),
+				menuitem("_Close",new KeyCodeCombination(KeyCode.W, KeyCombination.SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
+				menuitem("Close All",new KeyCodeCombination(KeyCode.W, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),
 				closeSpecific = 
 				new Menu("Close specific", null,
 						menuitem("other tab(s)", e -> tabsContainer.closeExcept(getCurrentTab())),
@@ -161,11 +162,11 @@ public class Viewer extends Application {
 		closeSpecific.disableProperty().bind(tabsContainer.tabsCountProperty().lessThan(2));
 		return menu;
 	}
-	private void updateTab() {
+	private void updateCurrentFile() {
 		Tab t = getCurrentTab(); 
 		if(t == null)
 			return;
-		
+
 		currentFile.set(t.getJbookPath());
 		stage.setTitle(t.getTitle());
 	}
@@ -189,34 +190,21 @@ public class Viewer extends Application {
 		}
 	}
 
-	private MenuItem menuitem(String label, EventHandler<ActionEvent> action) {
-		return menuitem(label, null, action);
+	private Menu getBookmarkMenu() {
+		
+		return new Menu("_Bookmark",
+				null,
+				menuitem("Add Bookmark", new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), false), currentTab.isNull()),
+				menuitem("Add Child Bookmark", new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull()),
+				radioMenuitem("select multiple", e -> bookmarks.getSelectionModel().setSelectionMode(((RadioMenuItem)e.getSource()).isSelected() ? SelectionMode.MULTIPLE : SelectionMode.SINGLE))
+				);
 	}
-	private MenuItem menuitem(String label, EventHandler<ActionEvent> action, BooleanBinding disable) {
-		return menuitem(label, null, action, disable);
-	}
-	private MenuItem menuitem(String label, KeyCombination accelerator, EventHandler<ActionEvent> action) {
-		return menuitem(label, accelerator, action, null);
-	}
-	private MenuItem menuitem(String label, KeyCombination accelerator, EventHandler<ActionEvent> action, BooleanBinding disable) {
-		MenuItem mi = new MenuItem(label);
-
-		if(accelerator != null)
-			mi.setAccelerator(accelerator);
-		if(action != null)
-			mi.setOnAction(action);
-		if(disable != null)
-			mi.disableProperty().bind(disable);
-
-		return mi;
-	}
-
 	private Node getBookmarkPane() throws IOException {
 		bookmarks.setShowRoot(false);
 		bookmarks.setEditable(true);
 		bookmarks.setStyle("-fx-font-family:Consolas");
 		bookmarks.setCellFactory(TextFieldTreeCell.forTreeView());
-		bookmarks.setOnEditCommit(e -> getCurrentTab().setTitle(e.getTreeItem(), e.getNewValue()));
+		bookmarks.setOnEditCommit(e -> getCurrentTab().setModified(true));
 		bookmarks.getSelectionModel().selectedItemProperty()
 		.addListener((p, o, n) -> {
 			if(getCurrentTab() != null ) {
@@ -246,15 +234,16 @@ public class Viewer extends Application {
 
 		RadioButton expandCollpase = new RadioButton();
 		expandCollpase.tooltipProperty().bind(new When(expandCollpase.selectedProperty()).then(new Tooltip("collapse")).otherwise(new Tooltip("expand")));
-		expandCollpase.setPrefHeight(20);
-		expandCollpase.setPrefWidth(20);
+		expandCollpase.setPrefHeight(24);
+		expandCollpase.setPrefWidth(24);
 		expandCollpase.setOnAction(e -> getCurrentTab().setExpanded(expandCollpase.isSelected()));
 
 		Pane p;
-		Button removeButton;
+		Button removeButton, addButton, addChildButton;
 		HBox controls = new HBox(3, 
-				button("add", "Plus_20px.png", e -> Actions.addAction(bookmarks, getCurrentTab())),
-				removeButton = button("remove selected","Cancel_20px.png", e -> Actions.removeAction(bookmarks, getCurrentTab())),
+				addButton = button("add", "plus.png", e -> Actions.addNewTab(bookmarks, getCurrentTab(), false)),
+				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> Actions.addNewTab(bookmarks, getCurrentTab(), true)),
+				removeButton = button("remove selected","error.png", e -> Actions.removeAction(bookmarks, getCurrentTab())),
 				expandCollpase,
 				p = new Pane(),
 				button("hide","Chevron Left_20px.png", showHideAction)
@@ -262,24 +251,24 @@ public class Viewer extends Application {
 
 		HBox.setHgrow(p, Priority.ALWAYS);
 
-		removeButton.graphicProperty().bind(new When(removeButton.disableProperty()).then(new ImageView("Cancel-disabled_20px.png")).otherwise(new ImageView("Cancel_20px.png")));
-		removeButton.disableProperty()
-		.bind(bookmarks.getSelectionModel().selectedItemProperty().isNull());
+		ColorAdjust grayscale = new ColorAdjust();
+		grayscale.setSaturation(-1);
+
+		removeButton.effectProperty().bind(new When(removeButton.disableProperty()).then(grayscale).otherwise((ColorAdjust)null));
+		removeButton.disableProperty().bind(bookmarks.getSelectionModel().selectedItemProperty().isNull());
+		
+		addChildButton.effectProperty().bind(removeButton.effectProperty());
+		addChildButton.disableProperty().bind(removeButton.disableProperty());
+
+		addButton.effectProperty().bind(new When(addButton.disableProperty()).then(grayscale).otherwise((ColorAdjust)null));
+		
+		BooleanBinding nullTab = currentTab.isNull();
+		addButton.disableProperty().bind(nullTab);
+		expandCollpase.disableProperty().bind(nullTab);
 
 		controls.setPadding(new Insets(5));
 		pane.setTop(controls);
 		pane.disableProperty().bind(currentTab.isNull());
 		return pane;
-	}
-
-	private Button button(String tooltip, String iconName, EventHandler<ActionEvent> action) {
-		Button b = new Button(null, new ImageView(iconName));
-		b.getStyleClass().clear();
-		b.setTooltip(new Tooltip(tooltip));
-
-		if(action != null)
-			b.setOnAction(action);
-
-		return b;
 	}
 }

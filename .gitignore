@@ -23,3 +23,5 @@ hs_err_pid*
 
 
 compiled/session.properties
+**/Thumbs.db
+**/desktop.ini

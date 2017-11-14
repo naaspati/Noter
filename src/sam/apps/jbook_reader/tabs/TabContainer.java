@@ -119,8 +119,11 @@ public class TabContainer extends BorderPane {
 
 		onTabClosing.accept(tab);
 
-		if(tab.isModified() && Actions.save(tab, true) == ActionResult.FAILED) 
-			return;
+		if(tab.isModified()) {
+			ActionResult ar = Actions.save(tab, true);
+			if(ar != ActionResult.NO && ar != ActionResult.SUCCESS)
+				return;
+		} 
 
 		tabs.remove(tab);
 		int index = tabsBox.getChildren().indexOf(tab.getView());

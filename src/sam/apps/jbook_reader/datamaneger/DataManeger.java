@@ -2,12 +2,9 @@ package sam.apps.jbook_reader.datamaneger;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
 
@@ -18,29 +15,20 @@ import javafx.scene.control.TreeItem;
  *
  */
 public class DataManeger {
-
 	private boolean modified = false;
 	private Path jbookPath;
-	private TreeItem<String> rootItem;
+	private final TreeItem<String> rootItem = new TreeItem<>();
 
-	private final Map<TreeItem<String>, Entry> map = new HashMap<>();
-	private final BiConsumer<TreeItem<String>, Entry> mapFiller = map::put;
-	private final List<Entry> rootEntries;
-
-	protected DataManeger() {
-		rootEntries = new ArrayList<>();
-	}
-
+	public DataManeger() {}
+	
 	protected DataManeger(Path jbookPath) throws Exception {
-		rootEntries = new EntryDecoder().decode(jbookPath, mapFiller);
+		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
 		this.jbookPath = jbookPath;
 	}
 	public void reload() throws Exception {
 		if(jbookPath == null)
 			return;
-		rootEntries.clear();
-		rootEntries.addAll(new EntryDecoder().decode(jbookPath, mapFiller));
-		fillRootItem();
+		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
 	}
 	public boolean isModified() {
 		return modified;
@@ -49,19 +37,8 @@ public class DataManeger {
 		modified = modified || m;
 	}
 	public TreeItem<String> getRootItem() {
-		if(rootItem != null)
-			return rootItem;
-
-		rootItem = new TreeItem<>("");
-		fillRootItem();
 		return rootItem;
 	}
-
-	private void fillRootItem() {
-		rootItem.getChildren().clear();
-		rootEntries.stream().map(Entry::getItem).collect(Collectors.toCollection(rootItem::getChildren));
-	}
-
 	public void save() throws Exception {
 		save(jbookPath);
 	}
@@ -69,37 +46,44 @@ public class DataManeger {
 		if(!isModified() && jbookPath != null)
 			return;
 
-		new EntryEncoder().encode(rootEntries, path);
+		new EntryEncoder().encode(
+				rootItem.getChildren().stream()
+				.map(Entry.class::cast)
+				.collect(Collectors.toList()), 
+				path);
+
 		modified = false;
-		setModified(false);
+		setModified(modified);
 	}
 
-	public TreeItem<String> add(TreeItem<String> parent, String title) {
-		Entry e = new Entry(title, mapFiller);
+	public TreeItem<String> add(TreeItem<String> selectedItem, String title, boolean addChild) {
+		Entry entry;
+		Entry parent = addChild ? (Entry)selectedItem : getParent(selectedItem); 
 
-		Entry pe = map.get(parent);
-		if(pe == null) {
-			map.put(e.getItem(), e);
-			rootItem.getChildren().add(e.getItem());
-			rootEntries.add(e);
+		if(parent != null)
+			entry = parent.addChild(title, null, System.currentTimeMillis(), (Entry)selectedItem);
+		else {
+			entry = new Entry(title, null, System.currentTimeMillis());
+			rootItem.getChildren().add(entry);
 		}
-		else
-			pe.addEntry(e);
-
 		setModified(true);
-		return e.getItem();
+		return entry;
+	}
+	private Entry getParent(TreeItem<String> selectedItem) {
+		return selectedItem == null || selectedItem.getParent() == rootItem ? null : (Entry)selectedItem.getParent();
 	}
 	public void remove(List<TreeItem<String>> items) {
+		if(items == null || items.isEmpty())
+			return;
+		
 		new ArrayList<>(items).forEach(t -> {
-			Entry e = map.get(t);
-			Entry parent = e.getParent();
-			if(parent == null) {
-				rootEntries.remove(e);
-				rootItem.getChildren().remove(e.getItem());
-			}
+			Entry parent = getParent(t);
+			if(parent == null)
+				rootItem.getChildren().remove(t);
 			else
-				parent.remove(e);
+				parent.remove(t);
 		});
+		setModified(true);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -109,37 +93,34 @@ public class DataManeger {
 
 		char[] chars =  n.toLowerCase().toCharArray();
 
-		return map.values().stream()
+		return walk()
 				.filter(e -> e.testTitle(chars))
-				.map(Entry::getItem)
 				.toArray(TreeItem[]::new);
+	}
+	private Stream<Entry> walk() {
+		Stream.Builder<Entry> builder = Stream.builder();
+
+		for (TreeItem<String> t : rootItem.getChildren())
+			((Entry)t).walk(builder);
+
+		return builder.build();
 	}
 	public Path getJbookPath() {
 		return jbookPath;
 	}
 	public void setExpanded(boolean b) {
-		map.keySet().forEach(t -> t.setExpanded(b));
-	}
-	public void setTitle(TreeItem<String> item, String newTitle) {
-		setModified(map.get(item).setTitle(newTitle));
+		walk().forEach(t -> t.setExpanded(b));
 	}
 	public String getContent(TreeItem<String> n) {
-		return Optional.ofNullable(n)
-				.map(map::get)
-				.map(Entry::getContent)
-				.orElse("");
+		return n == null ? null : ((Entry)n).getContent();
 	}
 	public void setContent(TreeItem<String> item, String content) {
-		Entry e = map.get(item);
-		if(e != null)
-			setModified(e.setContent(content));
+		if(item != null)
+			setModified(((Entry)item).setContent(content));
 	}
 
 	public void setJbookPath(Path path) {
 		jbookPath = path;
-		
-	}
-	public void put(TreeItem<String> item, Entry entry) {
-		map.put(item, entry);
+
 	}
 }

@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.Optional;
 
 import javafx.application.HostServices;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
@@ -30,17 +30,17 @@ import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.AlertBuilder;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
-import sam.myutils.renamer.RemoveInValidCharFromString;
 import sam.properties.session.Session;
 
 public class Actions {
 	public enum ActionResult {
-		FAILED, CANCELLED, SUCCESS, NULL
+		FAILED, SUCCESS, NULL, OK, CANCEL, YES, NO 
 	}
 
-	public static void addAction(TreeView<String> bookmarks, DataManeger maneger) {
+	public static void addNewTab(TreeView<String> bookmarks, Tab maneger, boolean addChildBookmark) {
+		TreeItem<String> item = bookmarks.getSelectionModel().getSelectedItem();
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION);
-		dialog.headerText(treeToString(bookmarks.getSelectionModel().getSelectedItem(), new StringBuilder("Add New Bookmark to\n")).toString());
+		dialog.headerText(treeToString(item, new StringBuilder("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n")).toString());
 
 		TextField tf = new TextField();
 		HBox hb = new HBox(10, new Text("Title "), tf);
@@ -61,26 +61,26 @@ public class Actions {
 				return;
 			}
 
-			for (TreeItem<String> item : array) {
-				treeToString(item, sb);
+			for (TreeItem<String> t : array) {
+				treeToString(t, sb);
 				sb.append('\n');
 			}
 			ta.setText(sb.toString());
 			sb.setLength(0);
 		});
+		
+		Platform.runLater(() -> tf.requestFocus());
 
 		dialog.showAndWait()
 		.filter(b -> b == ButtonType.OK)
-		.ifPresent(b -> {
-			TreeItem<String> parent = bookmarks.getSelectionModel().getSelectedItem();
-			if(parent == null)
-				parent = bookmarks.getRoot();
-
-			bookmarks.getSelectionModel().select(maneger.add(parent, tf.getText()));
+		.map(b -> maneger.add(item, tf.getText(), addChildBookmark))
+		.ifPresent(t -> {
+			bookmarks.getSelectionModel().clearSelection();
+			bookmarks.getSelectionModel().select(t);
 		});
 	}
 
-	static final char[] separator2 = {' ', '>', ' '};
+	static final char[] separator = {' ', '>', ' '};
 	static StringBuilder treeToString(TreeItem<String> item, StringBuilder sb) {
 		if(item == null)
 			return sb;
@@ -92,7 +92,7 @@ public class Actions {
 		while((t = t.getParent()) != null) list.add(t.getValue());
 
 		for (int i = list.size() - 2; i >= 0 ; i--)
-			sb.append(list.get(i)).append(separator2);
+			sb.append(list.get(i)).append(separator);
 
 		sb.setLength(sb.length() - 3);
 		return sb;
@@ -121,6 +121,7 @@ public class Actions {
 	}
 	public static void removeAction(TreeView<String> bookmarks, DataManeger maneger) {
 		maneger.remove(bookmarks.getSelectionModel().getSelectedItems());
+		bookmarks.getSelectionModel().clearSelection();
 	}
 	public static void  open(TabContainer tabContainer)  {
 		File file = getFile("select a file to open...", null);
@@ -152,8 +153,11 @@ public class Actions {
 		if(tab == null)
 			return ActionResult.NULL;
 
-		if(confirmBeforeSaving && !confirmSaving("save", tab))
-			return ActionResult.CANCELLED;
+		if(confirmBeforeSaving) {
+			ActionResult ar = confirmSaving("Save As", tab);
+			if(ar != ActionResult.YES)
+				return ar;
+		}
 
 		if(tab.getJbookPath() == null)
 			return save_as(tab, false);
@@ -168,21 +172,32 @@ public class Actions {
 		FxPopupShop.showHidePopup("file saved", 1500);
 		return ActionResult.SUCCESS;
 	}
-	private static boolean confirmSaving(String title, Tab tab) {
-		Optional<ButtonType> button = FxAlert.showConfirmDialog(title, "Save File", tab.getJbookPath() != null ? tab.getJbookPath() : tab.getTitle()).showAndWait();
-		return button.isPresent() && button.get() == ButtonType.OK;
+	private static ActionResult confirmSaving(String title, Tab tab) {
+		return
+				FxAlert.alertBuilder(AlertType.CONFIRMATION)
+				.title("Save File")
+				.contentText(tab.getJbookPath() != null ? tab.getJbookPath() : tab.getTitle())
+				.buttonTypes(ButtonType.NO, ButtonType.YES, ButtonType.CANCEL)
+				.showAndWait()
+				.map(b -> b == ButtonType.YES ? ActionResult.YES : 
+					b == ButtonType.NO ? ActionResult.NO : 
+						ActionResult.CANCEL)
+				.orElse(ActionResult.NULL);
 	}
 	public static ActionResult  save_as(Tab tab, boolean confirmBeforeSaving)  {
 		if(tab == null)
 			return ActionResult.NULL;
 
-		if(confirmBeforeSaving && !confirmSaving("save", tab))
-			return ActionResult.CANCELLED;
+		if(confirmBeforeSaving) {
+			ActionResult ar = confirmSaving("Save As", tab);
+			if(ar != ActionResult.YES)
+				return ar;
+		}
 
 		File file = getFile("save file", tab.getTitle());
 
 		if(file == null)
-			return ActionResult.CANCELLED;
+			return ActionResult.CANCEL;
 
 		try {
 			tab.save(file.toPath());
@@ -193,40 +208,18 @@ public class Actions {
 		}
 		return ActionResult.SUCCESS;
 	}
-	public static void  save_all(TabContainer container)  {
-		container.saveAllTabs();
-	}
 	public static void  rename(Tab tab)  {
-		final String initial = tab.getJbookPath().getFileName().toString();
-		TextInputDialog dialog = new TextInputDialog(initial);
-		dialog.initOwner(Viewer.getStage());
-		dialog.setHeaderText("Rename File");
-		dialog.setContentText("new name"); 
+		Session.put("last-visited-folder", tab.getJbookPath().getParent().toString());
 
-		Optional<String> strOP = dialog.showAndWait();
-
-		if(!strOP.isPresent())
-			return;
-
-		String str = strOP.get();
-
-		if(initial.equals(str))
-			return;
-
-		str = RemoveInValidCharFromString.removeInvalidCharsFromFileName(str);
-
-		if(str == null || str.isEmpty()) {
-			FxPopupShop.showHidePopup("bad name", 1500);
+		File file = getFile("rename", tab.getJbookPath().getFileName().toString());
+		if(file == null) {
+			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
-
-		if(initial.equals(str))
-			return;
-
 		try {
-			tab.setJbookPath(Files.move(tab.getJbookPath(), tab.getJbookPath().resolveSibling(str), StandardCopyOption.REPLACE_EXISTING));
+			tab.setJbookPath(Files.move(tab.getJbookPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING));
 		} catch (IOException e) {
-			FxAlert.showErrorDialoag(tab.getJbookPath()+"\n"+tab.getJbookPath().resolveSibling(str), "failed to rename", e);
+			FxAlert.showErrorDialoag("source: "+tab.getJbookPath()+"\ntarget: "+file, "failed to rename", e);
 		}
 	}
 }

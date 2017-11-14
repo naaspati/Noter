@@ -54,7 +54,7 @@ public class Tab extends DataManeger {
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
 
 	@Override
-	protected void setModified(boolean m) {
+	public void setModified(boolean m) {
 		super.setModified(m);
 		if(isModified()) {
 			if(!view.getStyleClass().contains("modified"))
