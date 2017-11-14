@@ -12,4 +12,4 @@ A Small App to keep your notes
 
 
 ### download
-[download noter.jar](https://github.com/naaspati/Noter/raw/master/compiled/noter.jar)
+[download noter.zip](https://github.com/naaspati/Noter/raw/master/noter.zip)
