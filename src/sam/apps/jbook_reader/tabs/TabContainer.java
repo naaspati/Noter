@@ -20,6 +20,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.apps.jbook_reader.Actions;
 import sam.apps.jbook_reader.Actions.ActionResult;
+import static sam.apps.jbook_reader.Utils.*;
 import sam.fx.alert.FxAlert;
 
 public class TabContainer extends BorderPane {
@@ -31,8 +32,23 @@ public class TabContainer extends BorderPane {
 
 	private double div = 0;
 
-	public TabContainer() {
-		tabsBox.getStyleClass().add("tabs-box");
+	private static transient TabContainer instance;
+
+	public static TabContainer getInstance() {
+		if (instance == null) {
+			synchronized (TabContainer.class) {
+				if (instance == null)
+					instance = new TabContainer();
+			}
+		}
+		return instance;
+	}
+
+	private TabContainer() {
+		setId("tab-container");
+		
+		addClass(tabsBox, "tab-box");
+
 		tabsCount.bind(Bindings.size(tabsBox.getChildren()));
 		tabsCount.addListener((p, o, n) -> div = 1/n.doubleValue());
 
@@ -44,9 +60,9 @@ public class TabContainer extends BorderPane {
 
 		Button left = new Button();
 		Button right = new Button();
-		right.getStyleClass().add("button-right");
+		addClass(right,"right");
 		HBox rightLeft = new HBox(3, left, right);
-		rightLeft.getStyleClass().add("tabs-box-scroll");
+		rightLeft.setId("scroll");
 
 		right.disableProperty().bind(sp.hvalueProperty().isEqualTo(1));
 		left.disableProperty().bind(sp.hvalueProperty().isEqualTo(0));
@@ -89,12 +105,12 @@ public class TabContainer extends BorderPane {
 			while(true) {
 				title = "New "+(n++);
 				for (Tab t : tabs) {
-					if(title.equals(t.getTitle()))
+					if(title.equals(t.getTabTitle()))
 						continue loop;
 				}
 				break;
 			}
-		tab.setTitle(title);
+		tab.setTabTitle(title);
 		addTab(tab);
 	}
 	public void addTab(Path path) {
@@ -144,11 +160,11 @@ public class TabContainer extends BorderPane {
 		sp.setHvalue(newTab == null ? 0 : div*(tabsBox.getChildren().indexOf(newTab.getView()) - 1));
 		onTabSwitch.accept(newTab);
 	}
+	public void setOnTabClosing(Consumer<Tab> onTabClosing) {
+		this.onTabClosing = onTabClosing;
+	}	
 	public void setOnTabSwitch(Consumer<Tab> consumer) {
 		onTabSwitch = consumer;
-	}
-	public void setOnTabClosing(Consumer<Tab> consumer) {
-		onTabClosing = consumer;
 	}
 	public ReadOnlyIntegerProperty tabsCountProperty() {
 		return tabsCount.getReadOnlyProperty();

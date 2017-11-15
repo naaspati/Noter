@@ -25,6 +25,14 @@ class Entry extends TreeItem<String> {
 		this.lastModified = System.currentTimeMillis();
 	}
 	public String getTitle() { return getValue(); }
+	public boolean setTitle(String title) {
+		if(Objects.equals(title, getValue()))
+			return false;
+		
+		updateLastModified();
+		setValue(title);
+		return true;
+	}
 	public String getContent() { return content; }
 	public boolean setContent(String content) {
 		if(Objects.equals(content, this.content))
@@ -42,17 +50,26 @@ class Entry extends TreeItem<String> {
 		
 		return collector; 
 	}
-	boolean testTitle(char[] against) {
-		if(chars == null) {
+	boolean test(char[] titleSearch, String contentSearch) {
+		if(chars == null && titleSearch != null) {
 			chars = getTitle().toLowerCase().toCharArray();
 			Arrays.sort(chars);
 		}
-
-		for (char c : against) {
-			if(Arrays.binarySearch(chars, c) < 0)
-				return false;
+		boolean b = true;
+		if(titleSearch != null) {
+			if(chars.length < titleSearch.length)
+				b = false;
+			for (char c : titleSearch) {
+				if(Arrays.binarySearch(chars, c) < 0) {
+					b = false;
+					break;
+				}
+			}
+			if(b)
+				return true;
 		}
-		return true;
+		
+		return content != null && contentSearch != null && content.contains(contentSearch);
 	} 
 	public Entry addChild(String title, String content, long lastmodified, Entry relativeTo) {
 		Entry child = new Entry(title, content, lastmodified);

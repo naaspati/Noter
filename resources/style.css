@@ -1,5 +1,8 @@
+.root {
+	-fx-font-family:Consolas;
+}
 
-.tabs-box {
+#tab-container .tab-box {
 	-fx-padding:5 50 5 5;
 }
 .tab {
@@ -20,22 +23,53 @@
 .tab > .close {
 	-fx-background-color:red;
 	-fx-background-radius:50%;
-	-fx-padding:-3 3 0 3;
+	-fx-padding:-2 3 0 3;
 	-fx-text-fill:white;
 	-fx-font-weight:bold;
 }
 
-.tabs-box-scroll {
+#tab-container #scroll {
 -fx-background-color:transparent;
 -fx-alignment:center;
 -fx-padding:0 3 0 10;	
 }
-.tabs-box-scroll .button {
+#tab-container #scroll .button {
 	-fx-base:black;
 	-fx-font-weight:bold;
 	-fx-font-size:15;
 	-fx-shape:"M 4.1562528,85.551706 C 2.0187515,86.827826 -50.154926,57.714138 -50.191328,55.224948 -50.22773,52.735757 1.0723019,22.108871 3.2462051,23.321941 c 2.1739033,1.213071 3.047549,60.953644 0.9100477,62.229765 z";
 }
-.tabs-box-scroll .button-right {
+#tab-container #scroll .right {
 	-fx-rotate: 180;
 }	
+
+#bookmarks  {
+	-fx-font-family:Consolas;
+}
+#editor {
+	-fx-background-color:white;
+}
+#editor .main-title {
+		-fx-alignment:center;
+		-fx-font-size:2em;
+		-fx-padding: 10 0 10 0;
+		-fx-border-width:1 0 0 0;
+		-fx-border-color:lightgray;
+}
+.unit-editor .title-box {
+	-fx-alignment:center;
+	-fx-border-width:1 0 0 0;
+	-fx-border-color:lightgray;
+	-fx-background-color:white;
+}
+#popup-box {
+	-fx-background-color:black;
+	-fx-border-width:0.5;
+	-fx-border-color:white;
+	-fx-background-radius:10;
+	-fx-border-radius:10;
+}
+#popup-box .text {
+	-fx-text-fill:white;
+	-fx-fill:white;
+}

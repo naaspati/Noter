@@ -25,7 +25,7 @@ import sam.properties.session.Session;
 
 class EntryEncoder {
 	private static transient EntryEncoder instance;
-
+	
 	public static EntryEncoder getInstance() throws ParserConfigurationException {
 		if (instance == null) {
 			synchronized (EntryEncoder.class) {
@@ -82,8 +82,7 @@ class EntryEncoder {
 				TransformerFactory.newInstance()
 				.newTransformer();
 		
-		if(Session.has("xml-indent"))
-			Session.put("xml-indent", "false");
+		Session.putIfAbsent("xml-indent", "false");
 
 		transformer.setOutputProperty(OutputKeys.INDENT, 
 				Optional.ofNullable(Session.get("xml-indent"))

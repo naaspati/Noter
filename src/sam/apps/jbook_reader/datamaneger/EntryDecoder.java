@@ -15,7 +15,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 class EntryDecoder {
-
 	List<Entry> decode(Path path) throws Exception {
 		Document doc = 
 				DocumentBuilderFactory.newInstance()

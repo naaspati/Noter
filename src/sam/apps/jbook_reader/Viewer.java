@@ -1,29 +1,36 @@
 package sam.apps.jbook_reader;
 
-import static sam.apps.jbook_reader.Creater.*;
+import static javafx.scene.input.KeyCombination.ALT_DOWN;
+import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
+import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
+import static sam.apps.jbook_reader.Utils.button;
+import static sam.apps.jbook_reader.Utils.combination;
+import static sam.apps.jbook_reader.Utils.menuitem;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tooltip;
@@ -33,14 +40,14 @@ import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
+import sam.apps.jbook_reader.editor.Editor;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.FxAlert;
@@ -51,13 +58,20 @@ public class Viewer extends Application {
 	public static void main( String[] args ) {
 		launch(args);
 	}
-	private final TreeView<String> bookmarks = new TreeView<>();
-	private final Editor editor = new Editor();
-	private final TabContainer tabsContainer = new TabContainer();
-	private SimpleObjectProperty<Tab> currentTab = new SimpleObjectProperty<>();
+	private final TreeItem<String> rootItem = new TreeItem<>();
+	private final TreeView<String> bookmarks = new TreeView<>(rootItem);
+	private ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
 	private SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
-	private static Stage stage;
+	private SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 
+	private final TabContainer tabsContainer = TabContainer.getInstance();
+	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), bookmarks.getSelectionModel().selectedItemProperty());
+	private static Stage stage;
+	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
+	
+	static {
+		GRAYSCALE_EFFECT.setSaturation(-1);
+	}
 	public static Stage getStage() {
 		return stage;
 	}
@@ -67,32 +81,31 @@ public class Viewer extends Application {
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
 
-		SplitPane splitPane = new SplitPane(getBookmarkPane(), getEditor());
-		splitPane.setDividerPosition(0, 0.2);
-		splitPane.widthProperty().addListener((p, o, n) -> splitPane.setDividerPosition(0, 0.2));
-		tabsContainer.setOnTabSwitch(this::switchTab);
-		tabsContainer.setOnTabClosing(tab -> {
-			if(getCurrentTab() == null)
-				return;
-			getCurrentTab().setContent(getSelectedItem(), editor.getContent());
-		});
-		editor.disableIf(currentTab.isNull());
+		SplitPane splitPane = getSplitPane();
+		prepareTabsContainer();
 
 		BorderPane root = new BorderPane(splitPane);
 		root.setTop(getMenubar());
 
 		Scene scene = new Scene(root);
 		stage.setScene(scene);
-		scene.getStylesheets().add("style.css");
 
-		if(Session.has("stage.width")){
-			stage.setWidth(Double.parseDouble(Session.get("stage.width")));
-			stage.setHeight(Double.parseDouble(Session.get("stage.height")));
-			stage.setX(Double.parseDouble(Session.get("stage.x")));
-			stage.setY(Double.parseDouble(Session.get("stage.y")));
-		}
-		else 
-			stage.setMaximized(true);
+		showStage(stage);
+		loadFirstFile();
+
+		scene.getStylesheets().add("style.css");
+		// TODO FxUtils.liveReloadCss(getHostServices(), "resources/style.css", scene);
+	}
+
+	private void showStage(Stage stage2) {
+		Rectangle2D screen = Screen.getPrimary().getBounds();
+
+		Function<String, Double> parser = Double::parseDouble;
+
+		stage.setWidth(Session.get("stage.width", screen.getWidth()/2, parser));
+		stage.setHeight(Session.get("stage.height", screen.getHeight(), parser));
+		stage.setX(Session.get("stage.x", 0d, parser));
+		stage.setY(Session.get("stage.y", 0d, parser));
 
 		try {
 			stage.getIcons().add(new Image("notebook.png"));
@@ -103,20 +116,27 @@ public class Viewer extends Application {
 			exit();
 			e.consume();
 		});
+	}
+	private void prepareTabsContainer() {
+		tabsContainer.setOnTabSwitch(this::switchTab);
+		tabsContainer.setOnTabClosing(editor::finish);
+	}
+	private SplitPane getSplitPane() throws IOException {
+		SplitPane splitPane = new SplitPane(getBookmarkPane(), getEditor());
+		splitPane.setDividerPosition(0, 0.2);
+		splitPane.widthProperty().addListener((p, o, n) -> splitPane.setDividerPosition(0, 0.2));
+		return splitPane;
+	}
+	private void loadFirstFile() {
 		Optional.ofNullable(getParameters().getRaw())
 		.filter(l -> !l.isEmpty())
 		.ifPresent(list -> Platform.runLater(() -> list.forEach(s -> tabsContainer.addTab(Paths.get(s)))));
 	}
-
-	private TreeItem<String> getSelectedItem() {
-		return bookmarks.getSelectionModel().getSelectedItem();
-	}
 	private Tab getCurrentTab() {
 		return currentTab.get();
 	}
-
 	private Node getEditor() {
-		return new BorderPane(editor.getContentNode(), tabsContainer, null, null, null);
+		return new BorderPane(editor, tabsContainer, null, null, null);
 	}
 	private void exit() {
 		Session.put("stage.width", String.valueOf(stage.getWidth()));
@@ -127,29 +147,45 @@ public class Viewer extends Application {
 		if(tabsContainer.closeAll())
 			System.exit(0);
 	}
-	private Node getMenubar() {
-		MenuBar menubar = new MenuBar(getFileMenu(), getBookmarkMenu());
-		return menubar;
+	private MenuBar getMenubar() {
+		return new MenuBar(getFileMenu(), getBookmarkMenu(), getSearchMenu());
+	}
+	private Menu getSearchMenu() {
+		Menu menu = new Menu("_Search", null, 
+				menuitem("Search", combination(KeyCode.F, SHORTCUT_DOWN), e -> {
+					tabsContainer.setDisable(true);
+					tabsContainer.setEffect(GRAYSCALE_EFFECT);
+					searchActive.set(true);
+					
+					new SearchBox(stage, bookmarks, getCurrentTab())
+					.setOnHidden(e_e -> {
+						tabsContainer.setDisable(false);
+						tabsContainer.setEffect(null);
+						searchActive.set(false);
+						});
+				}, currentTab.isNull())
+				);
+		return menu;
 	}
 	private Menu getFileMenu() {
-		BooleanBinding fileNull = currentFile.isNull();
-		BooleanBinding tabNull = currentTab.isNull();
-		BooleanBinding selectedZero = tabsContainer.tabsCountProperty().isEqualTo(0);
+		BooleanBinding fileNull = currentFile.isNull().or(searchActive);
+		BooleanBinding tabNull = currentTab.isNull().or(searchActive);
+		BooleanBinding selectedZero = tabsContainer.tabsCountProperty().isEqualTo(0).or(searchActive);
 
 		Menu closeSpecific;
 
 		Menu menu = new Menu("_File", null, 
-				menuitem("_New", e -> tabsContainer.addBlankTab()),
-				menuitem("_Open...", new KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN), e -> Actions.open(tabsContainer)),
+				menuitem("_New", combination(KeyCode.N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsContainer.addBlankTab(), searchActive),
+				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> Actions.open(tabsContainer), searchActive),
 				menuitem("Open Containing Folder", e -> Actions.open_containing_folder(getHostServices(), getCurrentTab()), fileNull),
-				menuitem("Reload From Disk", e -> Actions.reload_from_disk(getCurrentTab()), fileNull),
-				menuitem("_Save", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN), e -> Actions.save(getCurrentTab(), false), fileNull),
-				menuitem("Save _As", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> {Actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
-				menuitem("Sav_e All", new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
+				menuitem("Reload From Disk", e -> Actions.reload_from_disk(getCurrentTab(), rootItem), fileNull),
+				menuitem("_Save", combination(KeyCode.S, SHORTCUT_DOWN), e -> Actions.save(getCurrentTab(), false), fileNull),
+				menuitem("Save _As", combination(KeyCode.S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {Actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
+				menuitem("Sav_e All", combination(KeyCode.S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
 				menuitem("Rename", e -> {Actions.rename(getCurrentTab()); updateCurrentFile();}, fileNull),
 				new SeparatorMenuItem(),
-				menuitem("_Close",new KeyCodeCombination(KeyCode.W, KeyCombination.SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
-				menuitem("Close All",new KeyCodeCombination(KeyCode.W, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),
+				menuitem("_Close",combination(KeyCode.W, SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
+				menuitem("Close All",combination(KeyCode.W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),
 				closeSpecific = 
 				new Menu("Close specific", null,
 						menuitem("other tab(s)", e -> tabsContainer.closeExcept(getCurrentTab())),
@@ -157,9 +193,9 @@ public class Viewer extends Application {
 						menuitem("tab(s) to the left", e -> tabsContainer.closeRightLeft(getCurrentTab(), false))
 						),
 				new SeparatorMenuItem(),
-				menuitem("E_xit", new KeyCodeCombination(KeyCode.F4, KeyCombination.ALT_DOWN), e -> exit())
+				menuitem("E_xit", combination(KeyCode.F4, ALT_DOWN), e -> exit())
 				);
-		closeSpecific.disableProperty().bind(tabsContainer.tabsCountProperty().lessThan(2));
+		closeSpecific.disableProperty().bind(tabsContainer.tabsCountProperty().lessThan(2).or(searchActive));
 		return menu;
 	}
 	private void updateCurrentFile() {
@@ -168,52 +204,36 @@ public class Viewer extends Application {
 			return;
 
 		currentFile.set(t.getJbookPath());
-		stage.setTitle(t.getTitle());
+		stage.setTitle(t.getTabTitle());
 	}
 	private void switchTab(final Tab newTab) {
-		if(getCurrentTab() != null)
-			getCurrentTab().setContent(getSelectedItem(), editor.getContent());
-
 		currentTab.set(newTab);
 
 		if(newTab == null) {
 			stage.setTitle(null);
-			bookmarks.setRoot(null);
-			editor.setContent(null);
+			rootItem.getChildren().clear();
 			currentFile.set(null);
 		}
 		else {
 			currentFile.set(newTab.getJbookPath());
-			stage.setTitle(newTab.getTitle());
-			bookmarks.setRoot(newTab.getRootItem());
-			editor.setContent(newTab.getContent(getSelectedItem()));
+			stage.setTitle(newTab.getTabTitle());
+			rootItem.getChildren().setAll(newTab.getItems());
 		}
 	}
-
 	private Menu getBookmarkMenu() {
-		
 		return new Menu("_Bookmark",
 				null,
-				menuitem("Add Bookmark", new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), false), currentTab.isNull()),
-				menuitem("Add Child Bookmark", new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull()),
-				radioMenuitem("select multiple", e -> bookmarks.getSelectionModel().setSelectionMode(((RadioMenuItem)e.getSource()).isSelected() ? SelectionMode.MULTIPLE : SelectionMode.SINGLE))
+				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), false), currentTab.isNull()),
+				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull())
+				//TODO , radioMenuitem("select multiple", e -> bookmarks.getSelectionModel().setSelectionMode(((RadioMenuItem)e.getSource()).isSelected() ? SelectionMode.MULTIPLE : SelectionMode.SINGLE))
 				);
 	}
 	private Node getBookmarkPane() throws IOException {
 		bookmarks.setShowRoot(false);
 		bookmarks.setEditable(true);
-		bookmarks.setStyle("-fx-font-family:Consolas");
+		bookmarks.setId("bookmarks");
 		bookmarks.setCellFactory(TextFieldTreeCell.forTreeView());
 		bookmarks.setOnEditCommit(e -> getCurrentTab().setModified(true));
-		bookmarks.getSelectionModel().selectedItemProperty()
-		.addListener((p, o, n) -> {
-			if(getCurrentTab() != null ) {
-				getCurrentTab().setContent(o, editor.getContent());
-				editor.setContent(getCurrentTab().getContent(n));
-			}
-			if(n != null)
-				editor.setTitle(n.getValue());
-		});
 
 		BorderPane pane = new BorderPane(bookmarks);
 
@@ -251,17 +271,14 @@ public class Viewer extends Application {
 
 		HBox.setHgrow(p, Priority.ALWAYS);
 
-		ColorAdjust grayscale = new ColorAdjust();
-		grayscale.setSaturation(-1);
-
-		removeButton.effectProperty().bind(new When(removeButton.disableProperty()).then(grayscale).otherwise((ColorAdjust)null));
+		removeButton.effectProperty().bind(new When(removeButton.disableProperty()).then(GRAYSCALE_EFFECT).otherwise((ColorAdjust)null));
 		removeButton.disableProperty().bind(bookmarks.getSelectionModel().selectedItemProperty().isNull());
-		
+
 		addChildButton.effectProperty().bind(removeButton.effectProperty());
 		addChildButton.disableProperty().bind(removeButton.disableProperty());
 
-		addButton.effectProperty().bind(new When(addButton.disableProperty()).then(grayscale).otherwise((ColorAdjust)null));
-		
+		addButton.effectProperty().bind(new When(addButton.disableProperty()).then(GRAYSCALE_EFFECT).otherwise((ColorAdjust)null));
+
 		BooleanBinding nullTab = currentTab.isNull();
 		addButton.disableProperty().bind(nullTab);
 		expandCollpase.disableProperty().bind(nullTab);
