@@ -3,7 +3,9 @@ package sam.apps.jbook_reader.tabs;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -28,7 +30,7 @@ public class TabContainer extends BorderPane {
 	private final ReadOnlyIntegerWrapper tabsCount = new ReadOnlyIntegerWrapper();
 	private final List<Tab> tabs = new ArrayList<>();
 	private final ScrollPane sp = new ScrollPane(tabsBox); 
-	private Consumer<Tab> onTabSwitch, onSelect, onTabClosing;
+	private Consumer<Tab> onTabSwitch, onSelect, onTabClosing, onTabClosed;
 
 	private double div = 0;
 
@@ -144,7 +146,9 @@ public class TabContainer extends BorderPane {
 		tabs.remove(tab);
 		int index = tabsBox.getChildren().indexOf(tab.getView());
 		tabsBox.getChildren().remove(index);
-
+		
+		onTabClosed.accept(tab);
+		
 		if(!tab.isActive())
 			return;
 
@@ -162,7 +166,10 @@ public class TabContainer extends BorderPane {
 	}
 	public void setOnTabClosing(Consumer<Tab> onTabClosing) {
 		this.onTabClosing = onTabClosing;
-	}	
+	}
+	public void setOnTabClosed(Consumer<Tab> action) {
+		this.onTabClosed = action;
+	}
 	public void setOnTabSwitch(Consumer<Tab> consumer) {
 		onTabSwitch = consumer;
 	}
@@ -202,5 +209,10 @@ public class TabContainer extends BorderPane {
 	public void saveAllTabs() {
 		for (Tab tab : tabs)
 			Actions.save(tab, false);
+	}
+	public List<Path> getJbookPaths() {
+		return tabs.stream().map(Tab::getJbookPath)
+		.filter(Objects::nonNull)
+		.collect(Collectors.toList());
 	}
 }

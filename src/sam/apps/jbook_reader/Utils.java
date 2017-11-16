@@ -19,6 +19,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.Modifier;
+import javafx.scene.text.Text;
 
 public interface Utils {
 	public static String treeToString(TreeItem<String> item) {
@@ -85,7 +86,7 @@ public interface Utils {
 	}
 	public static Button button(String tooltip, String iconName, EventHandler<ActionEvent> action) {
 		Button b = new Button(null, iconName == null ? null : new ImageView(iconName));
-		
+
 		b.getStyleClass().clear();
 		b.setTooltip(new Tooltip(tooltip));
 
@@ -117,7 +118,6 @@ public interface Utils {
 		for (E e : elements)
 			consumer.accept(e);
 	}
-
 	public static String createBanner(String text, int length, char symbol){
 		if(text == null)
 			text = "null";
@@ -142,7 +142,7 @@ public interface Utils {
 		}
 		else
 			b.append(text);
-		
+
 
 		if(lengthBool)
 			for (int i = half; i < length - text.length() - 2; i++) b.append(symbol);
@@ -151,5 +151,8 @@ public interface Utils {
 		b.append(symbols);
 
 		return b.toString();
+	}
+	public static Text text(String string) {
+		return new Text(string);
 	}
 }

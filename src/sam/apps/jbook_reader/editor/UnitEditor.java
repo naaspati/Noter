@@ -35,6 +35,7 @@ final class UnitEditor extends BorderPane {
 		String text = tab.getContent(item);
 		content = new TextArea(text);
 		content.setEditable(false);
+		updateFont();
 		
 		long count = text == null || text.isEmpty() ? 0 : text.chars().filter(s -> s == '\n').count();
 		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
@@ -63,6 +64,10 @@ final class UnitEditor extends BorderPane {
 		content.textProperty().addListener(listener);
 	}
 
+	public void updateFont() {
+		title.setFont(Editor.getFont());
+		content.setFont(Editor.getFont());
+	}
 	void finish() {
 		if(!editStarted)
 			return;
@@ -84,5 +89,9 @@ final class UnitEditor extends BorderPane {
 	}
 	public TreeItem<String> getItem() {
 		return item;
+	}
+
+	public void setWordWrap(boolean wrap) {
+		content.setWrapText(wrap);
 	}
 }

@@ -6,16 +6,22 @@ import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.apps.jbook_reader.Utils.button;
 import static sam.apps.jbook_reader.Utils.combination;
 import static sam.apps.jbook_reader.Utils.menuitem;
+import static sam.apps.jbook_reader.Utils.radioMenuitem;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -30,7 +36,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tooltip;
@@ -40,6 +48,7 @@ import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -68,7 +77,7 @@ public class Viewer extends Application {
 	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), bookmarks.getSelectionModel().selectedItemProperty());
 	private static Stage stage;
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
-	
+
 	static {
 		GRAYSCALE_EFFECT.setSaturation(-1);
 	}
@@ -80,6 +89,8 @@ public class Viewer extends Application {
 		Viewer.stage = stage;
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
+
+		readRecents();
 
 		SplitPane splitPane = getSplitPane();
 		prepareTabsContainer();
@@ -97,6 +108,15 @@ public class Viewer extends Application {
 		// TODO FxUtils.liveReloadCss(getHostServices(), "resources/style.css", scene);
 	}
 
+	private void readRecents() throws IOException, URISyntaxException {
+		Stream.of(Session.get("recents", "").split(";"))
+		.map(String::trim)
+		.filter(s -> !s.isEmpty())
+		.map(Paths::get)
+		.filter(Files::exists)
+		.map(this::recentsMenuItem)
+		.forEach(recentsMenu.getItems()::add);
+	}
 	private void showStage(Stage stage2) {
 		Rectangle2D screen = Screen.getPrimary().getBounds();
 
@@ -120,7 +140,25 @@ public class Viewer extends Application {
 	private void prepareTabsContainer() {
 		tabsContainer.setOnTabSwitch(this::switchTab);
 		tabsContainer.setOnTabClosing(editor::finish);
+		tabsContainer.setOnTabClosed(tab -> {
+			Path p = tab.getJbookPath();
+			if(p == null)
+				return;
+
+			List<MenuItem> list = recentsMenu.getItems(); 
+
+			list.add(0, recentsMenuItem(p));
+			if(list.size() > 10)
+				list.subList(10, list.size()).clear();
+		});
 	}
+	private MenuItem recentsMenuItem(Path path) {
+		MenuItem mi =  menuitem(path.toString(), e -> Actions.open(tabsContainer, path, recentsMenu));
+		mi.getStyleClass().add("recent-mi");
+		mi.setUserData(path);
+		return mi;
+	}
+
 	private SplitPane getSplitPane() throws IOException {
 		SplitPane splitPane = new SplitPane(getBookmarkPane(), getEditor());
 		splitPane.setDividerPosition(0, 0.2);
@@ -139,16 +177,27 @@ public class Viewer extends Application {
 		return new BorderPane(editor, tabsContainer, null, null, null);
 	}
 	private void exit() {
-		Session.put("stage.width", String.valueOf(stage.getWidth()));
-		Session.put("stage.height", String.valueOf(stage.getHeight()));
-		Session.put("stage.x", String.valueOf(stage.getX()));
-		Session.put("stage.y", String.valueOf(stage.getY()));
-
-		if(tabsContainer.closeAll())
+		if(tabsContainer.closeAll()) {
+			Session.put("stage.width", String.valueOf(stage.getWidth()));
+			Session.put("stage.height", String.valueOf(stage.getHeight()));
+			Session.put("stage.x", String.valueOf(stage.getX()));
+			Session.put("stage.y", String.valueOf(stage.getY()));
+			Session.put("recents", recentsMenu.getItems().stream()
+					.map(MenuItem::getUserData)
+					.map(Object::toString)
+					.map(s -> s.replace('\\', '/'))
+					.collect(Collectors.joining(";")));
 			System.exit(0);
+		}
 	}
 	private MenuBar getMenubar() {
-		return new MenuBar(getFileMenu(), getBookmarkMenu(), getSearchMenu());
+		return new MenuBar(getFileMenu(), getBookmarkMenu(), getSearchMenu(), getEditorMenu());
+	}
+	private Menu getEditorMenu() {
+		return new Menu("editor", null,
+				radioMenuitem("Text wrap", e -> editor.setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
+				menuitem("Font", e -> editor.setFont())
+				);
 	}
 	private Menu getSearchMenu() {
 		Menu menu = new Menu("_Search", null, 
@@ -156,27 +205,37 @@ public class Viewer extends Application {
 					tabsContainer.setDisable(true);
 					tabsContainer.setEffect(GRAYSCALE_EFFECT);
 					searchActive.set(true);
-					
+
 					new SearchBox(stage, bookmarks, getCurrentTab())
 					.setOnHidden(e_e -> {
 						tabsContainer.setDisable(false);
 						tabsContainer.setEffect(null);
 						searchActive.set(false);
-						});
+					});
 				}, currentTab.isNull())
 				);
 		return menu;
 	}
+
+	private final Menu recentsMenu = new Menu("_Recents");
 	private Menu getFileMenu() {
+		recentsMenu.disableProperty().bind(searchActive.or(Bindings.isEmpty(recentsMenu.getItems())));
+
 		BooleanBinding fileNull = currentFile.isNull().or(searchActive);
 		BooleanBinding tabNull = currentTab.isNull().or(searchActive);
 		BooleanBinding selectedZero = tabsContainer.tabsCountProperty().isEqualTo(0).or(searchActive);
 
-		Menu closeSpecific;
+		Menu closeSpecific = 
+				new Menu("Close specific", null,
+						menuitem("other tab(s)", e -> tabsContainer.closeExcept(getCurrentTab())),
+						menuitem("tab(s) to the right", e -> tabsContainer.closeRightLeft(getCurrentTab(), true)),
+						menuitem("tab(s) to the left", e -> tabsContainer.closeRightLeft(getCurrentTab(), false))
+						);
 
 		Menu menu = new Menu("_File", null, 
 				menuitem("_New", combination(KeyCode.N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsContainer.addBlankTab(), searchActive),
-				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> Actions.open(tabsContainer), searchActive),
+				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> Actions.open(tabsContainer, null, recentsMenu), searchActive),
+				recentsMenu,
 				menuitem("Open Containing Folder", e -> Actions.open_containing_folder(getHostServices(), getCurrentTab()), fileNull),
 				menuitem("Reload From Disk", e -> Actions.reload_from_disk(getCurrentTab(), rootItem), fileNull),
 				menuitem("_Save", combination(KeyCode.S, SHORTCUT_DOWN), e -> Actions.save(getCurrentTab(), false), fileNull),
@@ -186,12 +245,7 @@ public class Viewer extends Application {
 				new SeparatorMenuItem(),
 				menuitem("_Close",combination(KeyCode.W, SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
 				menuitem("Close All",combination(KeyCode.W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),
-				closeSpecific = 
-				new Menu("Close specific", null,
-						menuitem("other tab(s)", e -> tabsContainer.closeExcept(getCurrentTab())),
-						menuitem("tab(s) to the right", e -> tabsContainer.closeRightLeft(getCurrentTab(), true)),
-						menuitem("tab(s) to the left", e -> tabsContainer.closeRightLeft(getCurrentTab(), false))
-						),
+				closeSpecific,
 				new SeparatorMenuItem(),
 				menuitem("E_xit", combination(KeyCode.F4, ALT_DOWN), e -> exit())
 				);
@@ -225,7 +279,6 @@ public class Viewer extends Application {
 				null,
 				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), false), currentTab.isNull()),
 				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull())
-				//TODO , radioMenuitem("select multiple", e -> bookmarks.getSelectionModel().setSelectionMode(((RadioMenuItem)e.getSource()).isSelected() ? SelectionMode.MULTIPLE : SelectionMode.SINGLE))
 				);
 	}
 	private Node getBookmarkPane() throws IOException {
@@ -234,6 +287,10 @@ public class Viewer extends Application {
 		bookmarks.setId("bookmarks");
 		bookmarks.setCellFactory(TextFieldTreeCell.forTreeView());
 		bookmarks.setOnEditCommit(e -> getCurrentTab().setModified(true));
+		bookmarks.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+			if(e.getClickCount() == 2)
+				e.consume();
+		});
 
 		BorderPane pane = new BorderPane(bookmarks);
 

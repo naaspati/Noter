@@ -12,6 +12,7 @@ import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Menu;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
@@ -97,13 +98,21 @@ public class Actions {
 		maneger.remove(bookmarks.getSelectionModel().getSelectedItems(), bookmarks.getRoot());
 		bookmarks.getSelectionModel().clearSelection();
 	}
-	public static void  open(TabContainer tabContainer)  {
-		File file = getFile("select a file to open...", null);
+	public static void open(TabContainer tabsContainer, Path jbookPath, Menu recentsMenu)  {
+		if(jbookPath == null) {
+			File file = getFile("select a file to open...", null);
 
-		if(file == null)
-			return;
+			if(file == null)
+				return;
+			
+			jbookPath = file.toPath();
+		}
+		tabsContainer.addTab(jbookPath);
 
-		tabContainer.addTab(file.toPath()); 
+		Path p = jbookPath;
+		
+		recentsMenu.getItems()
+		.removeIf(mi -> p.equals(mi.getUserData()));
 	}
 	public static void  open_containing_folder(HostServices hs, Tab tab)  {
 		Optional.of(tab)
