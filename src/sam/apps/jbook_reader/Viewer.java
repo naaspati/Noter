@@ -287,8 +287,8 @@ public class Viewer extends Application {
 		bookmarks.setId("bookmarks");
 		bookmarks.setCellFactory(TextFieldTreeCell.forTreeView());
 		bookmarks.setOnEditCommit(e -> {
-			editor.updateTitle();
 			getCurrentTab().setModified(true);
+			Platform.runLater(() -> editor.updateTitle());
 		});
 		bookmarks.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
 			if(e.getClickCount() == 2)
