@@ -9,18 +9,18 @@ import java.util.function.Consumer;
 import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
-import javafx.scene.text.Text;
 import sam.apps.jbook_reader.Utils;
 import sam.apps.jbook_reader.tabs.Tab;
 
 final class UnitEditor extends BorderPane {
-	private final Text title;
+	private final Label title;
 	private final TextArea content;
 	private final Tab tab; 
 	private final TreeItem<String> item;
@@ -29,9 +29,9 @@ final class UnitEditor extends BorderPane {
 	private WeakChangeListener<String> listener;
 
 	public UnitEditor(Tab tab, TreeItem<String> item, 
-			Consumer<UnitEditor> onSelected) {
+			Consumer<UnitEditor> onEditStarted) {
 		
-		title = new Text(tab.getTitle(item));
+		title = new Label(tab.getTitle(item));
 		String text = tab.getContent(item);
 		content = new TextArea(text);
 		content.setEditable(false);
@@ -44,7 +44,7 @@ final class UnitEditor extends BorderPane {
 		this.item = item;
 		
 		Pane p;
-		HBox titleContainer = new HBox(title, p = new Pane(), editButton = button("edit", "edit.png", e -> onSelected.accept(this))); 
+		HBox titleContainer = new HBox(title, p = new Pane(), editButton = button("edit", "edit.png", e -> onEditStarted.accept(this))); 
 		setTop(titleContainer);
 		titleContainer.setPadding(new Insets(5, 10, 5, 10));
 		setCenter(content);
@@ -72,7 +72,6 @@ final class UnitEditor extends BorderPane {
 		if(!editStarted)
 			return;
 		
-		tab.setTitle(item, title.getText());
 		tab.setContent(item, content.getText());
 	}
 	public boolean isActive() {
@@ -90,8 +89,14 @@ final class UnitEditor extends BorderPane {
 	public TreeItem<String> getItem() {
 		return item;
 	}
-
+	public void updateTitle() {
+		title.setText(tab.getTitle(item));
+	}
 	public void setWordWrap(boolean wrap) {
 		content.setWrapText(wrap);
+	}
+
+	public String getContent() {
+		return content.getText();
 	}
 }

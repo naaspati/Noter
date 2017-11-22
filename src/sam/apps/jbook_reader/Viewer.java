@@ -277,8 +277,8 @@ public class Viewer extends Application {
 	private Menu getBookmarkMenu() {
 		return new Menu("_Bookmark",
 				null,
-				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), false), currentTab.isNull()),
-				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> Actions.addNewTab(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull())
+				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), false), currentTab.isNull()),
+				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull())
 				);
 	}
 	private Node getBookmarkPane() throws IOException {
@@ -286,7 +286,10 @@ public class Viewer extends Application {
 		bookmarks.setEditable(true);
 		bookmarks.setId("bookmarks");
 		bookmarks.setCellFactory(TextFieldTreeCell.forTreeView());
-		bookmarks.setOnEditCommit(e -> getCurrentTab().setModified(true));
+		bookmarks.setOnEditCommit(e -> {
+			editor.updateTitle();
+			getCurrentTab().setModified(true);
+		});
 		bookmarks.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
 			if(e.getClickCount() == 2)
 				e.consume();
@@ -318,8 +321,8 @@ public class Viewer extends Application {
 		Pane p;
 		Button removeButton, addButton, addChildButton;
 		HBox controls = new HBox(3, 
-				addButton = button("add", "plus.png", e -> Actions.addNewTab(bookmarks, getCurrentTab(), false)),
-				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> Actions.addNewTab(bookmarks, getCurrentTab(), true)),
+				addButton = button("add", "plus.png", e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), false)),
+				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), true)),
 				removeButton = button("remove selected","error.png", e -> Actions.removeAction(bookmarks, getCurrentTab())),
 				expandCollpase,
 				p = new Pane(),

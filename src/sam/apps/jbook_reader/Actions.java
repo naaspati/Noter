@@ -36,7 +36,7 @@ public class Actions {
 		FAILED, SUCCESS, NULL, OK, CANCEL, YES, NO 
 	}
 
-	public static void addNewTab(TreeView<String> bookmarks, Tab maneger, boolean addChildBookmark) {
+	public static void addNewBookmark(TreeView<String> bookmarks, Tab maneger, boolean addChildBookmark) {
 		TreeItem<String> item = bookmarks.getSelectionModel().getSelectedItem();
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION);
 		dialog.headerText(Utils.treeToString(item, new StringBuilder("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n")).toString());

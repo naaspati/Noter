@@ -60,7 +60,7 @@ public class DataManeger {
 
 	public TreeItem<String> add(TreeItem<String> selectedItem, TreeItem<String> rootItem, String title, boolean addChild) {
 		Entry entry;
-		Entry parent = addChild ? (Entry)selectedItem : getParent(selectedItem); 
+		Entry parent = addChild ? (Entry)selectedItem : getParent(selectedItem);
 
 		if(parent != null)
 			entry = parent.addChild(title, null, System.currentTimeMillis(), (Entry)selectedItem);
