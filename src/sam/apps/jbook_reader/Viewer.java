@@ -42,7 +42,6 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tooltip;
-import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.effect.ColorAdjust;
@@ -67,9 +66,13 @@ public class Viewer extends Application {
 	public static void main( String[] args ) {
 		launch(args);
 	}
-	private final TreeItem<String> rootItem = new TreeItem<>();
-	private final TreeView<String> bookmarks = new TreeView<>(rootItem);
+	private final TreeView<String> bookmarks = new TreeView<>();
+	private BooleanBinding selectedItemNull = bookmarks.getSelectionModel().selectedItemProperty().isNull();
+
 	private ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
+	private  BooleanBinding currentTabNull = currentTab.isNull();
+	private final Actions actions = Actions.getInstance();
+
 	private SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 
@@ -150,10 +153,11 @@ public class Viewer extends Application {
 			list.add(0, recentsMenuItem(p));
 			if(list.size() > 10)
 				list.subList(10, list.size()).clear();
+			actions.tabClosed(tab);
 		});
 	}
 	private MenuItem recentsMenuItem(Path path) {
-		MenuItem mi =  menuitem(path.toString(), e -> Actions.open(tabsContainer, path, recentsMenu));
+		MenuItem mi =  menuitem(path.toString(), e -> actions.open(tabsContainer, path, recentsMenu));
 		mi.getStyleClass().add("recent-mi");
 		mi.setUserData(path);
 		return mi;
@@ -212,7 +216,7 @@ public class Viewer extends Application {
 						tabsContainer.setEffect(null);
 						searchActive.set(false);
 					});
-				}, currentTab.isNull())
+				}, currentTabNull)
 				);
 		return menu;
 	}
@@ -222,7 +226,7 @@ public class Viewer extends Application {
 		recentsMenu.disableProperty().bind(searchActive.or(Bindings.isEmpty(recentsMenu.getItems())));
 
 		BooleanBinding fileNull = currentFile.isNull().or(searchActive);
-		BooleanBinding tabNull = currentTab.isNull().or(searchActive);
+		BooleanBinding tabNull = currentTabNull.or(searchActive);
 		BooleanBinding selectedZero = tabsContainer.tabsCountProperty().isEqualTo(0).or(searchActive);
 
 		Menu closeSpecific = 
@@ -234,14 +238,14 @@ public class Viewer extends Application {
 
 		Menu menu = new Menu("_File", null, 
 				menuitem("_New", combination(KeyCode.N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsContainer.addBlankTab(), searchActive),
-				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> Actions.open(tabsContainer, null, recentsMenu), searchActive),
+				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> actions.open(tabsContainer, null, recentsMenu), searchActive),
 				recentsMenu,
-				menuitem("Open Containing Folder", e -> Actions.open_containing_folder(getHostServices(), getCurrentTab()), fileNull),
-				menuitem("Reload From Disk", e -> Actions.reload_from_disk(getCurrentTab(), rootItem), fileNull),
-				menuitem("_Save", combination(KeyCode.S, SHORTCUT_DOWN), e -> Actions.save(getCurrentTab(), false), fileNull),
-				menuitem("Save _As", combination(KeyCode.S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {Actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
+				menuitem("Open Containing Folder", e -> actions.open_containing_folder(getHostServices(), getCurrentTab()), fileNull),
+				menuitem("Reload From Disk", e -> actions.reload_from_disk(getCurrentTab()), fileNull),
+				menuitem("_Save", combination(KeyCode.S, SHORTCUT_DOWN), e -> actions.save(getCurrentTab(), false), fileNull),
+				menuitem("Save _As", combination(KeyCode.S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
 				menuitem("Sav_e All", combination(KeyCode.S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
-				menuitem("Rename", e -> {Actions.rename(getCurrentTab()); updateCurrentFile();}, fileNull),
+				menuitem("Rename", e -> {actions.rename(getCurrentTab()); updateCurrentFile();}, fileNull),
 				new SeparatorMenuItem(),
 				menuitem("_Close",combination(KeyCode.W, SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
 				menuitem("Close All",combination(KeyCode.W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),
@@ -262,23 +266,20 @@ public class Viewer extends Application {
 	}
 	private void switchTab(final Tab newTab) {
 		currentTab.set(newTab);
-
-		if(newTab == null) {
-			stage.setTitle(null);
-			rootItem.getChildren().clear();
-			currentFile.set(null);
-		}
-		else {
-			currentFile.set(newTab.getJbookPath());
-			stage.setTitle(newTab.getTabTitle());
-			rootItem.getChildren().setAll(newTab.getItems());
-		}
+		boolean b = newTab == null;
+		stage.setTitle(b ? null : newTab.getTabTitle());
+		currentFile.set(b ? null : newTab.getJbookPath());
+		bookmarks.setRoot(b ? null : newTab.getRootItem());
+		actions.switchTab(newTab);
 	}
 	private Menu getBookmarkMenu() {
 		return new Menu("_Bookmark",
 				null,
-				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), false), currentTab.isNull()),
-				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), true), bookmarks.getSelectionModel().selectedItemProperty().isNull())
+				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), false), currentTabNull),
+				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), true), selectedItemNull),
+				menuitem("Remove bookmark", e -> actions.removeBookmarkAction(bookmarks, getCurrentTab()), selectedItemNull),
+				menuitem("Undo Remove bookmark", e -> actions.undoRemoveBookmark(getCurrentTab()), actions.undoDeleteSizeProperty().isEqualTo(0))
+			//TODO	menuitem("Move bookmark", this::moveBookMark, selectedItemNull)
 				);
 	}
 	private Node getBookmarkPane() throws IOException {
@@ -321,9 +322,9 @@ public class Viewer extends Application {
 		Pane p;
 		Button removeButton, addButton, addChildButton;
 		HBox controls = new HBox(3, 
-				addButton = button("add", "plus.png", e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), false)),
-				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> Actions.addNewBookmark(bookmarks, getCurrentTab(), true)),
-				removeButton = button("remove selected","error.png", e -> Actions.removeAction(bookmarks, getCurrentTab())),
+				addButton = button("add", "plus.png", e -> actions.addNewBookmark(bookmarks, getCurrentTab(), false)),
+				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> actions.addNewBookmark(bookmarks, getCurrentTab(), true)),
+				removeButton = button("remove selected","error.png", e -> actions.removeBookmarkAction(bookmarks, getCurrentTab())),
 				expandCollpase,
 				p = new Pane(),
 				button("hide","Chevron Left_20px.png", showHideAction)
@@ -332,20 +333,19 @@ public class Viewer extends Application {
 		HBox.setHgrow(p, Priority.ALWAYS);
 
 		removeButton.effectProperty().bind(new When(removeButton.disableProperty()).then(GRAYSCALE_EFFECT).otherwise((ColorAdjust)null));
-		removeButton.disableProperty().bind(bookmarks.getSelectionModel().selectedItemProperty().isNull());
+		removeButton.disableProperty().bind(selectedItemNull);
 
 		addChildButton.effectProperty().bind(removeButton.effectProperty());
 		addChildButton.disableProperty().bind(removeButton.disableProperty());
 
 		addButton.effectProperty().bind(new When(addButton.disableProperty()).then(GRAYSCALE_EFFECT).otherwise((ColorAdjust)null));
 
-		BooleanBinding nullTab = currentTab.isNull();
-		addButton.disableProperty().bind(nullTab);
-		expandCollpase.disableProperty().bind(nullTab);
+		addButton.disableProperty().bind(currentTabNull);
+		expandCollpase.disableProperty().bind(currentTabNull);
 
 		controls.setPadding(new Insets(5));
 		pane.setTop(controls);
-		pane.disableProperty().bind(currentTab.isNull());
+		pane.disableProperty().bind(currentTabNull);
 		return pane;
 	}
 }

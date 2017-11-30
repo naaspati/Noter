@@ -31,6 +31,7 @@ public class TabContainer extends BorderPane {
 	private final List<Tab> tabs = new ArrayList<>();
 	private final ScrollPane sp = new ScrollPane(tabsBox); 
 	private Consumer<Tab> onTabSwitch, onSelect, onTabClosing, onTabClosed;
+	
 
 	private double div = 0;
 
@@ -121,7 +122,7 @@ public class TabContainer extends BorderPane {
 		try {
 			addTab(new Tab(path, onSelect));
 		} catch (Exception  e) {
-			FxAlert.showErrorDialoag(path, "failed to open file", e);
+			FxAlert.showErrorDialog(path, "failed to open file", e);
 		}
 	}
 	private void addTab(Tab tab) {
@@ -138,7 +139,7 @@ public class TabContainer extends BorderPane {
 		onTabClosing.accept(tab);
 
 		if(tab.isModified()) {
-			ActionResult ar = Actions.save(tab, true);
+			ActionResult ar = Actions.getInstance().save(tab, true);
 			if(ar != ActionResult.NO && ar != ActionResult.SUCCESS)
 				return;
 		} 
@@ -208,7 +209,7 @@ public class TabContainer extends BorderPane {
 
 	public void saveAllTabs() {
 		for (Tab tab : tabs)
-			Actions.save(tab, false);
+			Actions.getInstance().save(tab, false);
 	}
 	public List<Path> getJbookPaths() {
 		return tabs.stream().map(Tab::getJbookPath)

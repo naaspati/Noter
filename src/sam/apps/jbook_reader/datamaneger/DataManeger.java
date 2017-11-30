@@ -1,10 +1,8 @@
 package sam.apps.jbook_reader.datamaneger;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
@@ -18,26 +16,22 @@ import javafx.scene.control.TreeItem;
 public class DataManeger {
 	private boolean modified = false;
 	private Path jbookPath;
-	private final List<Entry> entries;
+	private final TreeItem<String> rootItem = new TreeItem<>();
 
-	public DataManeger() {
-		entries = new ArrayList<>();
-	}
+	public DataManeger() {}
 
 	protected DataManeger(Path jbookPath) throws Exception {
-		entries = new EntryDecoder().decode(jbookPath);
+		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
 		this.jbookPath = jbookPath;
 	}
-	public List<? extends TreeItem<String>> reload() throws Exception {
+	public void reload() throws Exception {
 		if(jbookPath == null)
-			return null;
+			return;
 
-		entries.clear();
-		entries.addAll(new EntryDecoder().decode(jbookPath));
-		return getItems();
+		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
 	}
-	public List<? extends TreeItem<String>> getItems() {
-		return Collections.unmodifiableList(entries);
+	public TreeItem<String> getRootItem() {
+		return rootItem;
 	}
 	public boolean isModified() {
 		return modified;
@@ -52,7 +46,7 @@ public class DataManeger {
 		if(!isModified() && jbookPath != null)
 			return;
 
-		new EntryEncoder().encode(entries, path);
+		new EntryEncoder().encode(rootItem.getChildren().stream().map(i -> (Entry)i).collect(Collectors.toList()), path);
 
 		modified = false;
 		setModified(modified);
@@ -67,28 +61,13 @@ public class DataManeger {
 		else {
 			entry = new Entry(title, null, System.currentTimeMillis());
 			rootItem.getChildren().add(entry);
-			entries.add(entry);
+			rootItem.getChildren().add(entry);
 		}
 		setModified(true);
 		return entry;
 	}
 	private Entry getParent(TreeItem<String> selectedItem) {
-		return selectedItem == null || entries.contains(selectedItem) ? null : (Entry)selectedItem.getParent();
-	}
-	public void remove(List<TreeItem<String>> items, TreeItem<String> rootItem) {
-		if(items == null || items.isEmpty())
-			return;
-
-		new ArrayList<>(items).forEach(t -> {
-			Entry parent = getParent(t);
-			if(parent == null) {
-				entries.remove(t);
-				rootItem.getChildren().remove(t);
-			}
-			else
-				parent.remove(t);
-		});
-		setModified(true);
+		return selectedItem == null || rootItem.getChildren().contains(selectedItem) ? null : (Entry)selectedItem.getParent();
 	}
 	@SuppressWarnings("unchecked")
 	public TreeItem<String>[] search(String title, String content) {
@@ -112,8 +91,8 @@ public class DataManeger {
 	public Stream<Entry> walk() {
 		Stream.Builder<Entry> builder = Stream.builder();
 
-		for (Entry e : entries)
-			e.walk(builder);
+		for (TreeItem<String> e : rootItem.getChildren())
+			((Entry)e).walk(builder);
 
 		return builder.build();
 	}

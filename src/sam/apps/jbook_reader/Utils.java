@@ -13,12 +13,15 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.Modifier;
+import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
 
 public interface Utils {
@@ -155,4 +158,18 @@ public interface Utils {
 	public static Text text(String string) {
 		return new Text(string);
 	}
+	public static GridPane gridPane(int spacing) {
+		GridPane g = new GridPane();
+		g.setHgap(spacing);
+		g.setVgap(spacing);
+		return g;
+	}
+	public static ToggleGroup toggleGroup(ToggleButton selected, ToggleButton...buttons) {
+		ToggleGroup grp = new ToggleGroup();
+		grp.getToggles().addAll(buttons);
+		if(selected != null)
+			grp.selectToggle(selected);
+		return grp;
+	}
+	
 }

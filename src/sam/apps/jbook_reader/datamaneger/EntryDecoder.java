@@ -53,7 +53,7 @@ class EntryDecoder {
 				break;
 			case "content":
 				CharacterData cd = (CharacterData)n.getFirstChild(); 
-				content = cd.getData();
+				content = cd == null ? null : cd.getData();
 				break;
 			case "lastmodified":
 				lastmodified = Long.parseLong(n.getTextContent());
