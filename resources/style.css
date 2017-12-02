@@ -56,11 +56,14 @@
 		-fx-border-width:1 0 0 0;
 		-fx-border-color:lightgray;
 }
-.unit-editor .title-box {
+.unit-editor .title-box, .unit-editor .title {
 	-fx-alignment:center;
 	-fx-border-width:1 0 0 0;
 	-fx-border-color:lightgray;
 	-fx-background-color:white;
+}
+.unit-editor  .expand-button {
+	-fx-graphic:url(Expand_20px.png);
 }
 #popup-box {
 	-fx-background-color:black;

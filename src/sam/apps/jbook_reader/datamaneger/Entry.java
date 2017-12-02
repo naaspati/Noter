@@ -2,7 +2,6 @@ package sam.apps.jbook_reader.datamaneger;
 
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.stream.Stream.Builder;
 
 import javafx.scene.control.TreeItem;
@@ -11,43 +10,47 @@ class Entry extends TreeItem<String> {
 	private String content;
 	private long lastModified;
 	private transient char[] chars;
+	private transient boolean modified;
 
-	public Entry(String title, String content, long lastModified) {
+	Entry(String title, String content, long lastModified) {
 		super(title);
 		this.content = content;
 		this.lastModified = lastModified;
 	}
-
-	public long getLastModified() {
+	long getLastModified() {
 		return lastModified;
 	}
-	public void updateLastModified() {
+	void updateLastModified() {
 		this.lastModified = System.currentTimeMillis();
 	}
-	public String getTitle() { return getValue(); }
-	public boolean setTitle(String title) {
-		if(Objects.equals(title, getValue()))
-			return false;
-		
-		updateLastModified();
-		setValue(title);
-		return true;
+	String getTitle() { return getValue(); }
+	boolean setTitle(String title) {
+		if(updated(title, getTitle())) {
+			updateLastModified();
+			setValue(title);
+		}
+		return modified;
 	}
-	public String getContent() { return content; }
-	public boolean setContent(String content) {
-		if(Objects.equals(content, this.content))
-			return false;
-		
-		updateLastModified();
-		this.content = content;
-		return true;
+	boolean updated(String s1, String s2) {
+		return modified = modified || !Objects.equals(s1, s2);
+	}
+	public boolean isModified() {
+		return modified;
+	}
+	String getContent() { return content; }
+	boolean setContent(String content) {
+		if(updated(content, this.content)) {
+			updateLastModified();
+			this.content = content;
+		}
+		return modified;
 	}
 	Builder<Entry> walk(Builder<Entry> collector) {
 		collector.accept(this);
 
 		for (TreeItem<String> t : getChildren())
 			((Entry)t).walk(collector);
-		
+
 		return collector; 
 	}
 	boolean test(char[] titleSearch, String contentSearch) {
@@ -68,10 +71,10 @@ class Entry extends TreeItem<String> {
 			if(b)
 				return true;
 		}
-		
+
 		return content != null && contentSearch != null && content.contains(contentSearch);
 	} 
-	public Entry addChild(String title, String content, long lastmodified, Entry relativeTo) {
+	Entry addChild(String title, String content, long lastmodified, Entry relativeTo) {
 		Entry child = new Entry(title, content, lastmodified);
 
 		if(relativeTo == null)
@@ -82,12 +85,5 @@ class Entry extends TreeItem<String> {
 			getChildren().add(index, child);
 		}
 		return child;
-	}
-	public void remove(TreeItem<String> e) {
-		getChildren().remove(e);
-	}
-	public void forEach(Consumer<Entry> c) {
-		for (TreeItem<String> t : getChildren())
-			c.accept(((Entry)t));
 	}
 }

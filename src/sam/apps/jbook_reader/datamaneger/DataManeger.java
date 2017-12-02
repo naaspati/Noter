@@ -14,6 +14,7 @@ import javafx.scene.control.TreeItem;
  *
  */
 public class DataManeger {
+	private boolean permanentModified = false;
 	private boolean modified = false;
 	private Path jbookPath;
 	private final TreeItem<String> rootItem = new TreeItem<>();
@@ -29,6 +30,8 @@ public class DataManeger {
 			return;
 
 		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
+		permanentModified = false;
+		modified = false;
 	}
 	public TreeItem<String> getRootItem() {
 		return rootItem;
@@ -43,16 +46,16 @@ public class DataManeger {
 		save(jbookPath);
 	}
 	public void save(Path path) throws Exception {
-		if(!isModified() && jbookPath != null)
+		if(!permanentModified && !modified && jbookPath != null)
 			return;
 
 		new EntryEncoder().encode(rootItem.getChildren().stream().map(i -> (Entry)i).collect(Collectors.toList()), path);
 
+		permanentModified = false;
 		modified = false;
-		setModified(modified);
 	}
 
-	public TreeItem<String> add(TreeItem<String> selectedItem, TreeItem<String> rootItem, String title, boolean addChild) {
+	public TreeItem<String> add(TreeItem<String> selectedItem, String title, boolean addChild) {
 		Entry entry;
 		Entry parent = addChild ? (Entry)selectedItem : getParent(selectedItem);
 
@@ -61,13 +64,13 @@ public class DataManeger {
 		else {
 			entry = new Entry(title, null, System.currentTimeMillis());
 			rootItem.getChildren().add(entry);
-			rootItem.getChildren().add(entry);
 		}
 		setModified(true);
+		permanentModified = true;
 		return entry;
 	}
 	private Entry getParent(TreeItem<String> selectedItem) {
-		return selectedItem == null || rootItem.getChildren().contains(selectedItem) ? null : (Entry)selectedItem.getParent();
+		return selectedItem == null || selectedItem.getParent() == rootItem ? null : (Entry)selectedItem.getParent();
 	}
 	@SuppressWarnings("unchecked")
 	public TreeItem<String>[] search(String title, String content) {
@@ -99,15 +102,15 @@ public class DataManeger {
 	public Path getJbookPath() {
 		return jbookPath;
 	}
-	public void setExpanded(boolean b) {
-		walk().forEach(t -> t.setExpanded(b));
-	}
 	public String getContent(TreeItem<String> n) {
 		return n == null ? null : ((Entry)n).getContent();
 	}
 	public String getTitle(TreeItem<String> item) {
 		return item == null ? null : ((Entry)item).getTitle();
-	}	
+	}
+	public long getLastModifiedTime(TreeItem<String> item) {
+		return item == null ? 0 : ((Entry)item).getLastModified();
+	}
 	public void setTitle(TreeItem<String> item, String title) {
 		if(item != null)
 			setModified(((Entry)item).setTitle(title));
@@ -119,5 +122,9 @@ public class DataManeger {
 	public void setJbookPath(Path path) {
 		jbookPath = path;
 
+	}
+
+	public void setPermanentModified() {
+		this.permanentModified = true;
 	}
 }

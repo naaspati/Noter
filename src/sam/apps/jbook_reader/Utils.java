@@ -28,7 +28,6 @@ public interface Utils {
 	public static String treeToString(TreeItem<String> item) {
 		return treeToString(item, new StringBuilder()).toString();
 	} 
-	public static final char[] separator = {' ', '>', ' '};
 	public static StringBuilder treeToString(TreeItem<String> item, StringBuilder sb) {
 		if(item == null)
 			return sb;
@@ -38,9 +37,10 @@ public interface Utils {
 		list.add(t.getValue());
 
 		while((t = t.getParent()) != null) list.add(t.getValue());
+		String separator = " ";
 
 		for (int i = list.size() - 2; i >= 0 ; i--)
-			sb.append(list.get(i)).append(separator);
+			sb.append(list.get(i)).append('\n').append(separator+=" ").append('>').append(' ');
 
 		sb.setLength(sb.length() - 3);
 		return sb;

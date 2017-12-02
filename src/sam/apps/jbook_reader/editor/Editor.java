@@ -5,9 +5,10 @@ import static sam.apps.jbook_reader.Utils.button;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.WeakHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -51,19 +52,40 @@ public class Editor extends BorderPane {
 	private final VBox container = new VBox(15);
 	private final ScrollPane containerScrollPane = new ScrollPane(container);
 	private final Label maintitle = new Label();
-	private final ReadOnlyObjectProperty<Tab> currentTabProperty;
-	private UnitEditor currentEditor;
 	private final Button backBtn, combineBtn;
 	private final SimpleObjectProperty<Node> backToContent = new SimpleObjectProperty<>();  
-	private final Consumer<UnitEditor> onEditStarted = this::onEditStarted;
+	private final Consumer<TreeItem<String>> onExpanded = this::onExpanded;
+	private final CenterEditor centerEditor = new CenterEditor();
 	private boolean wrapText;
 	private TextArea combinedTextArea;
+	private final LinkedList<TreeItem<String>> expandedItems = new LinkedList<>();
+	private Tab tab;
 
-	private static transient Editor instance;
+	private static volatile Editor instance;
 	private static Font font;
 
 	public static Font getFont() {
 		return font;
+	}
+	static {
+		// Font.font(family, weight, posture, size)
+		String family = Session.get("editor.font.family");
+		FontWeight weight = parse("editor.font.weight", FontWeight::valueOf);
+		FontPosture posture = parse("editor.font.posture", FontPosture::valueOf);
+		Float size = parse("editor.font.size", Float::parseFloat);
+
+		font = Font.font(family, weight, posture, size == null ? -1 : size);
+	}
+	private static <R> R parse(String key, Function<String, R> parser) {
+		try {
+			String s = Session.get(key);
+			if(s == null)
+				return null;
+			return parser.apply(s.toUpperCase());
+		} catch (Exception e) {
+			Logger.getLogger(Editor.class.getName()).warning("bad "+key+" value: "+Session.get(key));
+		}
+		return null;
 	}
 
 	public static Editor getInstance(ReadOnlyObjectProperty<Tab> currentTabProperty, ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty) {
@@ -79,9 +101,7 @@ public class Editor extends BorderPane {
 		Objects.requireNonNull(currentTabProperty);
 		Objects.requireNonNull(selectedItemProperty);
 
-		this.currentTabProperty = currentTabProperty;
-
-		loadFont();
+		containerScrollPane.setFitToWidth(true);
 
 		currentTabProperty.addListener((p, o, n) -> tabChange(n));
 		selectedItemProperty.addListener((p, o, n) -> itemChange(n));
@@ -110,90 +130,42 @@ public class Editor extends BorderPane {
 		backBtn.visibleProperty().bind(backToContent.isNotNull());
 		combineBtn.visibleProperty().bind(centerProperty().isEqualTo(containerScrollPane).and(Bindings.size(container.getChildren()).greaterThan(1)));
 	}
-	private void loadFont() {
-		// Font.font(family, weight, posture, size)
-		String family = Session.get("editor.font.family");
-		FontWeight weight = parse("editor.font.weight", FontWeight::valueOf);
-		FontPosture posture = parse("editor.font.posture", FontPosture::valueOf);
-		Float size = parse("editor.font.size", Float::parseFloat);
-
-		font = Font.font(family, weight, posture, size == null ? -1 : size);
-	}
-
-	private <R> R parse(String key, Function<String, R> parser) {
-		try {
-			String s = Session.get(key);
-			if(s == null)
-				return null;
-			return parser.apply(s.toUpperCase());
-		} catch (Exception e) {
-			Logger.getLogger(Editor.class.getName()).warning("bad "+key+" value: "+Session.get(key));
-		}
-		return null;
-	}
-
-	public void finish(Tab tab) {
-		if(currentTabProperty.get() == tab)
-			finishUnitEditors();	
-	}
-	private void finishUnitEditors() {
-		if(getCenter() != null && getCenter() instanceof UnitEditor)
-			((UnitEditor)getCenter()).finish();
-
-		container.getChildren().stream()
-		.map(UnitEditor.class::cast)
-		.forEach(UnitEditor::finish);
-	}
 	private void itemChange(TreeItem<String> nnew) {
 		backToContent.set(null);
-		
-		if(currentEditor != null && currentEditor.getItem() == nnew)
-			return;
 
-		finishUnitEditors();
-		container.getChildren().clear();
-		maintitle.setText(null);
-		containerScrollPane.setFitToWidth(true);
-
-		if(nnew == null)
-			return;
-
-		currentEditor = newUnitEditor(nnew);
-
-		if(nnew.getChildren().isEmpty() || currentEditor.isActive()) {
-			maintitle.setText(currentEditor.getItemTitle());
-			setCenter(currentEditor);
+		if(centerEditor.getItem() == nnew) {
+			setCenter(null);
+			setCenter(centerEditor);
 			return;
 		}
-
-		currentEditor = null;
-
-		container.getChildren().add(newUnitEditor(nnew));
-		nnew.getChildren().stream()
-		.map(this::newUnitEditor)
-		.forEach(container.getChildren()::add);
+		if(nnew == null) {
+			resizeContainer(0);
+			maintitle.setText(null);
+			setCenter(null);
+			return;
+		}
+		if(nnew.getChildren().isEmpty() || expandedItems.contains(nnew)) {
+			centerEditor.set(tab, nnew);
+			maintitle.setText(centerEditor.getItemTitle());
+			setCenter(null);
+			setCenter(centerEditor);
+			return;
+		}
+		resizeContainer(nnew.getChildren().size() + 1);
+		getUnitEditorAt(0).set(tab, nnew);
+		int index = 1;
+		for (TreeItem<String> ti : nnew.getChildren()) getUnitEditorAt(index++).set(tab, ti); 
 
 		setCenter(null);
-		setCenter(currentEditor == null ? containerScrollPane : currentEditor);
+		setCenter(containerScrollPane);
 		containerScrollPane.setVvalue(0);
-		maintitle.setText(currentEditor == null ? currentTabProperty.get().getTitle(nnew) :  currentEditor.getItemTitle());
-		
+		maintitle.setText(tab.getTitle(nnew));
+
 		if(combinedTextArea != null && nnew == combinedTextArea.getUserData())
 			combineAction();
 	}
-	WeakHashMap<TreeItem<String>, WeakReference<UnitEditor>> editorsMap = new WeakHashMap<>();
-
-	private UnitEditor newUnitEditor(TreeItem<String> nnew) {
-		return 
-				Optional.ofNullable(editorsMap.get(nnew))
-				.map(WeakReference::get)
-				.orElseGet(() -> putEditor(nnew));
-	}
-	private UnitEditor putEditor(TreeItem<String> nnew) {
-		UnitEditor ue = new UnitEditor(currentTabProperty.get(), nnew, onEditStarted);
-		ue.setWordWrap(wrapText);
-		editorsMap.put(nnew, new WeakReference<UnitEditor>(ue));
-		return ue;
+	private UnitEditor getUnitEditorAt(int index) {
+		return (UnitEditor)container.getChildren().get(index);
 	}
 	private void backToContentAction() {
 		if(combinedTextArea != null) {
@@ -204,15 +176,47 @@ public class Editor extends BorderPane {
 		backToContent.set(null);
 	}
 	private void tabChange(Tab nnew) {
-		finishUnitEditors();
-		container.getChildren().clear();
+		this.tab = nnew;
+		resizeContainer(0);
 		maintitle.setText(null);
+		centerEditor.clear();
 		setCenter(null);
 	}
-	public void updateTitle() {
-		unitEditors().forEach(UnitEditor::updateTitle);
-		if(currentEditor != null)
-			maintitle.setText(currentEditor.getItemTitle());
+
+	private final LinkedList<WeakReference<UnitEditor>> unitEditors = new LinkedList<>();
+	private void resizeContainer(int newSize) {
+		List<Node> list = container.getChildren();
+
+		if(container.getChildren().size() > newSize) {
+			list = list.subList(newSize, list.size());
+			list.forEach(n -> unitEditors.add(new WeakReference<UnitEditor>((UnitEditor)n)));
+			list.clear();
+		}
+		else {
+			while(list.size() < newSize) {
+				if(unitEditors.isEmpty())
+					list.add(new UnitEditor(onExpanded));
+				else {
+					Node n = unitEditors.pop().get();
+					if(n != null) list.add(n);
+				}
+			}
+			for (Node n : list) {
+				UnitEditor e = (UnitEditor)n;
+				e.setWordWrap(wrapText);
+			}
+		}
+	}
+	public void updateTitle(TreeItem<String> item) {
+		containerChildren().forEach(UnitEditor::updateTitle);
+		unitEditors.stream().map(WeakReference::get).filter(Objects::nonNull).forEach(UnitEditor::updateTitle);
+		centerEditor.updateTitle();
+		if(getCenter() == centerEditor)
+			maintitle.setText(centerEditor.getItemTitle());
+		else if(container.getChildren().isEmpty())
+			maintitle.setText(null);
+		else
+			maintitle.setText(getUnitEditorAt(0).getItemTitle());
 	}
 	private void combineAction() {
 		String content = container.getChildren().stream().map(UnitEditor.class::cast).reduce(new StringBuilder(), (sb, u) -> {
@@ -234,33 +238,24 @@ public class Editor extends BorderPane {
 		setCenter(combinedTextArea);
 
 	}	
-	private void onEditStarted(UnitEditor ue) {
-		if(currentEditor != null)
-			currentEditor.setActive(false);
-
-		currentEditor = ue;
-		currentEditor.setActive(true);
+	private void onExpanded(TreeItem<String> item) {
+		centerEditor.set(tab, item);
 		if(getCenter() == containerScrollPane)
 			backToContent.set(containerScrollPane);
-		
-		setCenter(currentEditor);
-		maintitle.setText(currentEditor.getItemTitle());
+
+		setCenter(centerEditor);
+		maintitle.setText(centerEditor.getItemTitle());
 	}
 
-	private Stream<UnitEditor> unitEditors() {
-		return editorsMap.values().stream()
-				.map(WeakReference::get)
-				.filter(Objects::nonNull);
+	private Stream<UnitEditor> containerChildren() {
+		return container.getChildren().stream()
+				.map(n -> (UnitEditor)n);
 	}
-
 	public void setWordWrap(boolean wrap) {
 		wrapText = wrap;
 		if(combinedTextArea != null)
 			combinedTextArea.setWrapText(wrap);
-		unitEditors().forEach(u -> u.setWordWrap(wrap));
-	}
-	private void updateFont() {
-		unitEditors().forEach(UnitEditor::updateFont);
+		containerChildren().forEach(u -> u.setWordWrap(wrap));
 	}
 	public void setFont() {
 		Stage stage = new Stage(StageStyle.UTILITY);
@@ -343,7 +338,9 @@ public class Editor extends BorderPane {
 		ok.setOnAction(e -> {
 			Editor.font = ta.getFont(); 
 			stage.hide();
-			updateFont();
+			centerEditor.updateFont();
+			unitEditors.stream().map(WeakReference::get).filter(Objects::nonNull).forEach(UnitEditor::updateFont);
+			containerChildren().forEach(UnitEditor::updateFont);
 
 			Session.put("editor.font.family", family.getValue());
 			Session.put("editor.font.weight",weight.getValue().toString());
@@ -352,5 +349,4 @@ public class Editor extends BorderPane {
 		});
 		stage.showAndWait();
 	}
-
 }

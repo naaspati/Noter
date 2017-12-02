@@ -30,7 +30,7 @@ public class TabContainer extends BorderPane {
 	private final ReadOnlyIntegerWrapper tabsCount = new ReadOnlyIntegerWrapper();
 	private final List<Tab> tabs = new ArrayList<>();
 	private final ScrollPane sp = new ScrollPane(tabsBox); 
-	private Consumer<Tab> onTabSwitch, onSelect, onTabClosing, onTabClosed;
+	private Consumer<Tab> onTabSwitch, onSelect, onTabClosed;
 	
 
 	private double div = 0;
@@ -136,8 +136,6 @@ public class TabContainer extends BorderPane {
 		if(tab == null)
 			return;
 
-		onTabClosing.accept(tab);
-
 		if(tab.isModified()) {
 			ActionResult ar = Actions.getInstance().save(tab, true);
 			if(ar != ActionResult.NO && ar != ActionResult.SUCCESS)
@@ -164,9 +162,6 @@ public class TabContainer extends BorderPane {
 		tabs.forEach(t -> t.setActive(t == newTab));
 		sp.setHvalue(newTab == null ? 0 : div*(tabsBox.getChildren().indexOf(newTab.getView()) - 1));
 		onTabSwitch.accept(newTab);
-	}
-	public void setOnTabClosing(Consumer<Tab> onTabClosing) {
-		this.onTabClosing = onTabClosing;
 	}
 	public void setOnTabClosed(Consumer<Tab> action) {
 		this.onTabClosed = action;

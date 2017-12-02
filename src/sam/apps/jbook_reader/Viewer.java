@@ -37,13 +37,16 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
@@ -53,6 +56,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import sam.apps.jbook_reader.editor.Editor;
@@ -67,17 +71,18 @@ public class Viewer extends Application {
 		launch(args);
 	}
 	private final TreeView<String> bookmarks = new TreeView<>();
-	private BooleanBinding selectedItemNull = bookmarks.getSelectionModel().selectedItemProperty().isNull();
+	private final MultipleSelectionModel<TreeItem<String>> selectionModel = bookmarks.getSelectionModel();
+	private final BooleanBinding selectedItemNull = selectionModel.selectedItemProperty().isNull();
 
-	private ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
-	private  BooleanBinding currentTabNull = currentTab.isNull();
+	private final ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
+	private final BooleanBinding currentTabNull = currentTab.isNull();
 	private final Actions actions = Actions.getInstance();
 
-	private SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
-	private SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
+	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
+	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 
 	private final TabContainer tabsContainer = TabContainer.getInstance();
-	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), bookmarks.getSelectionModel().selectedItemProperty());
+	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), selectionModel.selectedItemProperty());
 	private static Stage stage;
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
 
@@ -94,6 +99,7 @@ public class Viewer extends Application {
 		FxPopupShop.setParent(stage);
 
 		readRecents();
+		selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
 
 		SplitPane splitPane = getSplitPane();
 		prepareTabsContainer();
@@ -142,7 +148,6 @@ public class Viewer extends Application {
 	}
 	private void prepareTabsContainer() {
 		tabsContainer.setOnTabSwitch(this::switchTab);
-		tabsContainer.setOnTabClosing(editor::finish);
 		tabsContainer.setOnTabClosed(tab -> {
 			Path p = tab.getJbookPath();
 			if(p == null)
@@ -277,23 +282,37 @@ public class Viewer extends Application {
 				null,
 				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), false), currentTabNull),
 				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), true), selectedItemNull),
+				new SeparatorMenuItem(),
 				menuitem("Remove bookmark", e -> actions.removeBookmarkAction(bookmarks, getCurrentTab()), selectedItemNull),
-				menuitem("Undo Remove bookmark", e -> actions.undoRemoveBookmark(getCurrentTab()), actions.undoDeleteSizeProperty().isEqualTo(0))
-			//TODO	menuitem("Move bookmark", this::moveBookMark, selectedItemNull)
+				menuitem("Undo Removed bookmark", e -> actions.undoRemoveBookmark(getCurrentTab()), actions.undoDeleteSizeProperty().isEqualTo(0)),
+				new SeparatorMenuItem(),
+				menuitem("Move bookmark", e -> actions.moveBookmarks(bookmarks, selectionModel.getSelectedItems()), selectedItemNull)
 				);
+
 	}
 	private Node getBookmarkPane() throws IOException {
 		bookmarks.setShowRoot(false);
 		bookmarks.setEditable(true);
 		bookmarks.setId("bookmarks");
-		bookmarks.setCellFactory(TextFieldTreeCell.forTreeView());
-		bookmarks.setOnEditCommit(e -> {
-			getCurrentTab().setModified(true);
-			Platform.runLater(() -> editor.updateTitle());
-		});
+		bookmarks.setOnEditStart(e -> {
+			TextInputDialog d = new TextInputDialog(e.getOldValue());
+			d.initModality(Modality.APPLICATION_MODAL);
+			d.initOwner(stage);
+			d.showAndWait()
+			.ifPresent(s -> {
+				if(s == null || s.equals(e.getOldValue()))
+					return;
+				
+				TreeItem<String> ti = e.getTreeItem();
+				getCurrentTab().setTitle(ti, s);
+				editor.updateTitle(ti);
+			});
+		});		
 		bookmarks.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-			if(e.getClickCount() == 2)
+			if(e.getClickCount() > 1) {
 				e.consume();
+				return;
+			}
 		});
 
 		BorderPane pane = new BorderPane(bookmarks);
@@ -317,8 +336,12 @@ public class Viewer extends Application {
 		expandCollpase.tooltipProperty().bind(new When(expandCollpase.selectedProperty()).then(new Tooltip("collapse")).otherwise(new Tooltip("expand")));
 		expandCollpase.setPrefHeight(24);
 		expandCollpase.setPrefWidth(24);
-		expandCollpase.setOnAction(e -> getCurrentTab().setExpanded(expandCollpase.isSelected()));
-
+		expandCollpase.setOnAction(e -> {
+			TreeItem<String> ti = selectionModel.getSelectedItem();
+			expandBookmarks(bookmarks.getRoot().getChildren(), expandCollpase.isSelected());
+			if(ti != null)
+				selectionModel.select(ti);
+		});
 		Pane p;
 		Button removeButton, addButton, addChildButton;
 		HBox controls = new HBox(3, 
@@ -347,5 +370,13 @@ public class Viewer extends Application {
 		pane.setTop(controls);
 		pane.disableProperty().bind(currentTabNull);
 		return pane;
+	}
+	private void expandBookmarks(List<TreeItem<String>> children, boolean expanded) {
+		if(children.isEmpty())
+			return;
+		for (TreeItem<String> t : children) {
+			t.setExpanded(expanded);
+			expandBookmarks(t.getChildren(), expanded);
+		}
 	}
 }

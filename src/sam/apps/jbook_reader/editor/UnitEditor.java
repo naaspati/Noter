@@ -2,15 +2,15 @@ package sam.apps.jbook_reader.editor;
 
 import static sam.apps.jbook_reader.Utils.addClass;
 import static sam.apps.jbook_reader.Utils.button;
-import static sam.apps.jbook_reader.Utils.toggleClass;
 
 import java.util.function.Consumer;
 
-import javafx.beans.value.WeakChangeListener;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -19,69 +19,62 @@ import javafx.scene.layout.Priority;
 import sam.apps.jbook_reader.Utils;
 import sam.apps.jbook_reader.tabs.Tab;
 
-final class UnitEditor extends BorderPane {
-	private final Label title;
-	private final TextArea content;
-	private final Tab tab; 
-	private final TreeItem<String> item;
-	private boolean editStarted;
-	private final Button editButton;
-	private WeakChangeListener<String> listener;
+class UnitEditor extends BorderPane {
+	protected final Label title = new Label();
+	private final TextArea content = new TextArea();
+	protected Tab tab; 
+	protected TreeItem<String> item;
+	private volatile boolean tabItemChanging = false;
 
-	public UnitEditor(Tab tab, TreeItem<String> item, 
-			Consumer<UnitEditor> onEditStarted) {
-		
-		title = new Label(tab.getTitle(item));
-		String text = tab.getContent(item);
-		content = new TextArea(text);
-		content.setEditable(false);
+	public UnitEditor(Consumer<TreeItem<String>> onExpanded) {
 		updateFont();
-		
-		long count = text == null || text.isEmpty() ? 0 : text.chars().filter(s -> s == '\n').count();
-		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
-
-		this.tab = tab;
-		this.item = item;
-		
-		Pane p;
-		HBox titleContainer = new HBox(title, p = new Pane(), editButton = button("edit", "edit.png", e -> onEditStarted.accept(this))); 
-		setTop(titleContainer);
-		titleContainer.setPadding(new Insets(5, 10, 5, 10));
 		setCenter(content);
-		
-		HBox.setHgrow(p, Priority.ALWAYS);
-		
+
+		if(onExpanded != null) {
+
+			Button expandButton = button("edit", null, e -> onExpanded.accept(this.item));
+			addClass(expandButton, "expand-button");
+
+			Pane p = new Pane();
+			HBox titleContainer = new HBox(title, p, expandButton);
+			titleContainer.setPadding(new Insets(5, 10, 5, 10));
+
+			HBox.setHgrow(p, Priority.ALWAYS);
+
+			addClass(titleContainer, "title-box");
+			setTop(titleContainer);
+		}
+		else {
+			setTop(title);
+			addClass(title, "title");
+			title.setMaxWidth(Double.MAX_VALUE);
+		}
+
 		addClass(this, "unit-editor");
-		addClass(titleContainer, "title-box");
-		addClass(title, "title");
 		addClass(content, "content");
-		
-		listener = new WeakChangeListener<>((prop, old, nnew) -> {
-			editStarted = true;
-			listener = null;
+
+		content.textProperty().addListener((prop, old, _new) -> {
+			if(!tabItemChanging)
+				tab.setContent(item, _new);
 		});
-		
-		content.textProperty().addListener(listener);
 	}
 
+	public void set(Tab tab, TreeItem<String> item) {
+		tabItemChanging = true;
+		this.tab = tab;
+		this.item = item;
+		title.setText(tab.getTitle(item));
+		content.setText(tab.getContent(item));
+	
+		String text = content.getText();
+		long count = text == null || text.isEmpty() ? 0 : text.chars().filter(s -> s == '\n').count();
+		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
+		
+		Platform.runLater(() -> tabItemChanging = false);
+	}
 	public void updateFont() {
 		title.setFont(Editor.getFont());
 		content.setFont(Editor.getFont());
-	}
-	void finish() {
-		if(!editStarted)
-			return;
-		
-		tab.setContent(item, content.getText());
-	}
-	public boolean isActive() {
-		return getStyleClass().contains("active");
-	}
-	public void setActive(boolean active) {
-		title.setText(active ? Utils.treeToString(item) : tab.getTitle(item));
-		toggleClass(this, "active", active);
-		editButton.setVisible(!active);
-		content.setEditable(active);
 	}
 	public String getItemTitle() {
 		return tab.getTitle(item);
@@ -90,12 +83,12 @@ final class UnitEditor extends BorderPane {
 		return item;
 	}
 	public void updateTitle() {
+		title.setTooltip(new Tooltip(Utils.treeToString(item)));
 		title.setText(tab.getTitle(item));
 	}
 	public void setWordWrap(boolean wrap) {
 		content.setWrapText(wrap);
 	}
-
 	public String getContent() {
 		return content.getText();
 	}

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,12 +15,19 @@ import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Menu;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
@@ -28,6 +36,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.AlertBuilder;
@@ -56,12 +67,14 @@ public class Actions {
 
 	public void addNewBookmark(TreeView<String> bookmarks, Tab maneger, boolean addChildBookmark) {
 		TreeItem<String> item = bookmarks.getSelectionModel().getSelectedItem();
-		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION);
-		dialog.headerText(Utils.treeToString(item, new StringBuilder("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n")).toString());
+		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION)
+				.title("Add New Bookmark")
+				.headerText(Utils.treeToString(item, new StringBuilder("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n")).toString());
 
 		TextField tf = new TextField();
 		HBox hb = new HBox(10, new Text("Title "), tf);
 		dialog.content(hb);
+		hb.setMaxWidth(300);
 		HBox.setHgrow(tf, Priority.ALWAYS);
 		hb.setAlignment(Pos.CENTER_LEFT);
 
@@ -88,51 +101,53 @@ public class Actions {
 
 		Platform.runLater(() -> tf.requestFocus());
 
-		dialog.showAndWait()
-		.filter(b -> b == ButtonType.OK)
-		.map(b -> maneger.add(item, bookmarks.getRoot(), tf.getText(), addChildBookmark))
+		Dialog<ButtonType> d = dialog.build();
+		d.initOwner(Viewer.getStage());
+
+		d.showAndWait().filter(b -> b == ButtonType.OK)
+		.map(b -> maneger.add(item, tf.getText(), addChildBookmark))
 		.ifPresent(t -> {
 			bookmarks.getSelectionModel().clearSelection();
 			bookmarks.getSelectionModel().select(t);
 		});
 	}
-
-	private class DeletedItem {
+	private class PatrentChildRelation {
 		final TreeItem<String> parent, child;
 		final int index;
-		DeletedItem(TreeItem<String> child) {
+		PatrentChildRelation(TreeItem<String> child) {
 			this.parent = child.getParent();
 			this.child = child;
 			this.index = child.getParent().getChildren().indexOf(child);
 		}
-		void remove() {
+		void removeChildFromParent() {
 			parent.getChildren().remove(index);
 		}
-		public void add() {
+		public void addChildToParent() {
 			parent.getChildren().add(index, child);
 		}
 	}
-	private HashMap<Tab, LinkedList<DeletedItem[]>> deletedItems = new HashMap<>();
+	private HashMap<Tab, LinkedList<PatrentChildRelation[]>> deletedItems = new HashMap<>();
 	private ReadOnlyIntegerWrapper undoDeleteSize = new ReadOnlyIntegerWrapper();
-	
+
 	public void removeBookmarkAction(TreeView<String> bookmarks, Tab currentTab) {
 		if(bookmarks.getSelectionModel().getSelectedItems().isEmpty())
 			return;
-		
-		LinkedList<DeletedItem[]> list = deletedItems.get(currentTab);
+
+		LinkedList<PatrentChildRelation[]> list = deletedItems.get(currentTab);
 		if(list == null) {
 			list = new LinkedList<>();
 			deletedItems.put(currentTab, list);
 		}
-		DeletedItem[] ditems = bookmarks.getSelectionModel().getSelectedItems().stream()
-				.map(DeletedItem::new)
-				.toArray(DeletedItem[]::new);
-		
+		PatrentChildRelation[] ditems = bookmarks.getSelectionModel().getSelectedItems().stream()
+				.map(PatrentChildRelation::new)
+				.toArray(PatrentChildRelation[]::new);
+
 		list.add(ditems);
 		undoDeleteSize.set(list.size());
-		
-		for (DeletedItem d : ditems) d.remove();
-		currentTab.setModified(true);
+
+		for (PatrentChildRelation d : ditems) d.removeChildFromParent();
+		currentTab.setPermanentModified();
+
 	}
 	public ReadOnlyIntegerProperty undoDeleteSizeProperty() {
 		return undoDeleteSize.getReadOnlyProperty();
@@ -143,26 +158,98 @@ public class Actions {
 	public void undoRemoveBookmark(Tab tab) {
 		if(undoDeleteSize.get() == 0)
 			return;
-		
+
 		Optional.ofNullable(tab)
 		.map(deletedItems::get)
 		.map(LinkedList::pollLast)
 		.ifPresent(items -> {
 			for (int i = items.length - 1; i >= 0 ; i--)
-				items[i].add();
-			
+				items[i].addChildToParent();
+
 			undoDeleteSize.set(deletedItems.get(tab).size());
 		});
-		
+
 	}
 	public void switchTab(Tab newTab) {
 		int size = Optional.ofNullable(newTab)
 				.map(deletedItems::get)
 				.map(List::size)
 				.orElse(0);
-		
+
 		undoDeleteSize.set(size);
-	}	
+	}
+	public void moveBookmarks(TreeView<String> bookmarks, List<TreeItem<String>> selectedItems) {
+		TreeItem<TreeItem<String>> root = fillRootItem(bookmarks.getRoot(), selectedItems);
+		TreeView<TreeItem<String>> view = new TreeView<>(root);
+		view.setShowRoot(false);
+		view.setCellFactory(tt -> new TreeCell<TreeItem<String>>() {
+			@Override
+			protected void updateItem(TreeItem<String> item, boolean empty) {
+				super.updateItem(item, empty);
+				setText(empty ? null : item.getValue());
+			}
+		});
+
+		Stage stg = new Stage(StageStyle.UNIFIED);
+		stg.initModality(Modality.APPLICATION_MODAL);
+		stg.initOwner(Viewer.getStage());
+
+		Button moveAbove = new Button("Move Above");
+		Button moveBelow = new Button("Move Below");
+		Button moveAsFirstChild = new Button("Move As First Child");
+		Button moveAsLastChild = new Button("Move As Last Child");
+
+		EventHandler<ActionEvent> action = e -> {
+			TreeItem<String> item = view.getSelectionModel().getSelectedItem().getValue();
+			TreeItem<String> parent = item.getParent(); 
+			int index = parent.getChildren().indexOf(item);
+			List<TreeItem<String>> list = new ArrayList<>(selectedItems);
+			list.forEach(t -> t.getParent().getChildren().remove(t));
+
+			if(e.getSource() == moveAbove){
+				if(index == 0)
+					parent.getChildren().addAll(0, list);
+				else
+					parent.getChildren().addAll(index, list);
+			}
+			else if(e.getSource() == moveBelow)
+				parent.getChildren().addAll(index, list);
+			else if(e.getSource() == moveAsFirstChild)
+				item.getChildren().addAll(0, list);
+			else if(e.getSource() == moveAsLastChild)
+				item.getChildren().addAll(list);
+			
+			stg.hide();
+			bookmarks.getSelectionModel().clearSelection();
+			bookmarks.getSelectionModel().select(list.get(0));
+		};
+		
+		moveAbove.setOnAction(action);
+		moveBelow.setOnAction(action);
+		moveAsFirstChild.setOnAction(action);
+		moveAsLastChild.setOnAction(action);
+		
+		VBox buttons = new VBox(10, moveAbove,moveBelow,moveAsFirstChild,moveAsLastChild);
+		buttons.setPadding(new Insets(10));
+		buttons.setAlignment(Pos.CENTER);
+		buttons.disableProperty().bind(view.getSelectionModel().selectedItemProperty().isNull());
+
+		view.setId("bookmarks");
+		Scene scene = new Scene(new HBox(view,buttons));
+		scene.getStylesheets().add("style.css");
+		stg.setScene(scene);
+		stg.setResizable(false);
+		stg.showAndWait();
+	}
+	private TreeItem<TreeItem<String>> fillRootItem(TreeItem<String> root, List<TreeItem<String>> selectedItems) {
+		TreeItem<TreeItem<String>> item = new TreeItem<>(root);
+		for (TreeItem<String> ti : root.getChildren()) {
+			if(!selectedItems.contains(ti))
+				item.getChildren().add(fillRootItem(ti, selectedItems));
+		}
+		return item;
+	}
+
 	private File getFile(String title, String suggestedName) {
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle(title);
