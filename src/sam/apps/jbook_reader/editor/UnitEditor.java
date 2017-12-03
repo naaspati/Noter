@@ -5,7 +5,6 @@ import static sam.fx.helpers.FxHelpers.button;
 
 import java.util.function.Consumer;
 
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -21,8 +20,7 @@ import sam.apps.jbook_reader.datamaneger.Entry;
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
 	private final TextArea content = new TextArea();
-	protected Entry item;
-	private volatile boolean tabItemChanging = false;
+	protected volatile Entry item;
 
 	public UnitEditor(Consumer<Entry> onExpanded) {
 		updateFont();
@@ -51,22 +49,20 @@ class UnitEditor extends BorderPane {
 		addClass(content, "content");
 
 		content.textProperty().addListener((prop, old, _new) -> {
-			if(!tabItemChanging)
+			if(item != null)
 				item.setContent(_new);
 		});
 	}
 
 	public void setItem(Entry item) {
-		tabItemChanging = true;
-		this.item = item;
+		this.item = null;
 		title.setText(item.getTitle());
 		content.setText(item.getContent());
 	
 		String text = content.getText();
 		long count = text == null || text.isEmpty() ? 0 : text.chars().filter(s -> s == '\n').count();
 		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
-		
-		Platform.runLater(() -> tabItemChanging = false);
+		this.item = item;
 	}
 	public void updateFont() {
 		title.setFont(Editor.getFont());

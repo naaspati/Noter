@@ -172,6 +172,13 @@ public class Editor extends BorderPane {
 			combinedTextArea.setText(null);
 			combinedTextArea.setUserData(null);
 		}
+		if(getCenter() == centerEditor && backToContent.get() == containerScrollPane) {
+			containerChildren()
+			.filter(u -> u.getItem() == centerEditor.getItem())
+			.findFirst()
+			.ifPresent(u -> u.setItem(centerEditor.getItem()));
+		}
+		
 		setCenter(backToContent.get());
 		backToContent.set(null);
 	}

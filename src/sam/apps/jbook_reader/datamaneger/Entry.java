@@ -51,6 +51,10 @@ public class Entry extends TreeItem<String> {
 			EntryUtils.setChildren(element, doc, getChildren().isEmpty() ? null : getChildren().stream().map(t -> ((Entry)t).getElement(doc)));
 			childrenModified = false;
 		}
+		else {
+			for (int i = 0; i < getChildren().size(); i++)
+				((Entry)getChildren().get(i)).getElement(doc);
+		}
 		return element;
 	}
 	private void log() {
@@ -99,9 +103,9 @@ public class Entry extends TreeItem<String> {
 	Builder<Entry> walk(Builder<Entry> collector) {
 		collector.accept(this);
 
-		for (TreeItem<String> t : getChildren())
-			((Entry)t).walk(collector);
-
+		for (int i = 0; i < getChildren().size(); i++)
+			((Entry)getChildren().get(i)).walk(collector);
+		
 		return collector; 
 	}
 	public Entry addChild(String title, Entry relativeTo) {

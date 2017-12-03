@@ -215,7 +215,7 @@ public class Viewer extends Application {
 				menuitem("no content bookmarks", e_e -> {
 					String sb = getCurrentTab().walk()
 							.filter(e -> e.getContent() == null || e.getContent().trim().isEmpty())
-							.reduce(new StringBuilder(), (sb2, t) -> Utils.treeToString(t, sb2).append('\n'), StringBuilder::append).toString();
+							.reduce(new StringBuilder(), (sb2, t) -> Utils.treeToString(t, sb2), StringBuilder::append).toString();
 
 					FxAlert.alertBuilder(AlertType.INFORMATION)
 					.expandableText(sb)
