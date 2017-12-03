@@ -1,5 +1,6 @@
 package sam.apps.jbook_reader.tabs;
 
+import static sam.fx.helpers.FxHelpers.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +23,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.apps.jbook_reader.Actions;
 import sam.apps.jbook_reader.Actions.ActionResult;
-import static sam.apps.jbook_reader.Utils.*;
 import sam.fx.alert.FxAlert;
 
 public class TabContainer extends BorderPane {
@@ -100,7 +100,13 @@ public class TabContainer extends BorderPane {
 	}
 
 	public void addBlankTab() {
-		Tab tab = new Tab(onSelect);
+		Tab tab;
+		try {
+			tab = new Tab(onSelect);
+		} catch (Exception e) {
+			FxAlert.showErrorDialog(null, "failed to create Tab", e);
+			return;
+		}
 
 		String title;
 		int n = 1;

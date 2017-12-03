@@ -39,6 +39,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.AlertBuilder;
@@ -65,8 +66,8 @@ public class Actions {
 		FAILED, SUCCESS, NULL, OK, CANCEL, YES, NO 
 	}
 
-	public void addNewBookmark(TreeView<String> bookmarks, Tab maneger, boolean addChildBookmark) {
-		TreeItem<String> item = bookmarks.getSelectionModel().getSelectedItem();
+	public void addNewBookmark(TreeView<String> bookmarks, Tab tab, boolean addChildBookmark) {
+		Entry item = (Entry)bookmarks.getSelectionModel().getSelectedItem();
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION)
 				.title("Add New Bookmark")
 				.headerText(Utils.treeToString(item, new StringBuilder("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n")).toString());
@@ -85,16 +86,9 @@ public class Actions {
 		StringBuilder sb = new StringBuilder();
 
 		tf.textProperty().addListener((p, o, n) -> {
-			TreeItem<String>[] array = maneger.search(n, null);
-			if(array == null || array.length == 0) {
-				ta.setText("");
-				return;
-			}
-
-			for (TreeItem<String> t : array) {
-				Utils.treeToString(t, sb);
-				sb.append('\n');
-			}
+			tab.walk()
+			.filter(e -> e.getTitle() != null && e.getTitle().contains(n))
+			.reduce(sb, (sb2, t) -> Utils.treeToString(t, sb2), StringBuilder::append);
 			ta.setText(sb.toString());
 			sb.setLength(0);
 		});
@@ -105,25 +99,35 @@ public class Actions {
 		d.initOwner(Viewer.getStage());
 
 		d.showAndWait().filter(b -> b == ButtonType.OK)
-		.map(b -> maneger.add(item, tf.getText(), addChildBookmark))
+		.map(b -> {
+			String title = tf.getText();
+			if(item == null)
+				return Entry.cast(bookmarks.getRoot()).addChild(title, null);
+			else {
+				if(addChildBookmark)
+					return item.addChild(title, null);
+				else
+					return Entry.cast(item.getParent()).addChild(title, item);
+			}
+		})
 		.ifPresent(t -> {
 			bookmarks.getSelectionModel().clearSelection();
 			bookmarks.getSelectionModel().select(t);
 		});
 	}
 	private class PatrentChildRelation {
-		final TreeItem<String> parent, child;
+		final Entry parent, child;
 		final int index;
-		PatrentChildRelation(TreeItem<String> child) {
-			this.parent = child.getParent();
+		PatrentChildRelation(Entry child) {
+			this.parent = (Entry) child.getParent();
 			this.child = child;
-			this.index = child.getParent().getChildren().indexOf(child);
+			this.index = parent.indexOf(child);
 		}
 		void removeChildFromParent() {
-			parent.getChildren().remove(index);
+			parent.remove(child);
 		}
 		public void addChildToParent() {
-			parent.getChildren().add(index, child);
+			parent.add(index, child);
 		}
 	}
 	private HashMap<Tab, LinkedList<PatrentChildRelation[]>> deletedItems = new HashMap<>();
@@ -139,6 +143,7 @@ public class Actions {
 			deletedItems.put(currentTab, list);
 		}
 		PatrentChildRelation[] ditems = bookmarks.getSelectionModel().getSelectedItems().stream()
+				.map(Entry::cast)
 				.map(PatrentChildRelation::new)
 				.toArray(PatrentChildRelation[]::new);
 
@@ -146,8 +151,6 @@ public class Actions {
 		undoDeleteSize.set(list.size());
 
 		for (PatrentChildRelation d : ditems) d.removeChildFromParent();
-		currentTab.setPermanentModified();
-
 	}
 	public ReadOnlyIntegerProperty undoDeleteSizeProperty() {
 		return undoDeleteSize.getReadOnlyProperty();
@@ -200,35 +203,35 @@ public class Actions {
 		Button moveAsLastChild = new Button("Move As Last Child");
 
 		EventHandler<ActionEvent> action = e -> {
-			TreeItem<String> item = view.getSelectionModel().getSelectedItem().getValue();
-			TreeItem<String> parent = item.getParent(); 
-			int index = parent.getChildren().indexOf(item);
+			Entry item = (Entry)view.getSelectionModel().getSelectedItem().getValue();
+			Entry parent = (Entry) item.getParent(); 
+			int index = parent.indexOf(item);
 			List<TreeItem<String>> list = new ArrayList<>(selectedItems);
-			list.forEach(t -> t.getParent().getChildren().remove(t));
+			list.forEach(t -> ((Entry)t.getParent()).remove(t));
 
 			if(e.getSource() == moveAbove){
 				if(index == 0)
-					parent.getChildren().addAll(0, list);
+					parent.addAll(0, list);
 				else
-					parent.getChildren().addAll(index, list);
+					parent.addAll(index, list);
 			}
 			else if(e.getSource() == moveBelow)
-				parent.getChildren().addAll(index, list);
+				parent.addAll(index, list);
 			else if(e.getSource() == moveAsFirstChild)
-				item.getChildren().addAll(0, list);
+				item.addAll(0, list);
 			else if(e.getSource() == moveAsLastChild)
-				item.getChildren().addAll(list);
-			
+				item.addAll(list);
+
 			stg.hide();
 			bookmarks.getSelectionModel().clearSelection();
 			bookmarks.getSelectionModel().select(list.get(0));
 		};
-		
+
 		moveAbove.setOnAction(action);
 		moveBelow.setOnAction(action);
 		moveAsFirstChild.setOnAction(action);
 		moveAsLastChild.setOnAction(action);
-		
+
 		VBox buttons = new VBox(10, moveAbove,moveBelow,moveAsFirstChild,moveAsLastChild);
 		buttons.setPadding(new Insets(10));
 		buttons.setAlignment(Pos.CENTER);

@@ -1,7 +1,7 @@
 package sam.apps.jbook_reader.editor;
 
-import static sam.apps.jbook_reader.Utils.addClass;
-import static sam.apps.jbook_reader.Utils.button;
+import static sam.fx.helpers.FxHelpers.addClass;
+import static sam.fx.helpers.FxHelpers.button;
 
 import java.util.function.Consumer;
 
@@ -11,27 +11,24 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
-import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import sam.apps.jbook_reader.Utils;
-import sam.apps.jbook_reader.tabs.Tab;
+import sam.apps.jbook_reader.datamaneger.Entry;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
 	private final TextArea content = new TextArea();
-	protected Tab tab; 
-	protected TreeItem<String> item;
+	protected Entry item;
 	private volatile boolean tabItemChanging = false;
 
-	public UnitEditor(Consumer<TreeItem<String>> onExpanded) {
+	public UnitEditor(Consumer<Entry> onExpanded) {
 		updateFont();
 		setCenter(content);
 
 		if(onExpanded != null) {
-
 			Button expandButton = button("edit", null, e -> onExpanded.accept(this.item));
 			addClass(expandButton, "expand-button");
 
@@ -55,16 +52,15 @@ class UnitEditor extends BorderPane {
 
 		content.textProperty().addListener((prop, old, _new) -> {
 			if(!tabItemChanging)
-				tab.setContent(item, _new);
+				item.setContent(_new);
 		});
 	}
 
-	public void set(Tab tab, TreeItem<String> item) {
+	public void setItem(Entry item) {
 		tabItemChanging = true;
-		this.tab = tab;
 		this.item = item;
-		title.setText(tab.getTitle(item));
-		content.setText(tab.getContent(item));
+		title.setText(item.getTitle());
+		content.setText(item.getContent());
 	
 		String text = content.getText();
 		long count = text == null || text.isEmpty() ? 0 : text.chars().filter(s -> s == '\n').count();
@@ -77,14 +73,14 @@ class UnitEditor extends BorderPane {
 		content.setFont(Editor.getFont());
 	}
 	public String getItemTitle() {
-		return tab.getTitle(item);
+		return item.getTitle();
 	}
-	public TreeItem<String> getItem() {
+	public Entry getItem() {
 		return item;
 	}
 	public void updateTitle() {
 		title.setTooltip(new Tooltip(Utils.treeToString(item)));
-		title.setText(tab.getTitle(item));
+		title.setText(item.getTitle());
 	}
 	public void setWordWrap(boolean wrap) {
 		content.setWrapText(wrap);

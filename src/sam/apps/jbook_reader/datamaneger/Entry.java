@@ -1,49 +1,100 @@
 package sam.apps.jbook_reader.datamaneger;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream.Builder;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
 import javafx.scene.control.TreeItem;
 
-class Entry extends TreeItem<String> { 
+public class Entry extends TreeItem<String> { 
 	private String content;
-	private long lastModified;
-	private transient char[] chars;
-	private transient boolean modified;
+	private long lastModified = -1;
+	private boolean titleModified, contentModified, childrenModified;
+	private Element element;
+	private final DataManeger maneger;
 
-	Entry(String title, String content, long lastModified) {
+	public static Entry cast(TreeItem<String> item) {
+		return (Entry)item;
+	}
+	Entry(String title, String content, long lastModified, DataManeger maneger) {
 		super(title);
 		this.content = content;
 		this.lastModified = lastModified;
+		this.maneger = maneger;
 	}
-	long getLastModified() {
+	Entry(Element element, DataManeger maneger) {
+		this.element = element;
+		setValue(EntryUtils.getTitle(element));
+		getChildren().setAll(EntryUtils.getChildren(element, maneger));
+		this.maneger = maneger;
+	}
+	Element getElement(Document doc) {
+		log(); //TODO remove
+		
+		if(element == null) {
+			element = EntryUtils.createEntry(doc, this);
+			contentModified = false;
+			titleModified = false;
+		}
+		if(titleModified) {
+			EntryUtils.setTitle(element, getTitle(), doc);
+			titleModified = false;
+		}
+		if(contentModified) {
+			EntryUtils.setContent(element, content, doc);
+			contentModified = false;
+		}
+		if(childrenModified) {
+			EntryUtils.setChildren(element, doc, getChildren().isEmpty() ? null : getChildren().stream().map(t -> ((Entry)t).getElement(doc)));
+			childrenModified = false;
+		}
+		return element;
+	}
+	private void log() {
+		if(element == null)
+			System.out.println(getTitle() +" ->  new");
+		else if(titleModified || 
+				contentModified || 
+				childrenModified) {
+
+			System.out.println(getTitle()+" "+(titleModified ? "title " : "") +
+					(contentModified ? "content " : "") +
+					(childrenModified ? "children " : ""));			
+		}
+	}
+	public long getLastModified() {
+		if(lastModified == -1)
+			lastModified = EntryUtils.getLastmodified(element);
+
 		return lastModified;
 	}
-	void updateLastModified() {
-		this.lastModified = System.currentTimeMillis();
-	}
-	String getTitle() { return getValue(); }
-	boolean setTitle(String title) {
-		if(updated(title, getTitle())) {
-			updateLastModified();
+	public String getTitle() { return getValue(); }
+	public void setTitle(String title) {
+		if(titleModified || !Objects.equals(title, getTitle())) {
+			titleModified = true;
 			setValue(title);
+			setModified();
 		}
-		return modified;
 	}
-	boolean updated(String s1, String s2) {
-		return modified = modified || !Objects.equals(s1, s2);
+	void setModified() {
+		lastModified = System.currentTimeMillis();
+		maneger.setModified();
 	}
-	public boolean isModified() {
-		return modified;
+	public String getContent() {
+		if(content == null)
+			content = EntryUtils.getContent(element);
+
+		return content; 
 	}
-	String getContent() { return content; }
-	boolean setContent(String content) {
-		if(updated(content, this.content)) {
-			updateLastModified();
-			this.content = content;
+	public void setContent(String content) {
+		if(contentModified || !Objects.equals(content, this.content)) {
+			contentModified = true;
+			this.content = content; 
+			setModified();
 		}
-		return modified;
 	}
 	Builder<Entry> walk(Builder<Entry> collector) {
 		collector.accept(this);
@@ -53,37 +104,39 @@ class Entry extends TreeItem<String> {
 
 		return collector; 
 	}
-	boolean test(char[] titleSearch, String contentSearch) {
-		if(chars == null && titleSearch != null) {
-			chars = getTitle().toLowerCase().toCharArray();
-			Arrays.sort(chars);
-		}
-		boolean b = true;
-		if(titleSearch != null) {
-			if(chars.length < titleSearch.length)
-				b = false;
-			for (char c : titleSearch) {
-				if(Arrays.binarySearch(chars, c) < 0) {
-					b = false;
-					break;
-				}
-			}
-			if(b)
-				return true;
-		}
-
-		return content != null && contentSearch != null && content.contains(contentSearch);
-	} 
-	Entry addChild(String title, String content, long lastmodified, Entry relativeTo) {
-		Entry child = new Entry(title, content, lastmodified);
+	public Entry addChild(String title, Entry relativeTo) {
+		Entry child = new Entry(title, null, System.currentTimeMillis(), maneger);
 
 		if(relativeTo == null)
-			getChildren().add(child);
+			add(child);
 		else {
-			int index = getChildren().indexOf(relativeTo);
+			int index = indexOf(relativeTo);
 			index = index < 0 ? getChildren().size() : index + 1;
-			getChildren().add(index, child);
+			add(index, child);
 		}
 		return child;
 	}
+	public int indexOf(Entry item) {
+		return getChildren().indexOf(item);
+	}
+	private List<TreeItem<String>> modifiedChildren() {
+		childrenModified = true;
+		maneger.setModified();
+		return getChildren();
+	}
+	public boolean remove(TreeItem<String> t) {
+		return modifiedChildren().remove(t);
+	}
+	public boolean add(Entry child) {
+		return modifiedChildren().add(child);
+	}
+	public void add(int index, Entry child) {
+		modifiedChildren().add(index, child);
+	}
+	public void addAll(int index, List<TreeItem<String>> list) {
+		modifiedChildren().addAll(index, list);
+	}
+	public void addAll(List<TreeItem<String>> list) {
+		modifiedChildren().addAll(list);
+	}	
 }

@@ -3,12 +3,10 @@ package sam.apps.jbook_reader;
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.apps.jbook_reader.Utils.button;
-import static sam.apps.jbook_reader.Utils.combination;
-import static sam.apps.jbook_reader.Utils.menuitem;
-import static sam.apps.jbook_reader.Utils.radioMenuitem;
+import static sam.fx.helpers.FxHelpers.*;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +31,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -59,6 +58,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.editor.Editor;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
@@ -80,6 +80,7 @@ public class Viewer extends Application {
 
 	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
+	private WeakReference<SearchBox> weakSearchBox = new WeakReference<SearchBox>(null);
 
 	private final TabContainer tabsContainer = TabContainer.getInstance();
 	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), selectionModel.selectedItemProperty());
@@ -200,7 +201,29 @@ public class Viewer extends Application {
 		}
 	}
 	private MenuBar getMenubar() {
-		return new MenuBar(getFileMenu(), getBookmarkMenu(), getSearchMenu(), getEditorMenu());
+		return new MenuBar(
+				getFileMenu(), 
+				getBookmarkMenu(), 
+				getSearchMenu(), 
+				getEditorMenu(), 
+				Session.get("debug", false, Boolean::valueOf) ? getDebugMenu() : new Menu()
+
+				);
+	}
+	private Menu getDebugMenu() {
+		return new Menu("debug", null,
+				menuitem("no content bookmarks", e_e -> {
+					String sb = getCurrentTab().walk()
+							.filter(e -> e.getContent() == null || e.getContent().trim().isEmpty())
+							.reduce(new StringBuilder(), (sb2, t) -> Utils.treeToString(t, sb2).append('\n'), StringBuilder::append).toString();
+
+					FxAlert.alertBuilder(AlertType.INFORMATION)
+					.expandableText(sb)
+					.expanded(true)
+					.headerText("No Content Bookmarks")
+					.showAndWait();
+				}, currentTabNull)
+				);
 	}
 	private Menu getEditorMenu() {
 		return new Menu("editor", null,
@@ -215,12 +238,21 @@ public class Viewer extends Application {
 					tabsContainer.setEffect(GRAYSCALE_EFFECT);
 					searchActive.set(true);
 
-					new SearchBox(stage, bookmarks, getCurrentTab())
-					.setOnHidden(e_e -> {
-						tabsContainer.setDisable(false);
-						tabsContainer.setEffect(null);
-						searchActive.set(false);
-					});
+					SearchBox sb = weakSearchBox.get();
+					
+					if(sb == null) {
+						sb = new SearchBox(selectionModel, getCurrentTab());
+						weakSearchBox = new WeakReference<>(sb);
+						sb.setOnHidden(e_e -> {
+							tabsContainer.setDisable(false);
+							tabsContainer.setEffect(null);
+							searchActive.set(false);
+						});
+					}
+					else { 
+						sb.start(getCurrentTab());
+					}
+ 						
 				}, currentTabNull)
 				);
 		return menu;
@@ -288,7 +320,6 @@ public class Viewer extends Application {
 				new SeparatorMenuItem(),
 				menuitem("Move bookmark", e -> actions.moveBookmarks(bookmarks, selectionModel.getSelectedItems()), selectedItemNull)
 				);
-
 	}
 	private Node getBookmarkPane() throws IOException {
 		bookmarks.setShowRoot(false);
@@ -296,15 +327,17 @@ public class Viewer extends Application {
 		bookmarks.setId("bookmarks");
 		bookmarks.setOnEditStart(e -> {
 			TextInputDialog d = new TextInputDialog(e.getOldValue());
+			d.setHeaderText("Rename Bookmark");
+			d.setTitle("Rename");
 			d.initModality(Modality.APPLICATION_MODAL);
 			d.initOwner(stage);
 			d.showAndWait()
 			.ifPresent(s -> {
 				if(s == null || s.equals(e.getOldValue()))
 					return;
-				
-				TreeItem<String> ti = e.getTreeItem();
-				getCurrentTab().setTitle(ti, s);
+
+				Entry ti = (Entry) e.getTreeItem();
+				ti.setTitle(s);
 				editor.updateTitle(ti);
 			});
 		});		
@@ -374,6 +407,7 @@ public class Viewer extends Application {
 	private void expandBookmarks(List<TreeItem<String>> children, boolean expanded) {
 		if(children.isEmpty())
 			return;
+
 		for (TreeItem<String> t : children) {
 			t.setExpanded(expanded);
 			expandBookmarks(t.getChildren(), expanded);

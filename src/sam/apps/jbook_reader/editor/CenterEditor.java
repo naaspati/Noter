@@ -5,8 +5,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 
-import javafx.scene.control.TreeItem;
-import sam.apps.jbook_reader.tabs.Tab;
+import sam.apps.jbook_reader.datamaneger.Entry;
 
 public class CenterEditor extends UnitEditor{
 
@@ -21,22 +20,20 @@ public class CenterEditor extends UnitEditor{
 		LocalDateTime dt = LocalDateTime.ofEpochSecond(t/1000, 0, offset);
 		return dt.format(formatter);
 	}
-
 	public  void clear() {
-		tab = null;
 		item = null;
 	}
 	@Override
-	public void set(Tab tab, TreeItem<String> item) {
-		super.set(tab, item);
-		title.setText("Modified: "+time(tab.getLastModifiedTime(item)));
+	public void setItem(Entry item) {
+		super.setItem(item);
+		title.setText("Modified: "+time(item.getLastModified()));
 	}
 	@Override
 	public void updateTitle() {
-		if(tab == null || item == null)
+		if(item == null)
 			return;
 		super.updateTitle();
-		title.setText("Modified: "+time(tab.getLastModifiedTime(item)));
+		title.setText("Modified: "+time(item.getLastModified()));
 	}
 	
 }

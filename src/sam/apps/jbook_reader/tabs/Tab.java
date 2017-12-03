@@ -1,8 +1,5 @@
 package sam.apps.jbook_reader.tabs;
 
-import static sam.apps.jbook_reader.Utils.setClass;
-import static sam.apps.jbook_reader.Utils.toggleClass;
-
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
@@ -14,6 +11,7 @@ import javafx.scene.control.Label;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import sam.apps.jbook_reader.datamaneger.DataManeger;
+import static sam.fx.helpers.FxHelpers.*;
 
 public class Tab extends DataManeger {
 	private final HBox view = new HBox(5);
@@ -26,7 +24,7 @@ public class Tab extends DataManeger {
 		setTabTitle(path.getFileName().toString());
 	}
 
-	public Tab(Consumer<Tab> onSelect) {
+	public Tab(Consumer<Tab> onSelect) throws Exception {
 		super();
 		init(onSelect);
 	}
@@ -52,11 +50,12 @@ public class Tab extends DataManeger {
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
 
 	@Override
-	public void setModified(boolean m) {
-		super.setModified(m);
+	protected void setModified(boolean b) {
+		super.setModified(b);
+		if(view == null)
+			return;
 		toggleClass(view, "modified", isModified());
 	}
-
 	@Override
 	public void setJbookPath(Path path) {
 		setTabTitle(path.getFileName().toString());

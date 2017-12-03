@@ -1,7 +1,7 @@
 package sam.apps.jbook_reader.editor;
 
-import static sam.apps.jbook_reader.Utils.addClass;
-import static sam.apps.jbook_reader.Utils.button;
+import static sam.fx.helpers.FxHelpers.addClass;
+import static sam.fx.helpers.FxHelpers.button;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
@@ -43,9 +43,10 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
-import sam.apps.jbook_reader.Utils;
 import sam.apps.jbook_reader.Viewer;
+import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
+import sam.fx.helpers.FxHelpers;
 import sam.properties.session.Session;
 
 public class Editor extends BorderPane {
@@ -54,12 +55,11 @@ public class Editor extends BorderPane {
 	private final Label maintitle = new Label();
 	private final Button backBtn, combineBtn;
 	private final SimpleObjectProperty<Node> backToContent = new SimpleObjectProperty<>();  
-	private final Consumer<TreeItem<String>> onExpanded = this::onExpanded;
+	private final Consumer<Entry> onExpanded = this::onExpanded;
 	private final CenterEditor centerEditor = new CenterEditor();
 	private boolean wrapText;
 	private TextArea combinedTextArea;
 	private final LinkedList<TreeItem<String>> expandedItems = new LinkedList<>();
-	private Tab tab;
 
 	private static volatile Editor instance;
 	private static Font font;
@@ -103,8 +103,8 @@ public class Editor extends BorderPane {
 
 		containerScrollPane.setFitToWidth(true);
 
-		currentTabProperty.addListener((p, o, n) -> tabChange(n));
-		selectedItemProperty.addListener((p, o, n) -> itemChange(n));
+		currentTabProperty.addListener(e -> tabChange());
+		selectedItemProperty.addListener((p, o, n) -> itemChange((Entry)n));
 
 		disableProperty().bind(selectedItemProperty.isNull());
 
@@ -130,7 +130,7 @@ public class Editor extends BorderPane {
 		backBtn.visibleProperty().bind(backToContent.isNotNull());
 		combineBtn.visibleProperty().bind(centerProperty().isEqualTo(containerScrollPane).and(Bindings.size(container.getChildren()).greaterThan(1)));
 	}
-	private void itemChange(TreeItem<String> nnew) {
+	private void itemChange(Entry nnew) {
 		backToContent.set(null);
 
 		if(centerEditor.getItem() == nnew) {
@@ -145,21 +145,21 @@ public class Editor extends BorderPane {
 			return;
 		}
 		if(nnew.getChildren().isEmpty() || expandedItems.contains(nnew)) {
-			centerEditor.set(tab, nnew);
+			centerEditor.setItem(nnew);
 			maintitle.setText(centerEditor.getItemTitle());
 			setCenter(null);
 			setCenter(centerEditor);
 			return;
 		}
 		resizeContainer(nnew.getChildren().size() + 1);
-		getUnitEditorAt(0).set(tab, nnew);
+		getUnitEditorAt(0).setItem(nnew);
 		int index = 1;
-		for (TreeItem<String> ti : nnew.getChildren()) getUnitEditorAt(index++).set(tab, ti); 
+		for (TreeItem<String> ti : nnew.getChildren()) getUnitEditorAt(index++).setItem((Entry)ti); 
 
 		setCenter(null);
 		setCenter(containerScrollPane);
 		containerScrollPane.setVvalue(0);
-		maintitle.setText(tab.getTitle(nnew));
+		maintitle.setText(nnew.getTitle());
 
 		if(combinedTextArea != null && nnew == combinedTextArea.getUserData())
 			combineAction();
@@ -175,8 +175,7 @@ public class Editor extends BorderPane {
 		setCenter(backToContent.get());
 		backToContent.set(null);
 	}
-	private void tabChange(Tab nnew) {
-		this.tab = nnew;
+	private void tabChange() {
 		resizeContainer(0);
 		maintitle.setText(null);
 		centerEditor.clear();
@@ -207,7 +206,7 @@ public class Editor extends BorderPane {
 			}
 		}
 	}
-	public void updateTitle(TreeItem<String> item) {
+	public void updateTitle(Entry item) {
 		containerChildren().forEach(UnitEditor::updateTitle);
 		unitEditors.stream().map(WeakReference::get).filter(Objects::nonNull).forEach(UnitEditor::updateTitle);
 		centerEditor.updateTitle();
@@ -238,8 +237,8 @@ public class Editor extends BorderPane {
 		setCenter(combinedTextArea);
 
 	}	
-	private void onExpanded(TreeItem<String> item) {
-		centerEditor.set(tab, item);
+	private void onExpanded(Entry item) {
+		centerEditor.setItem(item);
 		if(getCenter() == containerScrollPane)
 			backToContent.set(containerScrollPane);
 
@@ -268,7 +267,7 @@ public class Editor extends BorderPane {
 		root.setVgap(5);
 
 		// family, weight, posture, size
-		root.addRow(0, Stream.of("family:", "weight:", "posture:", "size:").map(Utils::text).toArray(Text[]::new));
+		root.addRow(0, Stream.of("family:", "weight:", "posture:", "size:").map(FxHelpers::text).toArray(Text[]::new));
 
 		ComboBox<String> family = new ComboBox<>(FXCollections.observableArrayList(Font.getFamilies()));
 		ComboBox<FontWeight> weight = new ComboBox<>(FXCollections.observableArrayList(FontWeight.values()));

@@ -1,54 +1,55 @@
 package sam.apps.jbook_reader;
 
-import static sam.apps.jbook_reader.Utils.button;
 import static sam.apps.jbook_reader.Utils.each;
+import static sam.fx.helpers.FxHelpers.button;
 
-import javafx.beans.binding.Bindings;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import javafx.beans.binding.When;
 import javafx.beans.value.WeakChangeListener;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
+import sam.fx.popup.FxPopupShop;
 
 public final class SearchBox extends Popup {
-	private final TextField field = new TextField();
-	private final Stage stage;
-	private final TreeView<String> bookmarks;
-	private final Tab tab;
+	private final TextField searchF = new TextField();
+	private final MultipleSelectionModel<TreeItem<String>> selectionModel;
+	private Tab tab;
 	private final Button previous, next, clear;
 	private final CheckBox inBookmarks = new CheckBox("Bookmarks"); 
 	private final CheckBox inContent = new CheckBox("Content");
 	private WeakChangeListener<Number> listener;
 
 	private int index = 0;
-	private ObservableList<TreeItem<String>> result = FXCollections.observableArrayList();
+	private List<Entry> result = new ArrayList<>();
+	private Iterator<Entry> iterator;
 
-	public SearchBox(Stage stage, TreeView<String> bookmarks, Tab tab) {
+	public SearchBox(MultipleSelectionModel<TreeItem<String>> selectionModel, Tab tab2) {
 		super();
-		
-		this.tab = tab;
-		this.bookmarks = bookmarks;
 
-		this.stage = stage;
-		field.setPrefColumnCount(20);
+		this.tab = tab2;
+		this.selectionModel = selectionModel;
+
+		searchF.setPrefColumnCount(20);
 
 		HBox box = new HBox(10,
-				previous = button("previous", "right-arrow.png", e1 -> move(-1)),
-				next = button("next", "right-arrow.png", e1 -> move(+1)),
+				previous = button("previous", "right-arrow.png", e1 -> previous()),
+				next = button("next", "right-arrow.png", e1 -> next()),
 				clear = button("clear", "cancel-mark.png", e1 -> clear())
 				);
 		previous.setRotate(-180);
@@ -65,14 +66,11 @@ public final class SearchBox extends Popup {
 		Button closeButton = button("close", null, e11 -> {clear.fire(); hide();});
 		closeButton.setText("x");
 		closeButton.setPrefWidth(10);
-		
+
 		HBox closeBox = new HBox(closeButton);
 		closeBox.setAlignment(Pos.TOP_RIGHT);
-		
-		Text status = new Text();
-		VBox root = new VBox(5, closeBox, t, field, box, t2, vvb, new Rectangle(2, 5), status);
-		
-		status.textProperty().bind(Bindings.concat("found: ", Bindings.size(result)));
+
+		VBox root = new VBox(5, closeBox, t, searchF, box, t2, vvb);
 
 		root.setId("popup-box");
 		root.setOpacity(0.8);
@@ -82,44 +80,86 @@ public final class SearchBox extends Popup {
 		setAutoHide(false);
 		setHideOnEscape(false);
 
-		field.setOnAction(e -> searchAction());
+		searchF.setOnAction(e -> searchAction());
 
-		show(stage);
+		Stage stage = Viewer.getStage(); 
+		show(Viewer.getStage());
 		listener = new WeakChangeListener<>((pp, o, n) -> setLocation());
-		listener.wasGarbageCollected();
 		setLocation();
-		
-		each(a -> a.addListener(listener), stage.xProperty(), stage.yProperty(), stage.widthProperty(), stage.heightProperty());
-		each(a -> a.getStyleClass().add("text"), t, t2, closeButton, inContent, inBookmarks, status);
-		each(b -> b.getTooltip().setStyle("-fx-background-color:white;-fx-text-fill:black;"), previous, next, clear, closeButton);
 
+		each(a -> a.addListener(listener), stage.xProperty(), stage.yProperty(), stage.widthProperty(), stage.heightProperty());
+		each(a -> a.getStyleClass().add("text"), t, t2, closeButton, inContent, inBookmarks);
+		each(b -> b.getTooltip().setStyle("-fx-background-color:white;-fx-text-fill:black;"), previous, next, clear, closeButton);
+	}
+	public void start(Tab tab) {
+		this.tab = tab;
+		clear();
+		show(Viewer.getStage());
 	}
 	private void searchAction() {
-		String text = field.getText();
+		String text = searchF.getText();
+		index = 0;
+		result.clear();
+		
 		if(text == null || text.isEmpty()) {
 			next.setDisable(true);
 			previous.setDisable(true);
 			clear.setDisable(true);
-			index = 0;
-			result.clear();
+			iterator = null;
 		}
 		else {
-			result.setAll(tab.search(inBookmarks.isSelected() ? text : null, inContent.isSelected() ? text : null));
-			move(0);
+			iterator = tab.walk().iterator();
+			next();
 		}
 	}
 	private void clear() {
-		field.setText(null);
-		field.fireEvent(new ActionEvent());
+		searchF.setText(null);
+		searchF.fireEvent(new ActionEvent());
 	}
-	private void move(int by) {
-		index = index + by;
-		bookmarks.getSelectionModel().clearSelection();
-		bookmarks.getSelectionModel().select(result.get(index));
-		previous.setDisable(index == 0);
-		next.setDisable(index == result.size() - 1);
+	private void next() {
+		if(index < result.size() - 1)
+			select(++index);
+		else {
+			Entry e = nextInIterator();
+			if(e == null)
+				FxPopupShop.showHidePopup("nothing found", 2000);
+			else
+				select(index);
+		}
+		updateDisable();
+	}
+	private void updateDisable() {
+		previous.setDisable(index <= 0);
+		next.setDisable(iterator == null && index == result.size() - 1);
+	}
+	private void previous() {
+		select(--index);
+		updateDisable();
+	}
+	private Entry nextInIterator() {
+		boolean inB = inBookmarks.isSelected(), inC = inContent.isSelected();
+		String text = searchF.getText();
+
+		while(iterator.hasNext()) {
+			Entry e = iterator.next();
+			if(
+					(inB && e.getTitle() != null && e.getTitle().contains(text)) ||
+					(inC && e.getContent() != null && e.getContent().contains(text))
+					) {
+				result.add(e);
+				index = result.size() - 1;
+				return e;
+			}
+		}
+		iterator = null;
+		return null;
+	}
+	private void select(int index) {
+		selectionModel.clearSelection();
+		selectionModel.select(result.get(index));
 	}
 	private void setLocation() {
+		Stage stage = Viewer.getStage();
 		setX(stage.getX() + stage.getWidth() - getWidth());
 		setY(stage.getY() + 30);	
 	}

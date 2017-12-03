@@ -1,11 +1,19 @@
 package sam.apps.jbook_reader.datamaneger;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.stream.Collectors;
+import java.util.Objects;
 import java.util.stream.Stream;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.w3c.dom.Document;
+
 import javafx.scene.control.TreeItem;
+import sam.apps.jbook_reader.datamaneger.EntryUtils.TwoValue;
 
 /**
  * DataManeger and View Controller
@@ -14,117 +22,72 @@ import javafx.scene.control.TreeItem;
  *
  */
 public class DataManeger {
-	private boolean permanentModified = false;
-	private boolean modified = false;
 	private Path jbookPath;
-	private final TreeItem<String> rootItem = new TreeItem<>();
+	private final Entry rootItem = new Entry(null, null, -1, this);
+	private Document document;
+	private boolean modified; 
 
-	public DataManeger() {}
-
+	protected DataManeger() throws ParserConfigurationException {
+		document = DocumentBuilderFactory.newInstance()
+				.newDocumentBuilder().newDocument();
+	}
 	protected DataManeger(Path jbookPath) throws Exception {
-		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
+		Objects.requireNonNull(jbookPath, "Path to .jbook cannot be null");
+		if(Files.notExists(jbookPath))
+			throw new FileNotFoundException("File not found: "+jbookPath);
+		if(Files.isDirectory(jbookPath))
+			throw new IOException("Not a File:"+jbookPath);
+
 		this.jbookPath = jbookPath;
+		reload();
 	}
 	public void reload() throws Exception {
 		if(jbookPath == null)
 			return;
 
-		rootItem.getChildren().setAll(new EntryDecoder().decode(jbookPath));
-		permanentModified = false;
-		modified = false;
+		TwoValue value = EntryUtils.parse(jbookPath, this);
+		rootItem.getChildren().setAll(value.entries);
+		document = value.doc;
+		setModified(false);
 	}
-	public TreeItem<String> getRootItem() {
+	public Entry getRootItem() {
 		return rootItem;
 	}
 	public boolean isModified() {
 		return modified;
 	}
-	protected void setModified(boolean m) {
-		modified = modified || m;
+	void setModified() {
+		if(!modified)
+			setModified(true);
+	}
+	protected void setModified(boolean b) {
+		this.modified = b;
 	}
 	public void save() throws Exception {
 		save(jbookPath);
 	}
 	public void save(Path path) throws Exception {
-		if(!permanentModified && !modified && jbookPath != null)
+		if(!isModified() && jbookPath != null)
 			return;
 
-		new EntryEncoder().encode(rootItem.getChildren().stream().map(i -> (Entry)i).collect(Collectors.toList()), path);
-
-		permanentModified = false;
-		modified = false;
-	}
-
-	public TreeItem<String> add(TreeItem<String> selectedItem, String title, boolean addChild) {
-		Entry entry;
-		Entry parent = addChild ? (Entry)selectedItem : getParent(selectedItem);
-
-		if(parent != null)
-			entry = parent.addChild(title, null, System.currentTimeMillis(), (Entry)selectedItem);
-		else {
-			entry = new Entry(title, null, System.currentTimeMillis());
-			rootItem.getChildren().add(entry);
-		}
-		setModified(true);
-		permanentModified = true;
-		return entry;
-	}
-	private Entry getParent(TreeItem<String> selectedItem) {
-		return selectedItem == null || selectedItem.getParent() == rootItem ? null : (Entry)selectedItem.getParent();
-	}
-	@SuppressWarnings("unchecked")
-	public TreeItem<String>[] search(String title, String content) {
-		if((title == null || title.isEmpty()) && (content == null || content.isEmpty()))
-			return null;
-
-		char[] chars =  title == null ? null : title.toLowerCase().toCharArray();
-		if(chars != null)
-			Arrays.sort(chars);
-
-		return walk()
-				.filter(e -> e.test(chars, content))
-				.toArray(TreeItem[]::new);
-	}
-
-	public Stream<? extends TreeItem<String>> walk(TreeItem<String> nnew) {
-		Stream.Builder<Entry> builder = Stream.builder();
-		((Entry)nnew).walk(builder);
-		return builder.build();
+		EntryUtils.save(document, rootItem.getChildren().stream().map(i -> (Entry)i), path);
+		jbookPath = path;
+		setModified(false);
 	}
 	public Stream<Entry> walk() {
+		return _walk(null);
+	} 
+	public Stream<Entry> _walk(TreeItem<String> item) {
 		Stream.Builder<Entry> builder = Stream.builder();
-
-		for (TreeItem<String> e : rootItem.getChildren())
-			((Entry)e).walk(builder);
-
-		return builder.build();
+		if(item == null)
+			return rootItem.walk(builder).build().skip(1);
+		else
+			return ((Entry)item).walk(builder).build();
 	}
 	public Path getJbookPath() {
 		return jbookPath;
 	}
-	public String getContent(TreeItem<String> n) {
-		return n == null ? null : ((Entry)n).getContent();
-	}
-	public String getTitle(TreeItem<String> item) {
-		return item == null ? null : ((Entry)item).getTitle();
-	}
-	public long getLastModifiedTime(TreeItem<String> item) {
-		return item == null ? 0 : ((Entry)item).getLastModified();
-	}
-	public void setTitle(TreeItem<String> item, String title) {
-		if(item != null)
-			setModified(((Entry)item).setTitle(title));
-	}	
-	public void setContent(TreeItem<String> item, String content) {
-		if(item != null)
-			setModified(((Entry)item).setContent(content));
-	}
 	public void setJbookPath(Path path) {
 		jbookPath = path;
-
-	}
-
-	public void setPermanentModified() {
-		this.permanentModified = true;
 	}
 }
