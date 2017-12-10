@@ -70,7 +70,7 @@ public class Actions {
 		Entry item = (Entry)bookmarks.getSelectionModel().getSelectedItem();
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION)
 				.title("Add New Bookmark")
-				.headerText(Utils.treeToString(item, new StringBuilder("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n")).toString());
+				.headerText("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n"+(item == null ? "" : item.getTitle()));
 
 		TextField tf = new TextField();
 		HBox hb = new HBox(10, new Text("Title "), tf);

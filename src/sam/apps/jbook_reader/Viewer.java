@@ -11,7 +11,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,6 +50,8 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -211,12 +215,19 @@ public class Viewer extends Application {
 				);
 	}
 	private Menu getDebugMenu() {
+		//TODO
 		return new Menu("debug", null,
 				menuitem("no content bookmarks", e_e -> {
 					String sb = getCurrentTab().walk()
 							.filter(e -> e.getContent() == null || e.getContent().trim().isEmpty())
+							.peek(e -> e.setExpanded(true))
 							.reduce(new StringBuilder(), (sb2, t) -> Utils.treeToString(t, sb2), StringBuilder::append).toString();
 
+					Clipboard cb = Clipboard.getSystemClipboard();
+					Map<DataFormat, Object> map = new HashMap<>();
+					map.put(DataFormat.PLAIN_TEXT, sb);
+					cb.setContent(map);
+					
 					FxAlert.alertBuilder(AlertType.INFORMATION)
 					.expandableText(sb)
 					.expanded(true)

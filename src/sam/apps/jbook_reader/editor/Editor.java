@@ -3,7 +3,6 @@ package sam.apps.jbook_reader.editor;
 import static sam.fx.helpers.FxHelpers.addClass;
 import static sam.fx.helpers.FxHelpers.button;
 
-import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -48,6 +47,7 @@ import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.fx.helpers.FxHelpers;
 import sam.properties.session.Session;
+import sam.weakstore.WeakStore;
 
 public class Editor extends BorderPane {
 	private final VBox container = new VBox(15);
@@ -178,7 +178,7 @@ public class Editor extends BorderPane {
 			.findFirst()
 			.ifPresent(u -> u.setItem(centerEditor.getItem()));
 		}
-		
+
 		setCenter(backToContent.get());
 		backToContent.set(null);
 	}
@@ -189,33 +189,30 @@ public class Editor extends BorderPane {
 		setCenter(null);
 	}
 
-	private final LinkedList<WeakReference<UnitEditor>> unitEditors = new LinkedList<>();
+	private final WeakStore<UnitEditor> unitEditors = new WeakStore<>(() -> new UnitEditor(onExpanded));
 	private void resizeContainer(int newSize) {
+
 		List<Node> list = container.getChildren();
 
 		if(container.getChildren().size() > newSize) {
 			list = list.subList(newSize, list.size());
-			list.forEach(n -> unitEditors.add(new WeakReference<UnitEditor>((UnitEditor)n)));
+			list.forEach(n -> unitEditors.add((UnitEditor)n));
 			list.clear();
 		}
 		else {
-			while(list.size() < newSize) {
-				if(unitEditors.isEmpty())
-					list.add(new UnitEditor(onExpanded));
-				else {
-					Node n = unitEditors.pop().get();
-					if(n != null) list.add(n);
-				}
-			}
+			while(list.size() != newSize)
+				list.add(unitEditors.get());
+			
 			for (Node n : list) {
 				UnitEditor e = (UnitEditor)n;
 				e.setWordWrap(wrapText);
+				e.updateTitle();
+				e.updateFont();
 			}
 		}
 	}
 	public void updateTitle(Entry item) {
 		containerChildren().forEach(UnitEditor::updateTitle);
-		unitEditors.stream().map(WeakReference::get).filter(Objects::nonNull).forEach(UnitEditor::updateTitle);
 		centerEditor.updateTitle();
 		if(getCenter() == centerEditor)
 			maintitle.setText(centerEditor.getItemTitle());
@@ -345,7 +342,6 @@ public class Editor extends BorderPane {
 			Editor.font = ta.getFont(); 
 			stage.hide();
 			centerEditor.updateFont();
-			unitEditors.stream().map(WeakReference::get).filter(Objects::nonNull).forEach(UnitEditor::updateFont);
 			containerChildren().forEach(UnitEditor::updateFont);
 
 			Session.put("editor.font.family", family.getValue());

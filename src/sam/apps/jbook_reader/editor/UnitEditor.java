@@ -75,6 +75,9 @@ class UnitEditor extends BorderPane {
 		return item;
 	}
 	public void updateTitle() {
+		if(item == null)
+			return;
+		
 		title.setTooltip(new Tooltip(Utils.treeToString(item)));
 		title.setText(item.getTitle());
 	}

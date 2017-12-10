@@ -64,7 +64,7 @@ public class Entry extends TreeItem<String> {
 				contentModified || 
 				childrenModified) {
 
-			System.out.println(getTitle()+" "+(titleModified ? "title " : "") +
+			System.out.println(getTitle()+" -> "+(titleModified ? "title " : "") +
 					(contentModified ? "content " : "") +
 					(childrenModified ? "children " : ""));			
 		}
