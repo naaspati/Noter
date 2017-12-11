@@ -66,11 +66,35 @@ public class Actions {
 		FAILED, SUCCESS, NULL, OK, CANCEL, YES, NO 
 	}
 
-	public void addNewBookmark(TreeView<String> bookmarks, Tab tab, boolean addChildBookmark) {
+	enum BookmarkType {
+		RELATIVE,
+		CHILD,
+		RELATIVE_TO_PARENT
+	}
+	
+	public void addNewBookmark(TreeView<String> bookmarks, Tab tab, BookmarkType bt1) {
 		Entry item = (Entry)bookmarks.getSelectionModel().getSelectedItem();
+
+		BookmarkType bt = bt1 == BookmarkType.RELATIVE_TO_PARENT && item.getParent() == bookmarks.getRoot() ? BookmarkType.RELATIVE : bt1;  
+		
+		String header = "Add new Bookmark";
+		if(item != null) {
+			switch (bt) {
+			case RELATIVE:
+				header += "\nRelative To: "+item.getValue();
+				break;
+			case CHILD:
+				header += "\nChild To: "+item.getValue();
+				break;
+			case RELATIVE_TO_PARENT:
+				header += "\nRelative To: "+item.getParent().getValue();
+				break;
+			}	
+		}
+		
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION)
 				.title("Add New Bookmark")
-				.headerText("Add New "+(item == null ? "" : (addChildBookmark ? "Child": "Sibling"))+" Bookmark to\n"+(item == null ? "" : item.getTitle()));
+				.headerText(header);
 
 		TextField tf = new TextField();
 		HBox hb = new HBox(10, new Text("Title "), tf);
@@ -104,11 +128,16 @@ public class Actions {
 			if(item == null)
 				return Entry.cast(bookmarks.getRoot()).addChild(title, null);
 			else {
-				if(addChildBookmark)
-					return item.addChild(title, null);
-				else
+				switch (bt) {
+				case RELATIVE:
 					return Entry.cast(item.getParent()).addChild(title, item);
+				case CHILD: 
+					return item.addChild(title, null);
+				case RELATIVE_TO_PARENT:
+					return Entry.cast(item.getParent().getParent()).addChild(title, (Entry)item.getParent());
+				}
 			}
+			return null;
 		})
 		.ifPresent(t -> {
 			bookmarks.getSelectionModel().clearSelection();

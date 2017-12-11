@@ -62,6 +62,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import sam.apps.jbook_reader.Actions.BookmarkType;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.editor.Editor;
 import sam.apps.jbook_reader.tabs.Tab;
@@ -323,8 +324,9 @@ public class Viewer extends Application {
 	private Menu getBookmarkMenu() {
 		return new Menu("_Bookmark",
 				null,
-				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), false), currentTabNull),
-				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), true), selectedItemNull),
+				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), BookmarkType.RELATIVE), currentTabNull),
+				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), BookmarkType.CHILD), selectedItemNull),
+				menuitem("Add Bookmark Relative to Parent", combination(KeyCode.N, ALT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(bookmarks, getCurrentTab(), BookmarkType.RELATIVE_TO_PARENT), selectedItemNull),
 				new SeparatorMenuItem(),
 				menuitem("Remove bookmark", e -> actions.removeBookmarkAction(bookmarks, getCurrentTab()), selectedItemNull),
 				menuitem("Undo Removed bookmark", e -> actions.undoRemoveBookmark(getCurrentTab()), actions.undoDeleteSizeProperty().isEqualTo(0)),
@@ -389,8 +391,8 @@ public class Viewer extends Application {
 		Pane p;
 		Button removeButton, addButton, addChildButton;
 		HBox controls = new HBox(3, 
-				addButton = button("add", "plus.png", e -> actions.addNewBookmark(bookmarks, getCurrentTab(), false)),
-				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> actions.addNewBookmark(bookmarks, getCurrentTab(), true)),
+				addButton = button("add", "plus.png", e -> actions.addNewBookmark(bookmarks, getCurrentTab(), BookmarkType.RELATIVE)),
+				addChildButton = button("add bookmark child", "bookmarkchild.png", e -> actions.addNewBookmark(bookmarks, getCurrentTab(), BookmarkType.CHILD)),
 				removeButton = button("remove selected","error.png", e -> actions.removeBookmarkAction(bookmarks, getCurrentTab())),
 				expandCollpase,
 				p = new Pane(),
