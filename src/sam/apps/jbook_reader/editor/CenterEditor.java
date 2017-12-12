@@ -27,6 +27,7 @@ public class CenterEditor extends UnitEditor{
 	public void setItem(Entry item) {
 		super.setItem(item);
 		title.setText("Modified: "+time(item.getLastModified()));
+		content.setEditable(true);
 	}
 	@Override
 	public void updateTitle() {
@@ -35,5 +36,4 @@ public class CenterEditor extends UnitEditor{
 		super.updateTitle();
 		title.setText("Modified: "+time(item.getLastModified()));
 	}
-	
 }

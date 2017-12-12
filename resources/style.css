@@ -53,14 +53,20 @@
 		-fx-alignment:center;
 		-fx-font-size:2em;
 		-fx-padding: 10 0 10 0;
-		-fx-border-width:1 0 0 0;
-		-fx-border-color:lightgray;
 }
+#editor .control-box {
+	-fx-border-width:1 0 0 0;
+	-fx-border-color:lightgray;
+	-fx-padding: 0 10 0 0;
+} 
 .unit-editor .title-box, .unit-editor .title {
 	-fx-alignment:center;
 	-fx-border-width:1 0 0 0;
 	-fx-border-color:lightgray;
 	-fx-background-color:white;
+}
+.unit-editor .title {
+	-fx-padding:3px;
 }
 .unit-editor  .expand-button {
 	-fx-graphic:url(Expand_20px.png);

@@ -4,10 +4,12 @@ import static sam.fx.helpers.FxHelpers.addClass;
 import static sam.fx.helpers.FxHelpers.button;
 
 import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -17,7 +19,6 @@ import java.util.stream.Stream;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -50,16 +51,23 @@ import sam.properties.session.Session;
 import sam.weakstore.WeakStore;
 
 public class Editor extends BorderPane {
+	private enum View {
+		CENTER, 
+		COMBINED_TEXT,
+		COMBINED_CHILDREN, 
+		EXPANDED
+	}
+
 	private final VBox container = new VBox(15);
 	private final ScrollPane containerScrollPane = new ScrollPane(container);
 	private final Label maintitle = new Label();
-	private final Button backBtn, combineBtn;
-	private final SimpleObjectProperty<Node> backToContent = new SimpleObjectProperty<>();  
-	private final Consumer<Entry> onExpanded = this::onExpanded;
+	private final Button backBtn, combineContentBtn, combineChildrenBtn;
+	private final Consumer<Entry> onExpanded = t -> changeEntry(t, View.EXPANDED);
 	private final CenterEditor centerEditor = new CenterEditor();
 	private boolean wrapText;
-	private TextArea combinedTextArea;
-	private final LinkedList<TreeItem<String>> expandedItems = new LinkedList<>();
+	private final Map<Tab, Map<Entry, Stack<View>>> tabEntryViewHistoryMap = new HashMap<>();
+	private Map<Entry, Stack<View>> entryViewHistoryMap;
+	private TextArea combinedTextArea; 
 
 	private static volatile Editor instance;
 	private static Font font;
@@ -103,8 +111,8 @@ public class Editor extends BorderPane {
 
 		containerScrollPane.setFitToWidth(true);
 
-		currentTabProperty.addListener(e -> tabChange());
-		selectedItemProperty.addListener((p, o, n) -> itemChange((Entry)n));
+		currentTabProperty.addListener((p, o, n) -> tabChange(n));
+		selectedItemProperty.addListener((p, o, n) -> changeEntry((Entry)n, Optional.ofNullable(entryViewHistoryMap.get(n)).filter(s -> !s.isEmpty()).map(Stack::pop).orElse(View.CENTER)));
 
 		disableProperty().bind(selectedItemProperty.isNull());
 
@@ -119,55 +127,115 @@ public class Editor extends BorderPane {
 		maintitle.setWrapText(true);
 
 		HBox hb = new HBox( 
-				backBtn = button("back", "Back_30px.png", e -> backToContentAction()),
+				backBtn = button("back", "Back_30px.png", e -> historyBack()),
 				maintitle,
-				combineBtn = button("combine children", "Plus Math_30px.png", e -> combineAction()));
-
+				combineContentBtn = button("combine children content", "Plus Math_20px.png", e -> changeEntry(View.COMBINED_TEXT)),
+				combineChildrenBtn = button("combine children view", "Cells_20px.png", e -> changeEntry(View.COMBINED_CHILDREN))
+				);
+		
+		backBtn.setVisible(false);
+		combineChildrenBtn.setVisible(false);
+		combineContentBtn.setVisible(false);
+		
 		setTop(hb);
+		addClass(hb, "control-box");
 		hb.setAlignment(Pos.CENTER);
 		HBox.setHgrow(maintitle, Priority.ALWAYS);
-
-		backBtn.visibleProperty().bind(backToContent.isNotNull());
-		combineBtn.visibleProperty().bind(centerProperty().isEqualTo(containerScrollPane).and(Bindings.size(container.getChildren()).greaterThan(1)));
 	}
-	private void itemChange(Entry nnew) {
-		backToContent.set(null);
-
-		if(centerEditor.getItem() == nnew) {
-			setCenter(null);
-			setCenter(centerEditor);
-			return;
-		}
-		if(nnew == null) {
+	private void changeEntry(View view) {
+		changeEntry(centerEditor.getItem(), view, false);
+	}
+	private void changeEntry(Entry item, View view) {
+		changeEntry(item, view, false);
+	}
+	private void historyBack() {
+		Optional.ofNullable(entryViewHistoryMap.get(centerEditor.getItem()))
+		.filter(s -> !s.isEmpty())
+		.map(Stack::pop)
+		.ifPresent(v -> changeEntry(centerEditor.getItem(), v, true));
+	}
+	private void changeEntry(Entry item, View view, boolean skipHistory) {
+		if(item == null) {
 			resizeContainer(0);
 			maintitle.setText(null);
 			setCenter(null);
+			entryViewHistoryMap.remove(item);
+			backBtn.setVisible(false);
+			combineChildrenBtn.setVisible(false);
+			combineContentBtn.setVisible(false);
 			return;
 		}
-		if(nnew.getChildren().isEmpty() || expandedItems.contains(nnew)) {
-			centerEditor.setItem(nnew);
-			maintitle.setText(centerEditor.getItemTitle());
-			setCenter(null);
-			setCenter(centerEditor);
-			return;
-		}
-		resizeContainer(nnew.getChildren().size() + 1);
-		getUnitEditorAt(0).setItem(nnew);
-		int index = 1;
-		for (TreeItem<String> ti : nnew.getChildren()) getUnitEditorAt(index++).setItem((Entry)ti); 
+
+		if(view == null || (view == View.COMBINED_CHILDREN && item.getChildren().isEmpty()))
+			view = View.CENTER;
 
 		setCenter(null);
-		setCenter(containerScrollPane);
-		containerScrollPane.setVvalue(0);
-		maintitle.setText(nnew.getTitle());
 
-		if(combinedTextArea != null && nnew == combinedTextArea.getUserData())
-			combineAction();
+		if(view == View.CENTER || view == View.EXPANDED) {
+			setCenter(centerEditor);
+			centerEditor.setItem(item);
+			maintitle.setText(centerEditor.getItemTitle());
+		}
+		else if(view == View.COMBINED_TEXT) {
+			if(combinedTextArea == null) {
+				combinedTextArea = new TextArea();
+				combinedTextArea.setEditable(false);
+			}
+			combinedTextArea.setFont(Editor.getFont());
+			combinedTextArea.setWrapText(wrapText);
+			setCenter(combinedTextArea);
+			combinedTextArea.setText(combineChildrenContent(item));
+		}
+		else if(view == View.COMBINED_CHILDREN) {
+			resizeContainer(item.getChildren().size() + 1);
+			getUnitEditorAt(0).setItem(item);
+			int index = 1;
+			for (TreeItem<String> ti : item.getChildren()) getUnitEditorAt(index++).setItem((Entry)ti); 
+
+			setCenter(containerScrollPane);
+			containerScrollPane.setVvalue(0);
+			maintitle.setText(item.getTitle());
+		}
+		
+		if(!skipHistory) {
+			Stack<View> s = entryViewHistoryMap.get(item);
+			if(s == null)
+				entryViewHistoryMap.put(item, s = new Stack<>());
+			s.push(view);
+		}
+
+		backBtn.setVisible(Optional.ofNullable(entryViewHistoryMap.get(item)).filter(s -> !s.isEmpty()).isPresent());
+		combineChildrenBtn.setVisible(view != View.COMBINED_CHILDREN && !item.getChildren().isEmpty());
+		combineContentBtn.setVisible(view != View.COMBINED_TEXT && !item.getChildren().isEmpty());
 	}
+	public String combineChildrenContent(Entry item) {
+		StringBuilder sb = new StringBuilder();
+
+		combine(sb, item);
+
+		item.getChildren().stream()
+		.map(Entry::cast)
+		.reduce(sb, this::combine, StringBuilder::append);
+
+		return sb.toString();
+	}	
+
+	private StringBuilder combine(StringBuilder sb, Entry u) {
+		char[] chars = new char[u.getTitle().length() + 10];
+		Arrays.fill(chars, '#');
+		sb.append(chars).append('\n')
+		.append("     ").append(u.getTitle()).append('\n')
+		.append(chars).append('\n').append('\n')
+		.append(u.getContent()).append('\n').append('\n');
+
+		return sb;
+	}
+
 	private UnitEditor getUnitEditorAt(int index) {
 		return (UnitEditor)container.getChildren().get(index);
 	}
-	private void backToContentAction() {
+	/* TODO
+	 * 	private void backToContentAction() {
 		if(combinedTextArea != null) {
 			combinedTextArea.setText(null);
 			combinedTextArea.setUserData(null);
@@ -182,11 +250,16 @@ public class Editor extends BorderPane {
 		setCenter(backToContent.get());
 		backToContent.set(null);
 	}
-	private void tabChange() {
+	 */
+
+	private void tabChange(Tab tab) {
 		resizeContainer(0);
 		maintitle.setText(null);
 		centerEditor.clear();
 		setCenter(null);
+		entryViewHistoryMap = tabEntryViewHistoryMap.get(tab);
+		if(entryViewHistoryMap == null)
+			tabEntryViewHistoryMap.put(tab, entryViewHistoryMap = new HashMap<>());
 	}
 
 	private final WeakStore<UnitEditor> unitEditors = new WeakStore<>(() -> new UnitEditor(onExpanded));
@@ -202,7 +275,7 @@ public class Editor extends BorderPane {
 		else {
 			while(list.size() != newSize)
 				list.add(unitEditors.get());
-			
+
 			for (Node n : list) {
 				UnitEditor e = (UnitEditor)n;
 				e.setWordWrap(wrapText);
@@ -221,34 +294,6 @@ public class Editor extends BorderPane {
 		else
 			maintitle.setText(getUnitEditorAt(0).getItemTitle());
 	}
-	private void combineAction() {
-		String content = container.getChildren().stream().map(UnitEditor.class::cast).reduce(new StringBuilder(), (sb, u) -> {
-			char[] chars = new char[u.getItemTitle().length() + 10];
-			Arrays.fill(chars, '#');
-			sb.append(chars).append('\n')
-			.append("     ").append(u.getItemTitle()).append('\n')
-			.append(chars).append('\n').append('\n')
-			.append(u.getContent()).append('\n').append('\n');
-			return sb;
-		}, StringBuilder::append).toString();
-
-		backToContent.set(containerScrollPane);
-		combinedTextArea = combinedTextArea != null ? combinedTextArea : new TextArea();
-		combinedTextArea.setText(content);
-		combinedTextArea.setUserData(((UnitEditor)container.getChildren().get(0)).getItem());
-		combinedTextArea.setEditable(false);
-		combinedTextArea.setWrapText(wrapText);
-		setCenter(combinedTextArea);
-
-	}	
-	private void onExpanded(Entry item) {
-		centerEditor.setItem(item);
-		if(getCenter() == containerScrollPane)
-			backToContent.set(containerScrollPane);
-
-		setCenter(centerEditor);
-		maintitle.setText(centerEditor.getItemTitle());
-	}
 
 	private Stream<UnitEditor> containerChildren() {
 		return container.getChildren().stream()
@@ -256,8 +301,7 @@ public class Editor extends BorderPane {
 	}
 	public void setWordWrap(boolean wrap) {
 		wrapText = wrap;
-		if(combinedTextArea != null)
-			combinedTextArea.setWrapText(wrap);
+		centerEditor.setWordWrap(wrap);
 		containerChildren().forEach(u -> u.setWordWrap(wrap));
 	}
 	public void setFont() {

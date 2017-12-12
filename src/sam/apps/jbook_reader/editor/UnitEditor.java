@@ -19,7 +19,7 @@ import sam.apps.jbook_reader.datamaneger.Entry;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
-	private final TextArea content = new TextArea();
+	protected final TextArea content = new TextArea();
 	protected volatile Entry item;
 
 	public UnitEditor(Consumer<Entry> onExpanded) {
