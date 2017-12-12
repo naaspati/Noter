@@ -58,8 +58,8 @@ public class Editor extends BorderPane {
 		EXPANDED
 	}
 
-	private final VBox container = new VBox(15);
-	private final ScrollPane containerScrollPane = new ScrollPane(container);
+	private VBox container;
+	private ScrollPane containerScrollPane;
 	private final Label maintitle = new Label();
 	private final Button backBtn, combineContentBtn, combineChildrenBtn;
 	private final Consumer<Entry> onExpanded = t -> changeEntry(t, View.EXPANDED);
@@ -67,7 +67,8 @@ public class Editor extends BorderPane {
 	private boolean wrapText;
 	private final Map<Tab, Map<Entry, Stack<View>>> tabEntryViewHistoryMap = new HashMap<>();
 	private Map<Entry, Stack<View>> entryViewHistoryMap;
-	private TextArea combinedTextArea; 
+	private TextArea combinedTextArea;
+	private View currentView;
 
 	private static volatile Editor instance;
 	private static Font font;
@@ -109,8 +110,6 @@ public class Editor extends BorderPane {
 		Objects.requireNonNull(currentTabProperty);
 		Objects.requireNonNull(selectedItemProperty);
 
-		containerScrollPane.setFitToWidth(true);
-
 		currentTabProperty.addListener((p, o, n) -> tabChange(n));
 		selectedItemProperty.addListener((p, o, n) -> changeEntry((Entry)n, Optional.ofNullable(entryViewHistoryMap.get(n)).filter(s -> !s.isEmpty()).map(Stack::pop).orElse(View.CENTER)));
 
@@ -118,9 +117,6 @@ public class Editor extends BorderPane {
 
 		setId("editor");
 		addClass(maintitle,"main-title");
-		addClass(container,"container");
-
-		container.setPadding(new Insets(10, 0, 10, 0));
 
 		maintitle.setPadding(new Insets(10));
 		maintitle.setMaxWidth(Double.MAX_VALUE);
@@ -132,11 +128,11 @@ public class Editor extends BorderPane {
 				combineContentBtn = button("combine children content", "Plus Math_20px.png", e -> changeEntry(View.COMBINED_TEXT)),
 				combineChildrenBtn = button("combine children view", "Cells_20px.png", e -> changeEntry(View.COMBINED_CHILDREN))
 				);
-		
+
 		backBtn.setVisible(false);
 		combineChildrenBtn.setVisible(false);
 		combineContentBtn.setVisible(false);
-		
+
 		setTop(hb);
 		addClass(hb, "control-box");
 		hb.setAlignment(Pos.CENTER);
@@ -163,6 +159,7 @@ public class Editor extends BorderPane {
 			backBtn.setVisible(false);
 			combineChildrenBtn.setVisible(false);
 			combineContentBtn.setVisible(false);
+			currentView = null;
 			return;
 		}
 
@@ -175,6 +172,10 @@ public class Editor extends BorderPane {
 			setCenter(centerEditor);
 			centerEditor.setItem(item);
 			maintitle.setText(centerEditor.getItemTitle());
+			if(view == View.CENTER) {
+				currentView = null;
+				entryViewHistoryMap.remove(item);
+			}
 		}
 		else if(view == View.COMBINED_TEXT) {
 			if(combinedTextArea == null) {
@@ -187,26 +188,30 @@ public class Editor extends BorderPane {
 			combinedTextArea.setText(combineChildrenContent(item));
 		}
 		else if(view == View.COMBINED_CHILDREN) {
+			createContainer();
 			resizeContainer(item.getChildren().size() + 1);
 			getUnitEditorAt(0).setItem(item);
 			int index = 1;
 			for (TreeItem<String> ti : item.getChildren()) getUnitEditorAt(index++).setItem((Entry)ti); 
-
+			
 			setCenter(containerScrollPane);
 			containerScrollPane.setVvalue(0);
 			maintitle.setText(item.getTitle());
 		}
-		
-		if(!skipHistory) {
+		if(!skipHistory && currentView != null) {
 			Stack<View> s = entryViewHistoryMap.get(item);
+
 			if(s == null)
 				entryViewHistoryMap.put(item, s = new Stack<>());
-			s.push(view);
+
+			s.push(currentView);
 		}
 
+		currentView = view;
+
 		backBtn.setVisible(Optional.ofNullable(entryViewHistoryMap.get(item)).filter(s -> !s.isEmpty()).isPresent());
-		combineChildrenBtn.setVisible(view != View.COMBINED_CHILDREN && !item.getChildren().isEmpty());
-		combineContentBtn.setVisible(view != View.COMBINED_TEXT && !item.getChildren().isEmpty());
+		combineChildrenBtn.setVisible(view != View.COMBINED_CHILDREN && view != View.EXPANDED && !item.getChildren().isEmpty());
+		combineContentBtn.setVisible(view != View.COMBINED_TEXT && view != View.EXPANDED && !item.getChildren().isEmpty());
 	}
 	public String combineChildrenContent(Entry item) {
 		StringBuilder sb = new StringBuilder();
@@ -218,7 +223,17 @@ public class Editor extends BorderPane {
 		.reduce(sb, this::combine, StringBuilder::append);
 
 		return sb.toString();
-	}	
+	}
+
+	public VBox createContainer() {
+		container = new VBox(15);
+		containerScrollPane = new ScrollPane(container);
+		containerScrollPane.setFitToWidth(true);
+		addClass(container,"container");
+		container.setPadding(new Insets(10, 0, 10, 0));
+
+		return container;
+	}
 
 	private StringBuilder combine(StringBuilder sb, Entry u) {
 		char[] chars = new char[u.getTitle().length() + 10];
@@ -264,6 +279,8 @@ public class Editor extends BorderPane {
 
 	private final WeakStore<UnitEditor> unitEditors = new WeakStore<>(() -> new UnitEditor(onExpanded));
 	private void resizeContainer(int newSize) {
+		if(container == null && newSize == 0)
+			return;
 
 		List<Node> list = container.getChildren();
 
@@ -289,15 +306,16 @@ public class Editor extends BorderPane {
 		centerEditor.updateTitle();
 		if(getCenter() == centerEditor)
 			maintitle.setText(centerEditor.getItemTitle());
-		else if(container.getChildren().isEmpty())
+		else if(container == null || container.getChildren().isEmpty())
 			maintitle.setText(null);
 		else
 			maintitle.setText(getUnitEditorAt(0).getItemTitle());
 	}
 
 	private Stream<UnitEditor> containerChildren() {
-		return container.getChildren().stream()
-				.map(n -> (UnitEditor)n);
+		return container == null ? Stream.empty() : 
+			container.getChildren().stream()
+			.map(n -> (UnitEditor)n);
 	}
 	public void setWordWrap(boolean wrap) {
 		wrapText = wrap;
