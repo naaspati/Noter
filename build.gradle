@@ -1,0 +1,40 @@
+apply plugin: 'java'
+apply plugin: 'application'
+// apply plugin: 'eclipse'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+   // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
+   compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.21.0.1'
+   // https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox
+   compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.8'
+   compile files('myutils.jar')
+  //TODO testCompile 'junit:junit:4.12'
+}
+ 
+version = 1.02
+sourceCompatibility = JavaVersion.VERSION_1_8 
+targetCompatibility = JavaVersion.VERSION_1_8
+ 
+mainClassName = 'sam.apps.jbook_reader.Viewer'
+
+task copy(type: Copy) {
+  from(fileTree("$buildDir/install/${distributions.main.baseName}"))
+  into("$rootDir/compiled")
+}
+
+run {
+    environment('APP_HOME', "$rootDir/compiled")
+}
+jar {
+  manifest {
+        attributes('Manifest-Version': '1.0',
+                   'Implementation-Version': version,
+                   'Main-Class':"$mainClassName",	
+                   'Class-Path':'.'
+                   )
+    }
+}
