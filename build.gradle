@@ -21,9 +21,16 @@ targetCompatibility = JavaVersion.VERSION_1_8
  
 mainClassName = 'sam.apps.jbook_reader.Viewer'
 
-task copy(type: Copy) {
+task copyCompiled(type: Copy) {
   from(fileTree("$buildDir/install/${distributions.main.baseName}"))
   into("$rootDir/compiled")
+}
+
+task zipCompiled(type: Zip){
+  from "$rootDir/compiled"
+  exclude '**/session.properties', '**/Thumbs.db'
+  archiveName 'noter.zip'
+  destinationDir rootDir
 }
 
 run {
