@@ -149,7 +149,7 @@ public class Main extends Application {
 
 		@Option(name = "--open", aliases="-o", usage="open file with matching names / or file if exists")
 		List<String> open;
-
+		
 		List<Path> files;
 
 		List<Pair<String, Path>> allFiles;
@@ -185,13 +185,16 @@ public class Main extends Application {
 					} else {
 						if(allFiles == null) {
 							try {
-								allFiles = Files.walk(Paths.get(defaultDir)).map(p -> new Pair<>(p.getFileName().toString().replaceFirst("(?i)\\.jbook$", ""), p)).collect(Collectors.toList());
+								allFiles = Files.walk(Paths.get(defaultDir))
+										.filter(p -> p.getFileName().toString().endsWith(".jbook") && Files.isRegularFile(p))
+										.map(p -> new Pair<>(p.getFileName().toString().replaceFirst("(?i)\\.jbook$", "").toLowerCase(), p))
+										.collect(Collectors.toList());
 							} catch (IOException e) {
 								throw new RuntimeException(e);
 							}
 						}
 						for (Pair<String,Path> pair : allFiles) {
-							if(s.equals(pair.getKey())){
+							if(s.equalsIgnoreCase(pair.getKey())){
 								files.add(pair.getValue());
 								continue loop1;
 							}
