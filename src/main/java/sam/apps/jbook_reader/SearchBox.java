@@ -1,7 +1,7 @@
 package sam.apps.jbook_reader;
 
 import static sam.apps.jbook_reader.Utils.each;
-import static sam.fx.helpers.FxHelpers.button;
+import static sam.fx.helpers.FxButton.button;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -82,8 +82,8 @@ public final class SearchBox extends Popup {
 
 		searchF.setOnAction(e -> searchAction());
 
-		Stage stage = Viewer.getStage(); 
-		show(Viewer.getStage());
+		Stage stage = Main.getStage(); 
+		show(Main.getStage());
 		listener = new WeakChangeListener<>((pp, o, n) -> setLocation());
 		setLocation();
 
@@ -94,7 +94,7 @@ public final class SearchBox extends Popup {
 	public void start(Tab tab) {
 		this.tab = tab;
 		clear();
-		show(Viewer.getStage());
+		show(Main.getStage());
 	}
 	private void searchAction() {
 		String text = searchF.getText();
@@ -159,7 +159,7 @@ public final class SearchBox extends Popup {
 		selectionModel.select(result.get(index));
 	}
 	private void setLocation() {
-		Stage stage = Viewer.getStage();
+		Stage stage = Main.getStage();
 		setX(stage.getX() + stage.getWidth() - getWidth());
 		setY(stage.getY() + 30);	
 	}

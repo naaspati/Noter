@@ -42,10 +42,10 @@ import javafx.stage.StageStyle;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
+import sam.config.Session;
 import sam.fx.alert.AlertBuilder;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
-import sam.properties.session.Session;
 
 public class Actions {
 	private static transient Actions instance;
@@ -66,12 +66,6 @@ public class Actions {
 		FAILED, SUCCESS, NULL, OK, CANCEL, YES, NO 
 	}
 
-	enum BookmarkType {
-		RELATIVE,
-		CHILD,
-		RELATIVE_TO_PARENT
-	}
-	
 	public void addNewBookmark(TreeView<String> bookmarks, Tab tab, BookmarkType bt1) {
 		Entry item = (Entry)bookmarks.getSelectionModel().getSelectedItem();
 
@@ -94,7 +88,7 @@ public class Actions {
 		
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION)
 				.title("Add New Bookmark")
-				.headerText(header);
+				.header(header);
 
 		TextField tf = new TextField();
 		HBox hb = new HBox(10, new Text("Title "), tf);
@@ -120,7 +114,7 @@ public class Actions {
 		Platform.runLater(() -> tf.requestFocus());
 
 		Dialog<ButtonType> d = dialog.build();
-		d.initOwner(Viewer.getStage());
+		d.initOwner(Main.getStage());
 
 		d.showAndWait().filter(b -> b == ButtonType.OK)
 		.map(b -> {
@@ -224,7 +218,7 @@ public class Actions {
 
 		Stage stg = new Stage(StageStyle.UNIFIED);
 		stg.initModality(Modality.APPLICATION_MODAL);
-		stg.initOwner(Viewer.getStage());
+		stg.initOwner(Main.getStage());
 
 		Button moveAbove = new Button("Move Above");
 		Button moveBelow = new Button("Move Below");
@@ -292,7 +286,7 @@ public class Actions {
 
 		chooser.setInitialFileName(suggestedName);
 		chooser.setInitialDirectory(new File(path));
-		File file = suggestedName == null ?  chooser.showOpenDialog(Viewer.getStage()) : chooser.showSaveDialog(Viewer.getStage());
+		File file = suggestedName == null ?  chooser.showOpenDialog(Main.getStage()) : chooser.showSaveDialog(Main.getStage());
 		if(file != null)
 			Session.put("last-visited-folder", file.getParent());
 
@@ -359,8 +353,8 @@ public class Actions {
 		return
 				FxAlert.alertBuilder(AlertType.CONFIRMATION)
 				.title("Save File")
-				.contentText(tab.getJbookPath() != null ? tab.getJbookPath() : tab.getTabTitle())
-				.buttonTypes(ButtonType.NO, ButtonType.YES, ButtonType.CANCEL)
+				.content(tab.getJbookPath() != null ? tab.getJbookPath() : tab.getTabTitle())
+				.buttons(ButtonType.NO, ButtonType.YES, ButtonType.CANCEL)
 				.showAndWait()
 				.map(b -> b == ButtonType.YES ? ActionResult.YES : 
 					b == ButtonType.NO ? ActionResult.NO : 

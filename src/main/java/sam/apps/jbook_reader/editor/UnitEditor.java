@@ -1,7 +1,7 @@
 package sam.apps.jbook_reader.editor;
 
-import static sam.fx.helpers.FxHelpers.addClass;
-import static sam.fx.helpers.FxHelpers.button;
+import static sam.fx.helpers.FxButton.button;
+import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.util.function.Consumer;
 

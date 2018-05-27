@@ -1,5 +1,8 @@
 package sam.apps.jbook_reader.tabs;
 
+import static sam.fx.helpers.FxClassHelper.setClass;
+import static sam.fx.helpers.FxClassHelper.toggleClass;
+
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
@@ -8,10 +11,10 @@ import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import sam.apps.jbook_reader.datamaneger.DataManeger;
-import static sam.fx.helpers.FxHelpers.*;
 
 public class Tab extends DataManeger {
 	private final HBox view = new HBox(5);
@@ -45,7 +48,10 @@ public class Tab extends DataManeger {
 	
 	public HBox getView() { return view; }
 
-	public void setTabTitle(String string) { title.setText(string); }
+	public void setTabTitle(String string) { 
+		title.setText(string);
+		title.setTooltip(new Tooltip(string));
+		}
 	public String getTabTitle() { return title.getText(); }
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
 

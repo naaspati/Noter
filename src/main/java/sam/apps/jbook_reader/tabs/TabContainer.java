@@ -1,6 +1,6 @@
 package sam.apps.jbook_reader.tabs;
 
-import static sam.fx.helpers.FxHelpers.addClass;
+import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

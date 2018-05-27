@@ -1,7 +1,7 @@
 package sam.apps.jbook_reader.editor;
 
-import static sam.fx.helpers.FxHelpers.addClass;
-import static sam.fx.helpers.FxHelpers.button;
+import static sam.fx.helpers.FxButton.button;
+import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,12 +43,11 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
-import sam.apps.jbook_reader.Viewer;
+import sam.apps.jbook_reader.Main;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
-import sam.fx.helpers.FxHelpers;
-import sam.properties.session.Session;
-import sam.weakstore.WeakStore;
+import sam.config.Session;
+import sam.weak.WeakStore;
 
 public class Editor extends BorderPane {
 	private enum View {
@@ -291,7 +290,7 @@ public class Editor extends BorderPane {
 		}
 		else {
 			while(list.size() != newSize)
-				list.add(unitEditors.get());
+				list.add(unitEditors.poll());
 
 			for (Node n : list) {
 				UnitEditor e = (UnitEditor)n;
@@ -325,7 +324,7 @@ public class Editor extends BorderPane {
 	public void setFont() {
 		Stage stage = new Stage(StageStyle.UTILITY);
 		stage.initModality(Modality.APPLICATION_MODAL);
-		stage.initOwner(Viewer.getStage());
+		stage.initOwner(Main.getStage());
 		stage.setTitle("Select Font");
 
 		GridPane root = new GridPane();
@@ -333,7 +332,7 @@ public class Editor extends BorderPane {
 		root.setVgap(5);
 
 		// family, weight, posture, size
-		root.addRow(0, Stream.of("family:", "weight:", "posture:", "size:").map(FxHelpers::text).toArray(Text[]::new));
+		root.addRow(0, Stream.of("family:", "weight:", "posture:", "size:").map(Text::new).toArray(Text[]::new));
 
 		ComboBox<String> family = new ComboBox<>(FXCollections.observableArrayList(Font.getFamilies()));
 		ComboBox<FontWeight> weight = new ComboBox<>(FXCollections.observableArrayList(FontWeight.values()));
