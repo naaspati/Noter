@@ -45,7 +45,7 @@ import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.AlertBuilder;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
-import sam.config.Session;
+
 
 public class Actions {
 	private static transient Actions instance;

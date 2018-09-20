@@ -23,7 +23,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sam.config.Session;
+
 
 class EntryUtils {
 	private static final String TITLE = "title";

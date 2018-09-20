@@ -9,7 +9,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
@@ -23,7 +22,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sam.config.Session;
+
 
 class EntryUtils {
 	private static final String TITLE = "title";
@@ -73,8 +72,9 @@ class EntryUtils {
 		Transformer transformer = 
 				TransformerFactory.newInstance()
 				.newTransformer();
-
-		Session.putIfAbsent("xml-indent", "false");
+		
+		/** TODO
+		 * 		Session.putIfAbsent("xml-indent", "false");
 
 		transformer.setOutputProperty(OutputKeys.INDENT, 
 				Optional.ofNullable(Session.get("xml-indent"))
@@ -85,6 +85,7 @@ class EntryUtils {
 				);
 
 		transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+		 */
 
 		StreamResult result = new StreamResult(Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING));
 		transformer.transform(new DOMSource(doc), result);

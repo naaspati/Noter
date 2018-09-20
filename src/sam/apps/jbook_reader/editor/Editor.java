@@ -47,7 +47,7 @@ import sam.apps.jbook_reader.Viewer;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.fx.helpers.FxHelpers;
-import sam.config.Session;
+
 
 public class Editor extends BorderPane {
 	private final VBox container = new VBox(15);

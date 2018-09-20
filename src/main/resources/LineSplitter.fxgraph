@@ -1,0 +1,39 @@
+package none
+
+
+import javafx.scene.layout.AnchorPane
+import javafx.stage.Stage
+import javafx.scene.Scene
+import javafx.scene.layout.VBox
+import javafx.scene.control.TextArea
+import javafx.scene.text.Text
+import javafx.scene.layout.HBox
+import javafx.scene.control.Button
+import javafx.geometry.Insets
+import javafx.scene.control.TextField
+
+dynamic component LineSplitter {
+	Stage {
+		scene : Scene {
+			VBox {
+				padding : Insets {bottom : 5, left : 5, right : 5, top : 5},
+				spacing : 10,
+				fillWidth : true,
+				Text {text : "Input"},
+				TextArea id inputTa {editable : false},
+				Text {text : "Output"},
+				TextArea id outputTa  {editable : false},
+				HBox {
+					spacing : 5,
+					Text {text:"word size"},
+					TextField id sizeTF {maxWidth : 50}, 
+					Button id check {text : "Check", onAction : controllermethod checkAction},
+					Button id ok {text: "OK", onAction : controllermethod okAction},
+					
+					alignment : "CENTER_RIGHT",
+					padding : Insets {bottom : 5, left : 5, right : 5, top : 5}
+				}
+			}
+		}
+	}
+}

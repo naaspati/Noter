@@ -68,7 +68,7 @@ import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
-import sam.config.Session;
+
 
 public class Viewer extends Application {
 	public static void main( String[] args ) {

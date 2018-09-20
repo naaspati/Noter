@@ -6,6 +6,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 
 import sam.apps.jbook_reader.datamaneger.Entry;
+import sam.fx.popup.FxPopupShop;
+import sam.myutils.MyUtilsCheck;
+import sam.myutils.MyUtilsException;
+import sam.weak.WeakAndLazy;
 
 public class CenterEditor extends UnitEditor{
 
@@ -35,5 +39,19 @@ public class CenterEditor extends UnitEditor{
 			return;
 		super.updateTitle();
 		title.setText("Modified: "+time(item.getLastModified()));
+	}
+
+	private final WeakAndLazy<LineSplitter> ls = new WeakAndLazy<>(() -> MyUtilsException.noError(() -> new LineSplitter()));
+
+	public void splitLine() {
+		if(!content.isEditable()) {
+			FxPopupShop.showHidePopup("not editable", 1500);
+			return;
+		}
+
+		if(MyUtilsCheck.isEmptyTrimmed(content.getSelectedText())) 
+			FxPopupShop.showHidePopup("no text selected", 1500);
+		else
+			ls.get().show(content);
 	}
 }

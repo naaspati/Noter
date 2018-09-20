@@ -8,24 +8,23 @@ import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
 
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
@@ -69,25 +68,34 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.util.Pair;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.editor.Editor;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
-import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 
 public class Main extends Application {
 	public static final Path APP_HOME = Paths.get(System.getenv("APP_HOME"));
-	private static FileLoader fileLoader;
+	public static final Path CONFIG_DIR = APP_HOME.resolve("config_dir");
+	private static CmdLoader cmdLoader;
 
-	public static void main( String[] args ) throws CmdLineException {
-		Session.setPath(APP_HOME);
-		
+	public static void main( String[] args ) throws CmdLineException, IOException {
 		if(args.length != 0)
-			fileLoader = new FileLoader(args);
-		launch(args);
+			cmdLoader = new CmdLoader(args);
+		launch(new String[0]);
+	}
+	
+	public static Properties  getConfig() {
+		
+		try {
+			Properties properties = new Properties();
+			properties.load(Files.newInputStream(Main.CONFIG_DIR.resolve("config.properties")));
+			
+			return properties;	
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private final TreeView<String> bookmarks = new TreeView<>();
@@ -134,93 +142,20 @@ public class Main extends Application {
 		showStage(stage);
 		readRecents();
 		
-		if(fileLoader != null && fileLoader.files != null && !fileLoader.files.isEmpty()) {
-			fileLoader.files.stream()
+		if(cmdLoader != null && cmdLoader.files != null && !cmdLoader.files.isEmpty()) {
+			cmdLoader.files.stream()
 			.filter(Files::exists)
 			.forEach(tabsContainer::addTab);
 		}
-	}
-
-	static class FileLoader {
-		@Option(name="--help", aliases="-h", usage="print this")
-		boolean help;
-		@Option(name="--version", aliases="-v", usage="print this")
-		boolean version;
-
-		@Option(name = "--open", aliases="-o", usage="open file with matching names / or file if exists")
-		List<String> open;
-		
-		List<Path> files;
-
-		List<Pair<String, Path>> allFiles;
-
-		public FileLoader(String[] args) throws CmdLineException {
-			CmdLineParser cmd = new CmdLineParser(this);
-			cmd.parseArgument(args);
-
-			if(help) {
-				cmd.printUsage(System.out);
-				System.exit(0);
-			}
-			if(version) {
-				System.out.println("1.2");
-				System.exit(0);
-			}
-
-			if(open == null || open.isEmpty())
-				return;
-
-			String defaultDir = Session.get("default.save.dir");
-			files = new ArrayList<>();
-
-			loop1:
-				for (String s : open) {
-					if(s.trim().isEmpty())
-						continue;
-
-					File f = new File(s);
-
-					if(f.exists() ||  (f = new File(defaultDir, s)).exists() ) {
-						files.add(f.toPath());
-					} else {
-						if(allFiles == null) {
-							try {
-								allFiles = Files.walk(Paths.get(defaultDir))
-										.filter(p -> p.getFileName().toString().endsWith(".jbook") && Files.isRegularFile(p))
-										.map(p -> new Pair<>(p.getFileName().toString().replaceFirst("(?i)\\.jbook$", "").toLowerCase(), p))
-										.collect(Collectors.toList());
-							} catch (IOException e) {
-								throw new RuntimeException(e);
-							}
-						}
-						for (Pair<String,Path> pair : allFiles) {
-							if(s.equalsIgnoreCase(pair.getKey())){
-								files.add(pair.getValue());
-								continue loop1;
-							}
-						}
-
-						s = s.toLowerCase();
-						boolean found = false;
-
-						for (Pair<String,Path> pair : allFiles) {
-							if(pair.getKey().contains(s)) {
-								files.add(pair.getValue());
-								found = true;
-							}
-						}
-						if(found)
-							continue loop1;
-					}
-					
-					System.out.println("no match found for:  "+s);
-				}
-			allFiles = null;
-		}
+		cmdLoader = null;
 	}
 
 	private void readRecents() throws IOException, URISyntaxException {
-		Stream.of(Session.get("recents", "").split(";"))
+		Path p = CONFIG_DIR.resolve("recents.txt");
+		if(Files.notExists(p))
+			return;
+		
+		Files.lines(p)
 		.map(String::trim)
 		.filter(s -> !s.isEmpty())
 		.map(Paths::get)
@@ -229,15 +164,23 @@ public class Main extends Application {
 		.map(this::recentsMenuItem)
 		.forEach(recentsMenu.getItems()::add);
 	}
-	private void showStage(Stage stage2) {
+	private void showStage(Stage stage2) throws IOException {
 		Rectangle2D screen = Screen.getPrimary().getBounds();
+		
+		Properties config = new Properties();
+		config.load(Files.newInputStream(CONFIG_DIR.resolve("stage-config.properties")));
+		
+		BiFunction<String, Double, Double> get = (s,t) -> {
+			try {
+				return Double.parseDouble(config.getProperty(s));
+			} catch (NullPointerException|NumberFormatException e) {}
+			return t;
+		};
 
-		Function<String, Double> parser = Double::parseDouble;
-
-		stage.setWidth(Session.get("stage.width", screen.getWidth()/2, parser));
-		stage.setHeight(Session.get("stage.height", screen.getHeight(), parser));
-		stage.setX(Session.get("stage.x", 0d, parser));
-		stage.setY(Session.get("stage.y", 0d, parser));
+		stage.setWidth(get.apply("stage.width", screen.getWidth()/2));
+		stage.setHeight(get.apply("stage.height", screen.getHeight()));
+		stage.setX(get.apply("stage.x", 0d));
+		stage.setY(get.apply("stage.y", 0d));
 
 		try {
 			stage.getIcons().add(new Image(Files.newInputStream(APP_HOME.resolve("notebook.png"))));
@@ -285,15 +228,28 @@ public class Main extends Application {
 	}
 	private void exit() {
 		if(tabsContainer.closeAll()) {
-			Session.put("stage.width", String.valueOf(stage.getWidth()));
-			Session.put("stage.height", String.valueOf(stage.getHeight()));
-			Session.put("stage.x", String.valueOf(stage.getX()));
-			Session.put("stage.y", String.valueOf(stage.getY()));
-			Session.put("recents", recentsMenu.getItems().stream()
-					.map(MenuItem::getUserData)
-					.map(Object::toString)
-					.map(s -> s.replace('\\', '/'))
-					.collect(Collectors.joining(";")));
+			
+			Properties properties = new Properties();
+			properties.put("stage.width", String.valueOf(stage.getWidth()));
+			properties.put("stage.height", String.valueOf(stage.getHeight()));
+			properties.put("stage.x", String.valueOf(stage.getX()));
+			properties.put("stage.y", String.valueOf(stage.getY()));
+			
+			try {
+				properties.store(Files.newOutputStream(CONFIG_DIR.resolve("stage-config.properties"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING), LocalDateTime.now().toString());
+			} catch (IOException e) {
+				System.out.println("failed to save: stage-config.properties  "+e);
+			}
+			
+			try {
+				Files.write(CONFIG_DIR.resolve("recents.txt"), recentsMenu.getItems().stream()
+						.map(MenuItem::getUserData)
+						.map(Object::toString)
+						.map(s -> s.replace('\\', '/'))
+						.collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			} catch (IOException e) {
+				System.out.println("failed to save: recents.txt  "+e);
+			}
 			System.exit(0);
 		}
 	}
@@ -303,8 +259,10 @@ public class Main extends Application {
 				getBookmarkMenu(), 
 				getSearchMenu(), 
 				getEditorMenu(), 
-				Session.get("debug", false, Boolean::valueOf) ? getDebugMenu() : new Menu()
-
+				Optional.ofNullable(getConfig().getProperty("debug"))
+				.filter(s -> s.trim().equalsIgnoreCase("true"))
+				.map(s -> getDebugMenu())
+				.orElse(new Menu())
 				);
 	}
 	private Menu getDebugMenu() {
@@ -331,8 +289,10 @@ public class Main extends Application {
 	}
 	private Menu getEditorMenu() {
 		return new Menu("editor", null,
+				menuitem("Split line", e -> editor.splitLine()),
 				radioMenuitem("Text wrap", e -> editor.setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
 				menuitem("Font", e -> editor.setFont())
+				
 				);
 	}
 	private Menu getSearchMenu() {

@@ -3,12 +3,17 @@ package sam.apps.jbook_reader.editor;
 import static sam.fx.helpers.FxButton.button;
 import static sam.fx.helpers.FxClassHelper.addClass;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -46,7 +51,7 @@ import javafx.util.StringConverter;
 import sam.apps.jbook_reader.Main;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
-import sam.config.Session;
+import sam.fx.popup.FxPopupShop;
 import sam.weak.WeakStore;
 
 public class Editor extends BorderPane {
@@ -76,22 +81,29 @@ public class Editor extends BorderPane {
 		return font;
 	}
 	static {
+		Properties prop = new Properties();
+		try {
+			prop.load(Files.newInputStream(Main.CONFIG_DIR.resolve("editor-config.properties")));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		
 		// Font.font(family, weight, posture, size)
-		String family = Session.get("editor.font.family");
-		FontWeight weight = parse("editor.font.weight", FontWeight::valueOf);
-		FontPosture posture = parse("editor.font.posture", FontPosture::valueOf);
-		Float size = parse("editor.font.size", Float::parseFloat);
+		String family = prop.getProperty("editor.font.family");
+		FontWeight weight = parse("editor.font.weight",prop, FontWeight::valueOf);
+		FontPosture posture = parse("editor.font.posture",prop, FontPosture::valueOf);
+		Float size = parse("editor.font.size",prop, Float::parseFloat);
 
 		font = Font.font(family, weight, posture, size == null ? -1 : size);
 	}
-	private static <R> R parse(String key, Function<String, R> parser) {
+	private static <R> R parse(String key, Properties prop, Function<String, R> parser) {
 		try {
-			String s = Session.get(key);
+			String s = prop.getProperty(key);
 			if(s == null)
 				return null;
 			return parser.apply(s.toUpperCase());
 		} catch (Exception e) {
-			Logger.getLogger(Editor.class.getName()).warning("bad "+key+" value: "+Session.get(key));
+			Logger.getLogger(Editor.class.getName()).warning("bad "+key+" value: "+prop.getProperty(key));
 		}
 		return null;
 	}
@@ -404,12 +416,28 @@ public class Editor extends BorderPane {
 			stage.hide();
 			centerEditor.updateFont();
 			containerChildren().forEach(UnitEditor::updateFont);
+			
+			Properties p = new Properties();
 
-			Session.put("editor.font.family", family.getValue());
-			Session.put("editor.font.weight",weight.getValue().toString());
-			Session.put("editor.font.posture",posture.getValue().toString());
-			Session.put("editor.font.size", size.getValue().toString());
+			p.put("editor.font.family", family.getValue());
+			p.put("editor.font.weight",weight.getValue().toString());
+			p.put("editor.font.posture",posture.getValue().toString());
+			p.put("editor.font.size", size.getValue().toString());
+			
+			try {
+				p.store(Files.newOutputStream(Main.CONFIG_DIR.resolve("editor-config.properties"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING), LocalDateTime.now().toString());
+			} catch (IOException e1) {
+				System.out.println("failed to save: editor-config.properties");
+			}
 		});
 		stage.showAndWait();
 	}
+
+	public void splitLine() {
+		if(getCenter() != centerEditor)
+			FxPopupShop.showHidePopup("no text selected", 1500);
+		else
+			centerEditor.splitLine();
+	}
+	
 }

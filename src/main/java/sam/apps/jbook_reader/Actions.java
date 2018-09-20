@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -42,7 +43,6 @@ import javafx.stage.StageStyle;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
-import sam.config.Session;
 import sam.fx.alert.AlertBuilder;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
@@ -70,22 +70,22 @@ public class Actions {
 		Entry item = (Entry)bookmarks.getSelectionModel().getSelectedItem();
 
 		BookmarkType bt = bt1 == BookmarkType.RELATIVE_TO_PARENT && item.getParent() == bookmarks.getRoot() ? BookmarkType.RELATIVE : bt1;  
-		
+
 		String header = "Add new Bookmark";
 		if(item != null) {
 			switch (bt) {
-			case RELATIVE:
-				header += "\nRelative To: "+item.getValue();
-				break;
-			case CHILD:
-				header += "\nChild To: "+item.getValue();
-				break;
-			case RELATIVE_TO_PARENT:
-				header += "\nRelative To: "+item.getParent().getValue();
-				break;
+				case RELATIVE:
+					header += "\nRelative To: "+item.getValue();
+					break;
+				case CHILD:
+					header += "\nChild To: "+item.getValue();
+					break;
+				case RELATIVE_TO_PARENT:
+					header += "\nRelative To: "+item.getParent().getValue();
+					break;
 			}	
 		}
-		
+
 		AlertBuilder dialog = FxAlert.alertBuilder(AlertType.CONFIRMATION)
 				.title("Add New Bookmark")
 				.header(header);
@@ -123,12 +123,12 @@ public class Actions {
 				return Entry.cast(bookmarks.getRoot()).addChild(title, null);
 			else {
 				switch (bt) {
-				case RELATIVE:
-					return Entry.cast(item.getParent()).addChild(title, item);
-				case CHILD: 
-					return item.addChild(title, null);
-				case RELATIVE_TO_PARENT:
-					return Entry.cast(item.getParent().getParent()).addChild(title, (Entry)item.getParent());
+					case RELATIVE:
+						return Entry.cast(item.getParent()).addChild(title, item);
+					case CHILD: 
+						return item.addChild(title, null);
+					case RELATIVE_TO_PARENT:
+						return Entry.cast(item.getParent().getParent()).addChild(title, (Entry)item.getParent());
 				}
 			}
 			return null;
@@ -281,14 +281,28 @@ public class Actions {
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
 
-		String path = Optional.ofNullable(Session.get("last-visited-folder"))
-				.orElse(Session.get("default.folder", "."));
+		final Path p = Main.CONFIG_DIR.resolve("last-visited-folder.txt");
+
+		String path;
+		try {
+			path = Files.exists(p) ? new String(Files.readAllBytes(p)) : null;
+		} catch (IOException e) {
+			path = null;
+		}
 
 		chooser.setInitialFileName(suggestedName);
-		chooser.setInitialDirectory(new File(path));
-		File file = suggestedName == null ?  chooser.showOpenDialog(Main.getStage()) : chooser.showSaveDialog(Main.getStage());
-		if(file != null)
-			Session.put("last-visited-folder", file.getParent());
+		File file = path == null ? null : new File(path);
+		if(file != null && file.exists())
+			chooser.setInitialDirectory(file);
+		else
+			chooser.setInitialDirectory(Main.APP_HOME.toFile());
+		file = suggestedName == null ?  chooser.showOpenDialog(Main.getStage()) : chooser.showSaveDialog(Main.getStage());
+
+		if(file != null) {
+			try {
+				Files.write(p, file.getParent().toString().replace('\\', '/').getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			} catch (IOException e) {}
+		}
 
 		return file;
 	}
@@ -386,8 +400,6 @@ public class Actions {
 		return ActionResult.SUCCESS;
 	}
 	public void  rename(Tab tab)  {
-		Session.put("last-visited-folder", tab.getJbookPath().getParent().toString());
-
 		File file = getFile("rename", tab.getJbookPath().getFileName().toString());
 		if(file == null) {
 			FxPopupShop.showHidePopup("cancelled", 1500);
