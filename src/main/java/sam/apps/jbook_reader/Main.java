@@ -59,6 +59,7 @@ import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -289,7 +290,7 @@ public class Main extends Application {
 	}
 	private Menu getEditorMenu() {
 		return new Menu("editor", null,
-				menuitem("Split line", e -> editor.splitLine()),
+				menuitem("Split line", combination(KeyCode.S, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN), e -> editor.splitLine()),
 				radioMenuitem("Text wrap", e -> editor.setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
 				menuitem("Font", e -> editor.setFont())
 				
