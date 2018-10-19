@@ -26,8 +26,8 @@
 				<HBox spacing="5" alignment="CENTER_RIGHT"> 
 					<Text text="word size"/> 
 					<TextField fx:id="sizeTF" maxWidth="50"/> 
-					<Button fx:id="check" text="Check" onAction="#checkAction"/> 
-					<Button fx:id="ok" text="OK" onAction="#okAction"/> 
+					<Button fx:id="check" text="Check" onAction="#checkAction" cancelButton="true"/> 
+					<Button fx:id="ok" text="OK" onAction="#okAction" defaultButton="true"/> 
 					<padding>
 						<Insets bottom="5" left="5" right="5" top="5"/> 
 					</padding>

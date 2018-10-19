@@ -23,7 +23,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 
-
 class EntryUtils {
 	private static final String TITLE = "title";
 	private static final String ENTRIES = "entries";

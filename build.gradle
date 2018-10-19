@@ -8,37 +8,44 @@ repositories {
 
 dependencies {
    compile 'args4j:args4j:2.33'
-   compile files('myutils.jar')
+ compile files('myutils.jar')
+  compile 'org.json:json:20180130'
+  
 }
  
+/*
 version = 1.02
 sourceCompatibility = JavaVersion.VERSION_1_8 
 targetCompatibility = JavaVersion.VERSION_1_8
+
+*/
  
-mainClassName = 'sam.apps.jbook_reader.Main'
+mainClassName = 'Main'
 
-task copy(type: Copy, dependsOn:'installDist') {
-  from(fileTree("$buildDir/install/${distributions.main.baseName}"))
-  into("$rootDir/compiled")
-}
+ext.appdir = file("${System.env.SAM_PROGRAMS}\\${file('.').name.toLowerCase()}\\app")
 
-task zipCompiled(type: Zip){
-  from "$rootDir/compiled"
-  exclude '**/session.properties', '**/Thumbs.db'
-  archiveName 'noter.zip'
-  destinationDir rootDir
-}
 run {
-    environment('APP_HOME', "$rootDir/compiled")
-}
-jar {
-  manifest {
-        attributes('Manifest-Version': '1.0',
-                   'Implementation-Version': version,
-                   'Main-Class':"$mainClassName",	
-                   'Class-Path':'.'
-                   )
-    }
+    workingDir installDist.destinationDir.parent
 }
 
-defaultTasks 'iD', 'copy'
+task install(type: Copy, dependsOn:installDist) {
+  from file(new File(installDist.destinationDir, 'lib'))
+  into appdir
+  
+  doLast {
+     new File(appdir, 'run.cmd').text = """
+  @echo off
+  setlocal
+   
+  java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', new File(installDist.destinationDir, 'lib').list())}\" ${mainClassName} %*
+  
+  """.stripIndent()
+  } 
+}
+
+jar {
+  exclude '*.fxgraph'
+}
+
+defaultTasks 'install'
+

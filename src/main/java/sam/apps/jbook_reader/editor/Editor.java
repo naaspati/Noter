@@ -17,7 +17,6 @@ import java.util.Properties;
 import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -48,11 +47,12 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
-import sam.apps.jbook_reader.Main;
+import sam.apps.jbook_reader.App;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.fx.popup.FxPopupShop;
-import sam.weak.WeakStore;
+import sam.logging.MyLoggerFactory;
+import sam.reference.WeakList;
 
 public class Editor extends BorderPane {
 	private enum View {
@@ -83,11 +83,11 @@ public class Editor extends BorderPane {
 	static {
 		Properties prop = new Properties();
 		try {
-			prop.load(Files.newInputStream(Main.CONFIG_DIR.resolve("editor-config.properties")));
+			prop.load(Files.newInputStream(App.CONFIG_DIR.resolve("editor-config.properties")));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		
+
 		// Font.font(family, weight, posture, size)
 		String family = prop.getProperty("editor.font.family");
 		FontWeight weight = parse("editor.font.weight",prop, FontWeight::valueOf);
@@ -103,7 +103,7 @@ public class Editor extends BorderPane {
 				return null;
 			return parser.apply(s.toUpperCase());
 		} catch (Exception e) {
-			Logger.getLogger(Editor.class.getName()).warning("bad "+key+" value: "+prop.getProperty(key));
+			MyLoggerFactory.logger(Editor.class.getName()).warning("bad "+key+" value: "+prop.getProperty(key));
 		}
 		return null;
 	}
@@ -204,7 +204,7 @@ public class Editor extends BorderPane {
 			getUnitEditorAt(0).setItem(item);
 			int index = 1;
 			for (TreeItem<String> ti : item.getChildren()) getUnitEditorAt(index++).setItem((Entry)ti); 
-			
+
 			setCenter(containerScrollPane);
 			containerScrollPane.setVvalue(0);
 			maintitle.setText(item.getTitle());
@@ -288,7 +288,7 @@ public class Editor extends BorderPane {
 			tabEntryViewHistoryMap.put(tab, entryViewHistoryMap = new HashMap<>());
 	}
 
-	private final WeakStore<UnitEditor> unitEditors = new WeakStore<>(() -> new UnitEditor(onExpanded));
+	private final WeakList<UnitEditor> unitEditors = new WeakList<>(() -> new UnitEditor(onExpanded));
 	private void resizeContainer(int newSize) {
 		if(container == null && newSize == 0)
 			return;
@@ -336,7 +336,7 @@ public class Editor extends BorderPane {
 	public void setFont() {
 		Stage stage = new Stage(StageStyle.UTILITY);
 		stage.initModality(Modality.APPLICATION_MODAL);
-		stage.initOwner(Main.getStage());
+		stage.initOwner(App.getStage());
 		stage.setTitle("Select Font");
 
 		GridPane root = new GridPane();
@@ -416,16 +416,16 @@ public class Editor extends BorderPane {
 			stage.hide();
 			centerEditor.updateFont();
 			containerChildren().forEach(UnitEditor::updateFont);
-			
+
 			Properties p = new Properties();
 
 			p.put("editor.font.family", family.getValue());
 			p.put("editor.font.weight",weight.getValue().toString());
 			p.put("editor.font.posture",posture.getValue().toString());
 			p.put("editor.font.size", size.getValue().toString());
-			
+
 			try {
-				p.store(Files.newOutputStream(Main.CONFIG_DIR.resolve("editor-config.properties"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING), LocalDateTime.now().toString());
+				p.store(Files.newOutputStream(App.CONFIG_DIR.resolve("editor-config.properties"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING), LocalDateTime.now().toString());
 			} catch (IOException e1) {
 				System.out.println("failed to save: editor-config.properties");
 			}
@@ -433,11 +433,11 @@ public class Editor extends BorderPane {
 		stage.showAndWait();
 	}
 
-	public void splitLine() {
+	public void consume(Consumer<TextArea> e) {
 		if(getCenter() != centerEditor)
 			FxPopupShop.showHidePopup("no text selected", 1500);
 		else
-			centerEditor.splitLine();
+			centerEditor.consume(e);
 	}
-	
+
 }

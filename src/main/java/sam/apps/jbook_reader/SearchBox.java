@@ -1,17 +1,19 @@
 package sam.apps.jbook_reader;
 
-import static sam.apps.jbook_reader.Utils.each;
 import static sam.fx.helpers.FxButton.button;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javafx.beans.binding.When;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.MultipleSelectionModel;
@@ -53,7 +55,10 @@ public final class SearchBox extends Popup {
 				clear = button("clear", "cancel-mark.png", e1 -> clear())
 				);
 		previous.setRotate(-180);
-		each(e -> e.opacityProperty().bind(new When(e.disableProperty()).then(0).otherwise(1)), previous, next, clear);
+		Consumer<Button> c = e -> e.opacityProperty().bind(new When(e.disableProperty()).then(0).otherwise(1));
+		c.accept(previous);
+		c.accept(next);
+		c.accept(clear);
 
 		box.setPadding(new Insets(5));
 		Text t = new Text("Search");
@@ -82,19 +87,25 @@ public final class SearchBox extends Popup {
 
 		searchF.setOnAction(e -> searchAction());
 
-		Stage stage = Main.getStage(); 
-		show(Main.getStage());
+		Stage stage = App.getStage(); 
+		show(App.getStage());
 		listener = new WeakChangeListener<>((pp, o, n) -> setLocation());
 		setLocation();
 
-		each(a -> a.addListener(listener), stage.xProperty(), stage.yProperty(), stage.widthProperty(), stage.heightProperty());
-		each(a -> a.getStyleClass().add("text"), t, t2, closeButton, inContent, inBookmarks);
-		each(b -> b.getTooltip().setStyle("-fx-background-color:white;-fx-text-fill:black;"), previous, next, clear, closeButton);
+		for(ReadOnlyDoubleProperty a: new ReadOnlyDoubleProperty[] {stage.xProperty(), stage.yProperty(), stage.widthProperty(), stage.heightProperty()} )
+			a.addListener(listener);
+		
+		for (Node b : new Node[] {t, t2, closeButton, inContent, inBookmarks})
+			b.getStyleClass().add("text");
+		
+		for (Button b : new Button[] {previous, next, clear, closeButton})
+			b.getTooltip().setStyle("-fx-background-color:white;-fx-text-fill:black;");			
 	}
+	
 	public void start(Tab tab) {
 		this.tab = tab;
 		clear();
-		show(Main.getStage());
+		show(App.getStage());
 	}
 	private void searchAction() {
 		String text = searchF.getText();
@@ -159,7 +170,7 @@ public final class SearchBox extends Popup {
 		selectionModel.select(result.get(index));
 	}
 	private void setLocation() {
-		Stage stage = Main.getStage();
+		Stage stage = App.getStage();
 		setX(stage.getX() + stage.getWidth() - getWidth());
 		setY(stage.getY() + 30);	
 	}

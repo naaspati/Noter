@@ -20,7 +20,20 @@ import org.kohsuke.args4j.Option;
 import javafx.util.Pair;
 
 
-class CmdLoader {
+public class CmdLoader {
+	private static volatile CmdLoader INSTANCE;
+
+	public static CmdLoader getInstance() {
+		return INSTANCE;
+	}
+
+	public static void init(String[] args) throws CmdLineException, IOException {
+		INSTANCE = new CmdLoader(args);
+	}
+	public static void clear() {
+		INSTANCE = null;
+	}
+
 	@Option(name="--help", aliases="-h", usage="print this")
 	boolean help;
 	@Option(name="--version", aliases="-v", usage="print version")
@@ -58,11 +71,11 @@ class CmdLoader {
 		if(open == null || open.isEmpty())
 			return;
 
-		Properties config = Main.getConfig();
+		Properties config = App.getConfig();
 		defaultDir = Optional.ofNullable(config.getProperty("default.save.dir")).orElse(System.getenv("USERPROFILE"));
 
 		files = new ArrayList<>();
-		Path searchCacheDir = Main.APP_HOME.resolve("search_cache");
+		Path searchCacheDir = Paths.get("search_cache");
 
 		for (String s : open) {
 			s = s.trim();
@@ -98,7 +111,7 @@ class CmdLoader {
 					break;
 				}
 			}
-			
+
 			if(p != null) {
 				files.add(p);
 				save(s, p, searchCacheDir);

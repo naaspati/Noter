@@ -114,7 +114,7 @@ public class Actions {
 		Platform.runLater(() -> tf.requestFocus());
 
 		Dialog<ButtonType> d = dialog.build();
-		d.initOwner(Main.getStage());
+		d.initOwner(App.getStage());
 
 		d.showAndWait().filter(b -> b == ButtonType.OK)
 		.map(b -> {
@@ -218,7 +218,7 @@ public class Actions {
 
 		Stage stg = new Stage(StageStyle.UNIFIED);
 		stg.initModality(Modality.APPLICATION_MODAL);
-		stg.initOwner(Main.getStage());
+		stg.initOwner(App.getStage());
 
 		Button moveAbove = new Button("Move Above");
 		Button moveBelow = new Button("Move Below");
@@ -281,7 +281,7 @@ public class Actions {
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
 
-		final Path p = Main.CONFIG_DIR.resolve("last-visited-folder.txt");
+		final Path p = App.CONFIG_DIR.resolve("last-visited-folder.txt");
 
 		String path;
 		try {
@@ -295,8 +295,8 @@ public class Actions {
 		if(file != null && file.exists())
 			chooser.setInitialDirectory(file);
 		else
-			chooser.setInitialDirectory(Main.APP_HOME.toFile());
-		file = suggestedName == null ?  chooser.showOpenDialog(Main.getStage()) : chooser.showSaveDialog(Main.getStage());
+			chooser.setInitialDirectory(new File("."));
+		file = suggestedName == null ?  chooser.showOpenDialog(App.getStage()) : chooser.showSaveDialog(App.getStage());
 
 		if(file != null) {
 			try {

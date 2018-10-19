@@ -27,8 +27,8 @@ dynamic component LineSplitter {
 					spacing : 5,
 					Text {text:"word size"},
 					TextField id sizeTF {maxWidth : 50}, 
-					Button id check {text : "Check", onAction : controllermethod checkAction},
-					Button id ok {text: "OK", onAction : controllermethod okAction},
+					Button id check {text : "Check", onAction : controllermethod checkAction, cancelButton : true},
+					Button id ok {text: "OK", onAction : controllermethod okAction, defaultButton : true},
 					
 					alignment : "CENTER_RIGHT",
 					padding : Insets {bottom : 5, left : 5, right : 5, top : 5}
