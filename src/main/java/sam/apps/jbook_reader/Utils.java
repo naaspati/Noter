@@ -1,10 +1,5 @@
 package sam.apps.jbook_reader;
 
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -12,8 +7,6 @@ import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsException;
-import sam.myutils.MyUtilsSystem;
 
 public class Utils {
 	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class.getSimpleName());
@@ -47,39 +40,5 @@ public class Utils {
 			sb.append('\n');
 
 		return sb;
-	}
-	private static Path pluginDir;
-	private static boolean pluginDirInit;
-	public static Path getPluginDir(){
-		if(pluginDirInit) return pluginDir;
-		pluginDirInit = true;
-		
-		String pathS = MyUtilsSystem.lookup("plugins_dir");
-		if(pathS == null) {
-			LOGGER.severe("plugins_dir not set");
-			return null;
-		}
-		Path path = Paths.get(pathS);
-		if(Files.notExists(path)) {
-			LOGGER.severe("plugins_dir not found: "+path.toAbsolutePath());
-			return null;
-		}
-		return pluginDir = path;
-	}
-
-	private static ClassLoader clsLoader;
-	private static boolean clsLoaderInit;
-
-	@SuppressWarnings("unchecked")
-	public static <E> E loadClass(String t) throws InstantiationException, IllegalAccessException, ClassNotFoundException, ClassCastException {
-		if(clsLoaderInit && clsLoader == null) return null;
-		
-		if (!clsLoaderInit) {
-			clsLoaderInit = true;
-			if(pluginDir == null) return null;
-			clsLoader = MyUtilsException.noError(() -> new URLClassLoader(new URL[] {pluginDir.toUri().toURL()}));
-		}
-		
-		return clsLoader == null ? null : (E)clsLoader.loadClass(t).newInstance();
 	}
 }

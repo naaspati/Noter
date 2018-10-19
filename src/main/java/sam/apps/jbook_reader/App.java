@@ -22,13 +22,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
@@ -38,7 +34,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
@@ -55,7 +50,6 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
@@ -65,7 +59,6 @@ import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -81,11 +74,9 @@ import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
-import sam.logging.MyLoggerFactory;
 
 public class App extends Application {
 	public static final Path CONFIG_DIR = Paths.get("config_dir");
-	private static final Logger LOGGER = MyLoggerFactory.logger(App.class.getSimpleName());
 
 	public static Properties  getConfig() {
 		try {
@@ -96,6 +87,12 @@ public class App extends Application {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private static App INSTANCE;
+
+	public static App getInstance() {
+		return INSTANCE;
 	}
 
 	private final TreeView<String> bookmarks = new TreeView<>();
@@ -123,6 +120,7 @@ public class App extends Application {
 	}
 	@Override
 	public void start(Stage stage) throws Exception {
+		App.INSTANCE = this;
 		App.stage = stage;
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
@@ -157,7 +155,7 @@ public class App extends Application {
 		Path p = Paths.get("notebook.png");
 		if(Files.exists(p))
 			stage.getIcons().add(new Image(Files.newInputStream(p)));
-		
+
 	}
 	private void readRecents() throws IOException, URISyntaxException {
 		Path p = CONFIG_DIR.resolve("recents.txt");
@@ -262,17 +260,19 @@ public class App extends Application {
 			System.exit(0);
 		}
 	}
-	private MenuBar getMenubar() {
-		return new MenuBar(
+	private MenuBar getMenubar() throws JSONException, IOException {
+		MenuBar bar =  new MenuBar(
 				getFileMenu(), 
 				getBookmarkMenu(), 
 				getSearchMenu(), 
-				getEditorMenu(), 
+				getEditorMenu(),
 				Optional.ofNullable(getConfig().getProperty("debug"))
 				.filter(s -> s.trim().equalsIgnoreCase("true"))
 				.map(s -> getDebugMenu())
-				.orElse(new Menu())
-				);
+				.orElse(new Menu()));
+
+		new DyanamiMenus().load(bar);
+		return bar;
 	}
 	private Menu getDebugMenu() {
 		//TODO
@@ -301,78 +301,7 @@ public class App extends Application {
 				radioMenuitem("Text wrap", e -> editor.setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
 				menuitem("Font", e -> editor.setFont())
 				);
-
-		loadMenuItems(menu, "editor-menu-items.json");
 		return menu;
-	}
-	@SuppressWarnings("unchecked")
-	private void loadMenuItems(Menu menu, String path) {
-		Path p = Paths.get(path);
-		if(Files.notExists(p))
-			return;
-
-		try {
-			JSONObject json = new JSONObject(Files.lines(p).collect(Collectors.joining()));
-
-			json.toMap().forEach((name,config) -> {
-				MenuItem mi = new MenuItem(name);
-				menu.getItems().add(mi);
-
-				((Map<String, Object>) config)
-				.forEach((s,t) -> {
-					if(t == null) return;
-					
-
-					switch (s.toLowerCase()) {
-						case "onmenuvalidation":  loadClass((String)t, (EventHandler<Event> e) -> mi.setOnMenuValidation(e)); break;
-						case "id":  mi.setId((String)t); break;
-						case "style":  mi.setStyle((String)t); break;
-						case "text":  mi.setText((String)t); break;
-						case "consume":  consume(mi, (String)t); break;
-						case "onaction":  loadClass((String)t, (EventHandler<ActionEvent> e) -> mi.setOnAction(e)); break;
-						case "disable":  mi.setDisable((boolean)t); break;
-						case "visible":  mi.setVisible((boolean)t); break;
-						case "accelerator":  mi.setAccelerator(KeyCombination.valueOf((String)t)); break;
-						case "mnemonicparsing":  mi.setMnemonicParsing((boolean)t); break;
-					}
-				});
-
-			});
-		} catch (JSONException | IOException e1) {
-			FxAlert.showErrorDialog(p, "Failed to parse", e1);
-		}    
-	}
-	private void consume(MenuItem mi, String t) {
-		if(t == null) return ;
-		mi.setOnAction(e -> {
-			try {
-				Consumer<TextArea> c = Utils.loadClass(t);
-				if(c == null) {
-					mi.setDisable(true);
-					FxAlert.showErrorDialog(null, "class not found for: "+t, null);
-					LOGGER.severe("class not found for: "+t);    
-				} else {
-					mi.setOnAction(d -> editor.consume(c));
-					editor.consume(c);
-				}
-			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | ClassCastException e1) {
-				FxAlert.showErrorDialog(null, "failed to load class: "+t, e1);
-				LOGGER.log(Level.SEVERE, "failed to load class: "+t, e1);
-				mi.setDisable(true);
-			}
-		});
-	}
-	private <E> void loadClass(String t, Consumer<E> consumer) {
-		try {
-			E e = Utils.loadClass(t);
-			if(e != null)
-				consumer.accept(e);
-			else
-				LOGGER.severe("class not found for: "+t);
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-			LOGGER.log(Level.SEVERE, "failed to load class: "+t, e); 	
-		}
-
 	}
 	private Menu getSearchMenu() {
 		Menu menu = new Menu("_Search", null, 
@@ -557,4 +486,8 @@ public class App extends Application {
 			expandBookmarks(t.getChildren(), expanded);
 		}
 	}
+	public Editor editor() {
+		return editor;
+	}
+
 }

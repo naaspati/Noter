@@ -436,8 +436,10 @@ public class Editor extends BorderPane {
 	public void consume(Consumer<TextArea> e) {
 		if(getCenter() != centerEditor)
 			FxPopupShop.showHidePopup("no text selected", 1500);
-		else
+		else {
+			
 			centerEditor.consume(e);
+		}
 	}
 
 }

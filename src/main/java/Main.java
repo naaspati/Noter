@@ -5,6 +5,7 @@ import org.kohsuke.args4j.CmdLineException;
 import javafx.application.Application;
 import sam.apps.jbook_reader.App;
 import sam.apps.jbook_reader.CmdLoader;
+import sam.logging.MyLoggerFactory;
 
 public class Main {
 
