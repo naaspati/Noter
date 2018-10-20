@@ -2,6 +2,10 @@
 	-fx-font-family:Consolas;
 }
 
+#bound-book-link {
+	-fx-font-size:0.7em;
+}
+
 #tab-container .tab-box {
 	-fx-padding:5 50 5 5;
 }
@@ -20,12 +24,17 @@
 	-fx-border-width: 0 0 2 0,0 0 3 0, 0.1;
 	-fx-border-color:cyan, green, black;
 }
-.tab > .close {
+.tab > .close, .tab > .open {
+	-fx-margin-top: 2;
 	-fx-background-color:red;
 	-fx-background-radius:50%;
 	-fx-padding:-2 3 0 3;
 	-fx-text-fill:white;
 	-fx-font-weight:bold;
+}
+
+.tab > .open {
+	-fx-background-color:green;
 }
 
 #tab-container #scroll {

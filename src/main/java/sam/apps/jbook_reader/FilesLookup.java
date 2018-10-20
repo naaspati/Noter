@@ -6,7 +6,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -20,6 +19,8 @@ import java.util.logging.Logger;
 import org.kohsuke.args4j.CmdLineException;
 
 import sam.config.Session;
+import sam.io.serilizers.StringReader2;
+import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
 
@@ -53,19 +54,19 @@ public class FilesLookup {
 
 	private Map<String, Path> files;
 	private String[] opencache ;
+	private final Path openCacheDir = Utils.APP_DATA.resolve("open_cache");
 	
 	private File find(final String string) throws UnsupportedEncodingException, IOException {
 		File f = null;
 		
 		if(opencache == null) {
-			opencache = new File("open_cache").list();
+			opencache = openCacheDir.toFile().list();
 			if(opencache == null) 
 				opencache = new String[0];
 			Arrays.sort(opencache, Comparator.naturalOrder());
 		}
-		
 		if(Arrays.binarySearch(opencache, string) >= 0) {
-			f = new File(new String(Files.readAllBytes(Paths.get("open_cache", string)), "utf-8"));
+			f = new File(StringReader2.getText(openCacheDir.resolve( string)));
 			if(f.exists()) {
 				File f2 = f;
 				LOGGER.fine(() -> "loaded from open_cache: "+f2);
@@ -126,8 +127,8 @@ public class FilesLookup {
 	}
 
 	private void save(String key, Path path) throws IOException {
-		Path p = Paths.get("open_cache", key);
+		Path p = openCacheDir.resolve( key);
 		Files.createDirectories(p.getParent());
-		Files.write(p, path.toString().getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+		StringWriter2.setText(p, path.toString());
 	}
 }

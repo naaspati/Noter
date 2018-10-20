@@ -69,7 +69,6 @@ public class DataManeger {
 		if(!isModified() && jbookPath != null)
 			return;
 
-		System.out.println();
 		EntryUtils.save(document, rootItem.getChildren().stream().map(i -> (Entry)i), path);
 		jbookPath = path;
 		setModified(false);

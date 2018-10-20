@@ -3,7 +3,7 @@ package sam.apps.jbook_reader;
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.apps.jbook_reader.Utils.CONFIG_DIR;
+import static sam.apps.jbook_reader.Utils.APP_DATA;
 import static sam.fx.helpers.FxButton.button;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import org.json.JSONException;
@@ -76,6 +77,7 @@ import sam.config.SessionPutGet;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
+import sam.logging.MyLoggerFactory;
 
 public class App extends Application implements SessionPutGet {
 	private static App INSTANCE;
@@ -134,9 +136,7 @@ public class App extends Application implements SessionPutGet {
 		
 		boundBooks = new BoundBooks();
 		
-		new FilesLookup()
-		.parse(getParameters().getRaw(), tabsContainer::addTab);
-		tabsContainer.forEach(boundBooks::openBook);
+		new FilesLookup().parse(getParameters().getRaw(), tabsContainer::addTab);
 	}
 	
 	private void loadIcon(Stage stage) throws IOException {
@@ -145,7 +145,7 @@ public class App extends Application implements SessionPutGet {
 			stage.getIcons().add(new Image(Files.newInputStream(p)));
 	}
 	private void readRecents() throws IOException, URISyntaxException {
-		Path p = Utils.CONFIG_DIR.resolve("recents.txt");
+		Path p = Utils.APP_DATA.resolve("recents.txt");
 		if(Files.notExists(p))
 			return;
 
@@ -218,6 +218,7 @@ public class App extends Application implements SessionPutGet {
 		return new BorderPane(editor, tabsContainer, null, null, null);
 	}
 	private void exit() {
+		boundBooks.save();
 		if(tabsContainer.closeAll()) {
 			
 			sessionPut("stage.width", String.valueOf(stage.getWidth()));
@@ -226,13 +227,13 @@ public class App extends Application implements SessionPutGet {
 			sessionPut("stage.y", String.valueOf(stage.getY()));
 
 			try {
-				Files.write(CONFIG_DIR.resolve("recents.txt"), recentsMenu.getItems().stream()
+				Files.write(APP_DATA.resolve("recents.txt"), recentsMenu.getItems().stream()
 						.map(MenuItem::getUserData)
 						.map(Object::toString)
 						.map(s -> s.replace('\\', '/'))
 						.collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			} catch (IOException e) {
-				System.out.println("failed to save: recents.txt  "+e);
+				MyLoggerFactory.bySimpleName(getClass()).log(Level.SEVERE,  "failed to save: recents.txt  ", e);   
 			}
 			System.exit(0);
 		}

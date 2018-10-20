@@ -24,6 +24,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.apps.jbook_reader.Actions;
 import sam.apps.jbook_reader.Actions.ActionResult;
+import sam.apps.jbook_reader.BoundBooks;
 import sam.fx.alert.FxAlert;
 
 public class TabContainer extends BorderPane {
@@ -32,7 +33,6 @@ public class TabContainer extends BorderPane {
 	private final List<Tab> tabs = new ArrayList<>();
 	private final ScrollPane sp = new ScrollPane(tabsBox); 
 	private Consumer<Tab> onTabSwitch, onSelect, onTabClosed;
-	
 
 	private double div = 0;
 
@@ -50,6 +50,9 @@ public class TabContainer extends BorderPane {
 
 	private TabContainer() {
 		setId("tab-container");
+
+		// boundBook.setId("bound-book-link");
+		// boundBook.setOnAction(e -> FileOpenerNE.openFile((File)boundBook.getUserData()));
 		
 		addClass(tabsBox, "tab-box");
 
@@ -76,6 +79,7 @@ public class TabContainer extends BorderPane {
 
 		setCenter(sp);
 		setRight(rightLeft);
+		// setBottom(boundBook);
 
 		rightLeft.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
 			return getWidth() < tabsBox.getWidth() ;
@@ -138,6 +142,8 @@ public class TabContainer extends BorderPane {
 		tab.setOnClose(this::closeTab);
 		tab.setContextMenu(closeTabsContextMenu);
 		selectTab(tab);
+		File file = BoundBooks.getInstance().openBook(tab);
+		tab.setBoundBook(file);
 	}
 	public void closeTab(Tab tab) {
 		if(tab == null)
@@ -152,9 +158,9 @@ public class TabContainer extends BorderPane {
 		tabs.remove(tab);
 		int index = tabsBox.getChildren().indexOf(tab.getView());
 		tabsBox.getChildren().remove(index);
-		
+
 		onTabClosed.accept(tab);
-		
+
 		if(!tab.isActive())
 			return;
 
@@ -215,8 +221,8 @@ public class TabContainer extends BorderPane {
 	}
 	public List<File> getJbookPaths() {
 		return tabs.stream().map(Tab::getJbookPath)
-		.filter(Objects::nonNull)
-		.collect(Collectors.toList());
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
 	}
 
 	public void forEach(Consumer<Tab> action) {

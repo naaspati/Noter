@@ -74,7 +74,7 @@ class EntryUtils {
 	
 	private static final String INDENT; 
 	static {
-		Path p = Utils.CONFIG_DIR.resolve("xml.properties");
+		Path p = Utils.APP_DATA.resolve("xml.properties");
 		if(Files.exists(p)) {
 			
 			INDENT = Optional.ofNullable(Session.getProperty(EntryUtils.class, "xml.indent"))

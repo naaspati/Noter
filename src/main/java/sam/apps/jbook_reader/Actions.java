@@ -1,6 +1,6 @@
 package sam.apps.jbook_reader;
 
-import static sam.apps.jbook_reader.Utils.CONFIG_DIR;
+import static sam.apps.jbook_reader.Utils.APP_DATA;
 
 import java.io.File;
 import java.io.IOException;
@@ -284,7 +284,7 @@ public class Actions {
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
 
-		final Path p = CONFIG_DIR.resolve("last-visited-folder.txt");
+		final Path p = APP_DATA.resolve("last-visited-folder.txt");
 
 		String path;
 		try {

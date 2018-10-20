@@ -4,12 +4,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
+import sam.myutils.System2;
 
 public class Utils {
-	public static final Path CONFIG_DIR = Paths.get("config_dir");
+	public static final Path APP_DATA = Optional.ofNullable(System2.lookup("app_data")).map(Paths::get).orElse(Paths.get("app_data"));
 
 	private Utils() {}
 
