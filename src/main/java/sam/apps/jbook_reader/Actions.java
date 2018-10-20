@@ -1,5 +1,7 @@
 package sam.apps.jbook_reader;
 
+import static sam.apps.jbook_reader.Utils.CONFIG_DIR;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,6 +48,7 @@ import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.fx.alert.AlertBuilder;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
+
 
 public class Actions {
 	private static transient Actions instance;
@@ -281,7 +284,7 @@ public class Actions {
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
 
-		final Path p = App.CONFIG_DIR.resolve("last-visited-folder.txt");
+		final Path p = CONFIG_DIR.resolve("last-visited-folder.txt");
 
 		String path;
 		try {
@@ -306,18 +309,18 @@ public class Actions {
 
 		return file;
 	}
-	public void open(TabContainer tabsContainer, Path jbookPath, Menu recentsMenu)  {
+	public void open(TabContainer tabsContainer, File jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
 			File file = getFile("select a file to open...", null);
 
 			if(file == null)
 				return;
 
-			jbookPath = file.toPath();
+			jbookPath = file;
 		}
 		tabsContainer.addTab(jbookPath);
 
-		Path p = jbookPath;
+		File p = jbookPath;
 
 		recentsMenu.getItems()
 		.removeIf(mi -> p.equals(mi.getUserData()));
@@ -325,9 +328,9 @@ public class Actions {
 	public void  open_containing_folder(HostServices hs, Tab tab)  {
 		Optional.of(tab)
 		.map(Tab::getJbookPath)
-		.map(Path::getParent)
-		.filter(Files::exists)
-		.ifPresent(p -> hs.showDocument(p.toUri().toString()));
+		.map(File::getParentFile)
+		.filter(File::exists)
+		.ifPresent(p -> hs.showDocument(p.toPath().toUri().toString()));
 	}
 	public void  reload_from_disk(Tab tab)  {
 		if(tab == null)
@@ -335,7 +338,7 @@ public class Actions {
 
 		try {
 			tab.reload();
-			FxPopupShop.showHidePopup("realoaded "+tab.getJbookPath().getFileName(), 1500);
+			FxPopupShop.showHidePopup("realoaded "+tab.getJbookPath().getName(), 1500);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(tab.getJbookPath(), "failed to reload", e);
 		}
@@ -391,8 +394,8 @@ public class Actions {
 			return ActionResult.CANCEL;
 
 		try {
-			tab.save(file.toPath());
-			tab.setJbookPath(file.toPath());
+			tab.save(file);
+			tab.setJbookPath(file);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(tab.getJbookPath(), "failed to save", e);
 			return ActionResult.FAILED;
@@ -400,13 +403,13 @@ public class Actions {
 		return ActionResult.SUCCESS;
 	}
 	public void  rename(Tab tab)  {
-		File file = getFile("rename", tab.getJbookPath().getFileName().toString());
+		File file = getFile("rename", tab.getJbookPath().getName());
 		if(file == null) {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
 		try {
-			tab.setJbookPath(Files.move(tab.getJbookPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING));
+			tab.setJbookPath(Files.move(tab.getJbookPath().toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING).toFile());
 		} catch (IOException e) {
 			FxAlert.showErrorDialog("source: "+tab.getJbookPath()+"\ntarget: "+file, "failed to rename", e);
 		}

@@ -1,0 +1,133 @@
+package sam.apps.jbook_reader;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+
+import org.kohsuke.args4j.CmdLineException;
+
+import sam.config.Session;
+import sam.logging.MyLoggerFactory;
+import sam.myutils.System2;
+
+
+public class FilesLookup {
+	private final Logger LOGGER = MyLoggerFactory.logger(FilesLookup.class.getSimpleName());
+
+	// List<Pair<String, Path>> allFiles;
+	// String defaultDir;
+
+	public void parse(List<String> args, Consumer<File> action) throws CmdLineException, IOException {
+		if(args.isEmpty()) 
+			return;
+
+		if(args.size() == 1) {
+			File p = find(args.get(0));
+			if(p != null) {
+				action.accept(p);
+				return ;
+			}
+		}
+		
+		for (String s : args) {
+			File f = find(s);
+			if(f == null)
+				LOGGER.severe("file not found for: "+s);
+			else
+				action.accept(f);
+		}
+	}
+
+	private Map<String, Path> files;
+	private String[] opencache ;
+	
+	private File find(final String string) throws UnsupportedEncodingException, IOException {
+		File f = null;
+		
+		if(opencache == null) {
+			opencache = new File("open_cache").list();
+			if(opencache == null) 
+				opencache = new String[0];
+			Arrays.sort(opencache, Comparator.naturalOrder());
+		}
+		
+		if(Arrays.binarySearch(opencache, string) >= 0) {
+			f = new File(new String(Files.readAllBytes(Paths.get("open_cache", string)), "utf-8"));
+			if(f.exists()) {
+				File f2 = f;
+				LOGGER.fine(() -> "loaded from open_cache: "+f2);
+				return f;
+			}
+		}
+		
+		f = new File(string);
+		if(f.exists()) {
+			LOGGER.fine(() -> "open as file found: "+string);
+			return f;
+		};
+		
+		if(files == null) {
+			Path dd = defaultDir();
+			if(Files.notExists(dd)) {
+				files = Collections.emptyMap();
+				LOGGER.severe("default dir, not found: "+dd);
+			} else {
+				files = new HashMap<>();
+				Files.walk(dd)
+				.forEach(p -> {
+					String s = p.getFileName().toString().toLowerCase();
+					if(!s.endsWith(".jbook"))
+						return;
+					if(!Files.isRegularFile(p)) return;
+					
+					files.put(substring(s), p);
+				});
+			}			
+		}
+		
+		if(files.isEmpty()) return null;
+		
+		String s = string.toLowerCase(); 
+		Path p = files.get(s.endsWith(".jbook") ? substring(s) : s);
+		if(p == null) 
+			p = files.entrySet().stream().filter(e -> e.getKey().startsWith(string)).findFirst().map(e -> e.getValue()).orElse(null);
+		
+		if(p == null) return null;
+		Path p2 = p;
+		LOGGER.fine(() -> "find from defaultDir walk, "+string+", path: "+p2);
+		save(string, p);
+		return p.toFile();
+	}
+
+	private String substring(String s) {
+		return s.substring(0, s.length() - 6);
+	}
+
+	private Path dd;
+	private Path defaultDir() {
+		if(dd != null) return dd;
+		String s = System2.lookup("default.save.dir");
+		if(s == null)
+			s = Optional.ofNullable(Session.getProperty(getClass(), "default.save.dir")).orElse(System.getenv("USERPROFILE"));
+		return dd = Paths.get(s);
+	}
+
+	private void save(String key, Path path) throws IOException {
+		Path p = Paths.get("open_cache", key);
+		Files.createDirectories(p.getParent());
+		Files.write(p, path.toString().getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+	}
+}

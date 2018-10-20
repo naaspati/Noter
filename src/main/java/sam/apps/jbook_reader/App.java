@@ -3,11 +3,13 @@ package sam.apps.jbook_reader;
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
+import static sam.apps.jbook_reader.Utils.CONFIG_DIR;
 import static sam.fx.helpers.FxButton.button;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
@@ -15,12 +17,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -72,23 +72,12 @@ import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.editor.Editor;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.apps.jbook_reader.tabs.TabContainer;
+import sam.config.SessionPutGet;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
+import sam.io.fileutils.FileOpenerNE;
 
-public class App extends Application {
-	public static final Path CONFIG_DIR = Paths.get("config_dir");
-
-	public static Properties  getConfig() {
-		try {
-			Properties properties = new Properties();
-			properties.load(Files.newInputStream(App.CONFIG_DIR.resolve("config.properties")));
-
-			return properties;	
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
+public class App extends Application implements SessionPutGet {
 	private static App INSTANCE;
 
 	public static App getInstance() {
@@ -103,7 +92,7 @@ public class App extends Application {
 	private final BooleanBinding currentTabNull = currentTab.isNull();
 	private final Actions actions = Actions.getInstance();
 
-	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
+	private final SimpleObjectProperty<File> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 	private WeakReference<SearchBox> weakSearchBox = new WeakReference<SearchBox>(null);
 
@@ -111,7 +100,8 @@ public class App extends Application {
 	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), selectionModel.selectedItemProperty());
 	private static Stage stage;
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
-
+	private BoundBooks boundBooks;
+	
 	static {
 		GRAYSCALE_EFFECT.setSaturation(-1);
 	}
@@ -124,6 +114,7 @@ public class App extends Application {
 		App.stage = stage;
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
+		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
 
 		selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -140,33 +131,29 @@ public class App extends Application {
 
 		showStage(stage);
 		readRecents();
-
-		CmdLoader cmd = CmdLoader.getInstance();
-
-		if(cmd != null && cmd.files != null && !cmd.files.isEmpty()) {
-			cmd.files.stream()
-			.filter(Files::exists)
-			.forEach(tabsContainer::addTab);
-		}
-		CmdLoader.clear();
+		
+		boundBooks = new BoundBooks();
+		
+		new FilesLookup()
+		.parse(getParameters().getRaw(), tabsContainer::addTab);
+		tabsContainer.forEach(boundBooks::openBook);
 	}
-
+	
 	private void loadIcon(Stage stage) throws IOException {
 		Path p = Paths.get("notebook.png");
 		if(Files.exists(p))
 			stage.getIcons().add(new Image(Files.newInputStream(p)));
-
 	}
 	private void readRecents() throws IOException, URISyntaxException {
-		Path p = CONFIG_DIR.resolve("recents.txt");
+		Path p = Utils.CONFIG_DIR.resolve("recents.txt");
 		if(Files.notExists(p))
 			return;
 
 		Files.lines(p)
 		.map(String::trim)
 		.filter(s -> !s.isEmpty())
-		.map(Paths::get)
-		.filter(Files::exists)
+		.map(File::new)
+		.filter(File::exists)
 		.distinct()
 		.map(this::recentsMenuItem)
 		.forEach(recentsMenu.getItems()::add);
@@ -174,12 +161,9 @@ public class App extends Application {
 	private void showStage(Stage stage2) throws IOException {
 		Rectangle2D screen = Screen.getPrimary().getBounds();
 
-		Properties config = new Properties();
-		config.load(Files.newInputStream(CONFIG_DIR.resolve("stage-config.properties")));
-
 		BiFunction<String, Double, Double> get = (s,t) -> {
 			try {
-				return Double.parseDouble(config.getProperty(s));
+				return Double.parseDouble(sessionGetProperty(s));
 			} catch (NullPointerException|NumberFormatException e) {}
 			return t;
 		};
@@ -202,7 +186,7 @@ public class App extends Application {
 	private void prepareTabsContainer() {
 		tabsContainer.setOnTabSwitch(this::switchTab);
 		tabsContainer.setOnTabClosed(tab -> {
-			Path p = tab.getJbookPath();
+			File p = tab.getJbookPath();
 			if(p == null)
 				return;
 
@@ -214,7 +198,7 @@ public class App extends Application {
 			actions.tabClosed(tab);
 		});
 	}
-	private MenuItem recentsMenuItem(Path path) {
+	private MenuItem recentsMenuItem(File path) {
 		MenuItem mi =  menuitem(path.toString(), e -> actions.open(tabsContainer, path, recentsMenu));
 		mi.getStyleClass().add("recent-mi");
 		mi.setUserData(path);
@@ -235,18 +219,11 @@ public class App extends Application {
 	}
 	private void exit() {
 		if(tabsContainer.closeAll()) {
-
-			Properties properties = new Properties();
-			properties.put("stage.width", String.valueOf(stage.getWidth()));
-			properties.put("stage.height", String.valueOf(stage.getHeight()));
-			properties.put("stage.x", String.valueOf(stage.getX()));
-			properties.put("stage.y", String.valueOf(stage.getY()));
-
-			try {
-				properties.store(Files.newOutputStream(CONFIG_DIR.resolve("stage-config.properties"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING), LocalDateTime.now().toString());
-			} catch (IOException e) {
-				System.out.println("failed to save: stage-config.properties  "+e);
-			}
+			
+			sessionPut("stage.width", String.valueOf(stage.getWidth()));
+			sessionPut("stage.height", String.valueOf(stage.getHeight()));
+			sessionPut("stage.x", String.valueOf(stage.getX()));
+			sessionPut("stage.y", String.valueOf(stage.getY()));
 
 			try {
 				Files.write(CONFIG_DIR.resolve("recents.txt"), recentsMenu.getItems().stream()
@@ -266,7 +243,7 @@ public class App extends Application {
 				getBookmarkMenu(), 
 				getSearchMenu(), 
 				getEditorMenu(),
-				Optional.ofNullable(getConfig().getProperty("debug"))
+				Optional.ofNullable(sessionGetProperty("debug"))
 				.filter(s -> s.trim().equalsIgnoreCase("true"))
 				.map(s -> getDebugMenu())
 				.orElse(new Menu()));
@@ -355,6 +332,7 @@ public class App extends Application {
 				menuitem("Save _As", combination(KeyCode.S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
 				menuitem("Sav_e All", combination(KeyCode.S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
 				menuitem("Rename", e -> {actions.rename(getCurrentTab()); updateCurrentFile();}, fileNull),
+				menuitem("Bind Book", e -> {boundBooks.bindBook(getCurrentTab());}, fileNull),
 				new SeparatorMenuItem(),
 				menuitem("_Close",combination(KeyCode.W, SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
 				menuitem("Close All",combination(KeyCode.W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),

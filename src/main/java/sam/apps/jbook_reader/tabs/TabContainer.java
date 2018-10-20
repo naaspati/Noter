@@ -2,7 +2,7 @@ package sam.apps.jbook_reader.tabs;
 
 import static sam.fx.helpers.FxClassHelper.addClass;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -123,7 +123,7 @@ public class TabContainer extends BorderPane {
 		tab.setTabTitle(title);
 		addTab(tab);
 	}
-	public void addTab(Path path) {
+	public void addTab(File path) {
 		if(path == null)
 			return;
 		try {
@@ -213,9 +213,13 @@ public class TabContainer extends BorderPane {
 		for (Tab tab : tabs)
 			Actions.getInstance().save(tab, false);
 	}
-	public List<Path> getJbookPaths() {
+	public List<File> getJbookPaths() {
 		return tabs.stream().map(Tab::getJbookPath)
 		.filter(Objects::nonNull)
 		.collect(Collectors.toList());
+	}
+
+	public void forEach(Consumer<Tab> action) {
+		tabs.forEach(action);
 	}
 }

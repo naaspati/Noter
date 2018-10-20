@@ -3,7 +3,7 @@ package sam.apps.jbook_reader.tabs;
 import static sam.fx.helpers.FxClassHelper.setClass;
 import static sam.fx.helpers.FxClassHelper.toggleClass;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.function.Consumer;
 
 import javafx.geometry.Insets;
@@ -21,10 +21,10 @@ public class Tab extends DataManeger {
 	private final Label title = new Label();
 	private final Button close = new Button("x");
 
-	public Tab(Path path, Consumer<Tab> onSelect) throws Exception {
+	public Tab(File path, Consumer<Tab> onSelect) throws Exception {
 		super(path);
 		init(onSelect);
-		setTabTitle(path.getFileName().toString());
+		setTabTitle(path.getName());
 	}
 
 	public Tab(Consumer<Tab> onSelect) throws Exception {
@@ -63,8 +63,8 @@ public class Tab extends DataManeger {
 		toggleClass(view, "modified", isModified());
 	}
 	@Override
-	public void setJbookPath(Path path) {
-		setTabTitle(path.getFileName().toString());
+	public void setJbookPath(File path) {
+		setTabTitle(path.getName());
 		super.setJbookPath(path);
 	}
 	public boolean isActive() {

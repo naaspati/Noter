@@ -1,9 +1,8 @@
 package sam.apps.jbook_reader.datamaneger;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -22,7 +21,7 @@ import sam.apps.jbook_reader.datamaneger.EntryUtils.TwoValue;
  *
  */
 public class DataManeger {
-	private Path jbookPath;
+	private File jbookPath;
 	private final Entry rootItem = new Entry(null, null, -1, this);
 	private Document document;
 	private boolean modified; 
@@ -31,11 +30,11 @@ public class DataManeger {
 		document = DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder().newDocument();
 	}
-	protected DataManeger(Path jbookPath) throws Exception {
+	protected DataManeger(File jbookPath) throws Exception {
 		Objects.requireNonNull(jbookPath, "Path to .jbook cannot be null");
-		if(Files.notExists(jbookPath))
+		if(!jbookPath.exists())
 			throw new FileNotFoundException("File not found: "+jbookPath);
-		if(Files.isDirectory(jbookPath))
+		if(jbookPath.isDirectory())
 			throw new IOException("Not a File:"+jbookPath);
 
 		this.jbookPath = jbookPath;
@@ -66,7 +65,7 @@ public class DataManeger {
 	public void save() throws Exception {
 		save(jbookPath);
 	}
-	public void save(Path path) throws Exception {
+	public void save(File path) throws Exception {
 		if(!isModified() && jbookPath != null)
 			return;
 
@@ -85,10 +84,10 @@ public class DataManeger {
 		else
 			return ((Entry)item).walk(builder).build();
 	}
-	public Path getJbookPath() {
+	public File getJbookPath() {
 		return jbookPath;
 	}
-	public void setJbookPath(Path path) {
+	public void setJbookPath(File path) {
 		jbookPath = path;
 	}
 }

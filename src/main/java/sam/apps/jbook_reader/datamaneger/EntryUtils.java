@@ -1,14 +1,15 @@
 package sam.apps.jbook_reader.datamaneger;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
@@ -21,6 +22,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import sam.apps.jbook_reader.Utils;
+import sam.config.Session;
 
 
 class EntryUtils {
@@ -39,11 +43,11 @@ class EntryUtils {
 			this.doc = doc;
 		}
 	}
-	static TwoValue parse(Path path, DataManeger maneger) throws Exception {
+	static TwoValue parse(File path, DataManeger maneger) throws Exception {
 		Document doc = 
 				DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
-				.parse(path.toFile());
+				.parse(path);
 
 		doc.normalize();
 
@@ -56,7 +60,7 @@ class EntryUtils {
 		
 		return new TwoValue(entries, doc);
 	}
-	static void save(Document doc, Stream<Entry> entries, Path target) throws Exception {
+	static void save(Document doc, Stream<Entry> entries, File target) throws Exception {
 		clearNode(doc);
 
 		Element rootElement = doc.createElement(ENTRIES);
@@ -67,26 +71,31 @@ class EntryUtils {
 
 		write(doc, target);
 	}
-	private static void write(Document doc, Path target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
+	
+	private static final String INDENT; 
+	static {
+		Path p = Utils.CONFIG_DIR.resolve("xml.properties");
+		if(Files.exists(p)) {
+			
+			INDENT = Optional.ofNullable(Session.getProperty(EntryUtils.class, "xml.indent"))
+					.map(String::trim)
+					.map(s -> s.equalsIgnoreCase("true") ? "yes" : s)
+					.map(s -> s.equalsIgnoreCase("false") ? "no" : s)
+					.orElse("no");
+		} else {
+			INDENT = null;
+		}
+	}
+	
+	private static void write(Document doc, File target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
 		Transformer transformer = 
 				TransformerFactory.newInstance()
 				.newTransformer();
+
+		if(INDENT != null)
+			transformer.setOutputProperty(OutputKeys.INDENT, INDENT);
 		
-		/** TODO
-		 * 		Session.putIfAbsent("xml-indent", "false");
-
-		transformer.setOutputProperty(OutputKeys.INDENT, 
-				Optional.ofNullable(Session.get("xml-indent"))
-				.map(String::trim)
-				.map(s -> s.equalsIgnoreCase("true") ? "yes" : s)
-				.map(s -> s.equalsIgnoreCase("false") ? "no" : s)
-				.orElse("no")
-				);
-
-		transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-		 */
-
-		StreamResult result = new StreamResult(Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING));
+		StreamResult result = new StreamResult(target);
 		transformer.transform(new DOMSource(doc), result);
 	}
 

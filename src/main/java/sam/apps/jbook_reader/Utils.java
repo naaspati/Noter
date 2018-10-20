@@ -1,15 +1,15 @@
 package sam.apps.jbook_reader;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
-import sam.logging.MyLoggerFactory;
 
 public class Utils {
-	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class.getSimpleName());
+	public static final Path CONFIG_DIR = Paths.get("config_dir");
 
 	private Utils() {}
 
