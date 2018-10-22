@@ -37,7 +37,7 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 		initOwner(App.getStage());
 
 		HBox hb = new HBox(10, new Text("Title "), tf);
-		getDialogPane().setExpandableContent(hb);   
+		getDialogPane().setContent(hb);   
 		hb.setMaxWidth(300);
 		HBox.setHgrow(tf, Priority.ALWAYS);
 		hb.setAlignment(Pos.CENTER_LEFT);
