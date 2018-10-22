@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import org.kohsuke.args4j.CmdLineException;
@@ -31,25 +31,26 @@ public class FilesLookup {
 	// List<Pair<String, Path>> allFiles;
 	// String defaultDir;
 
-	public void parse(List<String> args, Consumer<File> action) throws CmdLineException, IOException {
+	public List<File> parse(List<String> args) throws CmdLineException, IOException {
 		if(args.isEmpty()) 
-			return;
-
+			return Collections.emptyList();
+		
 		if(args.size() == 1) {
 			File p = find(args.get(0));
-			if(p != null) {
-				action.accept(p);
-				return ;
-			}
+			if(p != null) 
+				return Collections.singletonList(p);
 		}
+		
+		List<File> files = new ArrayList<>();
 		
 		for (String s : args) {
 			File f = find(s);
 			if(f == null)
 				LOGGER.severe("file not found for: "+s);
 			else
-				action.accept(f);
+				files.add(f);
 		}
+		return files;
 	}
 
 	private Map<String, Path> files;

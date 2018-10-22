@@ -101,7 +101,7 @@ public class Tab extends DataManeger {
 			open.setTooltip(new Tooltip("open bound book: "+file.getName()));
 			open.setUserData(file);
 			if(!view.getChildren().contains(open))
-				view.getChildren().add(open);
+				view.getChildren().add(1,open);
 		}
 	}	
 	

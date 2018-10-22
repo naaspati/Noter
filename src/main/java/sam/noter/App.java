@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,8 +131,8 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 		
 		boundBooks = new BoundBooks();
 		
-		
-		new FilesLookup().parse(getParameters().getRaw(), tabsContainer::addTab);
+		List<File> files  = new FilesLookup().parse(getParameters().getRaw());
+		tabsContainer.addTabs(files);
 	}
 	
 	private void loadIcon(Stage stage) throws IOException {
@@ -179,7 +180,7 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 		});
 	}
 	private MenuItem recentsMenuItem(File path) {
-		MenuItem mi =  menuitem(path.toString(), e -> tabsContainer.open(path, recentsMenu));
+		MenuItem mi =  menuitem(path.toString(), e -> tabsContainer.open(Collections.singletonList(path), recentsMenu));
 		mi.getStyleClass().add("recent-mi");
 		mi.setUserData(path);
 		return mi;
