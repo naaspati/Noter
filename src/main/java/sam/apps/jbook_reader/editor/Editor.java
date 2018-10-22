@@ -1,6 +1,5 @@
 package sam.apps.jbook_reader.editor;
 
-import static sam.fx.helpers.FxButton.button;
 import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.util.Arrays;
@@ -19,6 +18,9 @@ import java.util.stream.Stream;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -32,7 +34,6 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
@@ -47,8 +48,11 @@ import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
 import sam.config.Session;
 import sam.config.SessionPutGet;
+import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
+import sam.fxml.Button2;
 import sam.logging.MyLoggerFactory;
+import sam.myutils.MyUtilsException;
 import sam.reference.WeakList;
 
 public class Editor extends BorderPane implements SessionPutGet {
@@ -58,11 +62,15 @@ public class Editor extends BorderPane implements SessionPutGet {
 		COMBINED_CHILDREN, 
 		EXPANDED
 	}
+	
+	@FXML private BorderPane editor;
+	@FXML private Button2 backBtn;
+	@FXML private Label maintitle;
+	@FXML private Button2 combineContentBtn;
+	@FXML private Button2 combineChildrenBtn;
 
 	private VBox container;
 	private ScrollPane containerScrollPane;
-	private final Label maintitle = new Label();
-	private final Button backBtn, combineContentBtn, combineChildrenBtn;
 	private final Consumer<Entry> onExpanded = t -> changeEntry(t, View.EXPANDED);
 	private final CenterEditor centerEditor = new CenterEditor();
 	private boolean wrapText;
@@ -109,6 +117,8 @@ public class Editor extends BorderPane implements SessionPutGet {
 		return instance;
 	}
 	private Editor(ReadOnlyObjectProperty<Tab> currentTabProperty, ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty) {
+		MyUtilsException.noError(() -> FxFxml.load(this, true));
+		
 		Objects.requireNonNull(currentTabProperty);
 		Objects.requireNonNull(selectedItemProperty);
 
@@ -117,36 +127,16 @@ public class Editor extends BorderPane implements SessionPutGet {
 
 		disableProperty().bind(selectedItemProperty.isNull());
 
-		setId("editor");
-		addClass(maintitle,"main-title");
-
-		maintitle.setPadding(new Insets(10));
-		maintitle.setMaxWidth(Double.MAX_VALUE);
-		maintitle.setWrapText(true);
-
-		HBox hb = new HBox( 
-				backBtn = button("back", "Back_30px.png", e -> historyBack()),
-				maintitle,
-				combineContentBtn = button("combine children content", "Plus Math_20px.png", e -> changeEntry(View.COMBINED_TEXT)),
-				combineChildrenBtn = button("combine children view", "Cells_20px.png", e -> changeEntry(View.COMBINED_CHILDREN))
-				);
-
-		backBtn.setVisible(false);
-		combineChildrenBtn.setVisible(false);
-		combineContentBtn.setVisible(false);
-
-		setTop(hb);
-		addClass(hb, "control-box");
-		hb.setAlignment(Pos.CENTER);
-		HBox.setHgrow(maintitle, Priority.ALWAYS);
 	}
-	private void changeEntry(View view) {
-		changeEntry(centerEditor.getItem(), view, false);
+	@FXML
+	private void changeEntry(ActionEvent e) {
+		changeEntry(centerEditor.getItem(), e.getSource() == combineContentBtn ? View.COMBINED_TEXT : View.COMBINED_CHILDREN, false);
 	}
 	private void changeEntry(Entry item, View view) {
 		changeEntry(item, view, false);
 	}
-	private void historyBack() {
+	@FXML
+	private void historyBack(Event  e) {
 		Optional.ofNullable(entryViewHistoryMap.get(centerEditor.getItem()))
 		.filter(s -> !s.isEmpty())
 		.map(Stack::pop)

@@ -1,0 +1,41 @@
+package fxml 
+
+import javafx.scene.layout.BorderPane
+import javafx.scene.layout.HBox
+import sam.fxml.Button2
+import javafx.scene.control.Label
+import javafx.geometry.Insets
+
+dynamic component Editor {
+	BorderPane id editor {
+		top: HBox {
+			styleClass : ["control-box"],
+			alignment : "CENTER",
+			Button2 id backBtn {
+				tip: "backup",
+				icon: "Back_30px.png",
+				onAction : controllermethod historyBack ,
+				visible : false 
+			},
+			Label id maintitle {
+				padding : Insets {topRightBottomLeft:10},
+				maxWidth : const Double#MAX_VALUE,
+				wrapText : true,
+				static hgrow : "ALWAYS",
+				styleClass : ["main-title"]
+			},
+			Button2 id combineContentBtn {
+				tip: "combine children content",
+				icon: "Plus Math_20px.png",
+				onAction : controllermethod changeEntry ,
+				visible : false 
+			},
+			Button2 id combineChildrenBtn {
+				tip: "combine children view",
+				icon: "Cells_20px.png",
+				onAction : controllermethod changeEntry ,
+				visible : false
+			}
+		}
+	}
+}

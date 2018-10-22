@@ -1,7 +1,5 @@
 package sam.apps.jbook_reader;
 
-import static sam.fx.helpers.FxButton.button;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -26,7 +24,9 @@ import javafx.stage.Popup;
 import javafx.stage.Stage;
 import sam.apps.jbook_reader.datamaneger.Entry;
 import sam.apps.jbook_reader.tabs.Tab;
+import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
+import sam.fxml.Button2;
 
 public final class SearchBox extends Popup {
 	private final TextField searchF = new TextField();
@@ -43,6 +43,7 @@ public final class SearchBox extends Popup {
 
 	public SearchBox(MultipleSelectionModel<TreeItem<String>> selectionModel, Tab tab2) {
 		super();
+		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
 
 		this.tab = tab2;
 		this.selectionModel = selectionModel;
@@ -50,9 +51,9 @@ public final class SearchBox extends Popup {
 		searchF.setPrefColumnCount(20);
 
 		HBox box = new HBox(10,
-				previous = button("previous", "right-arrow.png", e1 -> previous()),
-				next = button("next", "right-arrow.png", e1 -> next()),
-				clear = button("clear", "cancel-mark.png", e1 -> clear())
+				previous = new Button2("previous", "right-arrow.png", e1 -> previous()),
+				next = new Button2("next", "right-arrow.png", e1 -> next()),
+				clear = new Button2("clear", "cancel-mark.png", e1 -> clear())
 				);
 		previous.setRotate(-180);
 		Consumer<Button> c = e -> e.opacityProperty().bind(new When(e.disableProperty()).then(0).otherwise(1));
@@ -68,7 +69,7 @@ public final class SearchBox extends Popup {
 		VBox vvb = new VBox(3, inBookmarks, inContent);
 		vvb.setPadding(new Insets(0, 0, 0, 10));
 
-		Button closeButton = button("close", null, e11 -> {clear.fire(); hide();});
+		Button closeButton = new Button2("close", null, e11 -> {clear.fire(); hide();});
 		closeButton.setText("x");
 		closeButton.setPrefWidth(10);
 

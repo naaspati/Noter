@@ -22,22 +22,25 @@ targetCompatibility = JavaVersion.VERSION_1_8
  
 mainClassName = 'Main'
 
-ext.appdir = file("${System.env.SAM_PROGRAMS}\\${file('.').name.toLowerCase()}\\app")
+// ext.appdir = file("${System.env.SAM_PROGRAMS}\\${file('.').name.toLowerCase()}\\app")
+ext.appdir = file("${System.env.SAM_PROGRAMS}\\noter\\app")
 
 run {
-    workingDir installDist.destinationDir.parent
+    workingDir appdir.parent
 }
 
+
 task install(type: Copy, dependsOn:installDist) {
-  from file(new File(installDist.destinationDir, 'lib'))
+  def libdir = file(new File(installDist.destinationDir, 'lib')) 
+  from libdir
   into appdir
   
   doLast {
      new File(appdir, 'run.cmd').text = """
   @echo off
-  setlocal
-   
-  java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', new File(installDist.destinationDir, 'lib').list())}\" ${mainClassName} %*
+  setlocal 
+  
+  java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', libdir.list())}\" ${mainClassName} %*
   
   """.stripIndent()
   } 
@@ -48,4 +51,5 @@ jar {
 }
 
 defaultTasks 'install'
+
 

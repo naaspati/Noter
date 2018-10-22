@@ -1,0 +1,49 @@
+package fxml
+
+import javafx.scene.layout.BorderPane
+import javafx.scene.control.TreeView
+import javafx.scene.layout.HBox
+import sam.fxml.Button2
+import javafx.scene.control.RadioButton
+import javafx.scene.layout.Pane
+import javafx.geometry.Insets
+
+dynamic component BookmarksPane {
+	BorderPane {
+		center : TreeView id tree {
+			showRoot : false,
+			editable : true,
+			onEditStart : controllermethod bookmarksEditStart
+		},
+		top : HBox {
+			spacing : 3, 
+			padding :  Insets {topRightBottomLeft:5},
+			Button2 id addButton {
+				tip: "add",
+				icon: "plus.png",
+				onAction : controllermethod addAction 
+			},
+			Button2 id addChildButton {
+				tip: "add bookmark child",
+				icon: "bookmarkchild.png",
+				onAction: controllermethod addAction 
+			},
+			Button2 id removeButton {
+				tip: "remove selected",
+				icon: "error.png",
+				onAction: controllermethod removeAction 
+			},
+			RadioButton id expandCollpase {
+				prefWidth : 24, prefHeight : 24,
+				onAction : controllermethod expandCollpaseAction
+			},
+			Pane { static hgrow : "ALWAYS" },
+			Button2 id showHideButton {
+				tip: "hide",
+				icon: "Chevron Left_20px.png",
+				onAction: controllermethod showHideAction 
+			}
+		}
+		
+	}
+}

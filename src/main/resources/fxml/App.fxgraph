@@ -1,0 +1,30 @@
+package fxml
+
+import javafx.scene.layout.AnchorPane
+import javafx.stage.Stage
+import javafx.scene.Scene
+import javafx.scene.layout.BorderPane
+import javafx.scene.control.SplitPane
+import javafx.scene.control.SplitPane.Divider
+import javafx.scene.control.TreeView
+import sam.apps.jbook_reader.BookmarksPane
+import sam.apps.jbook_reader.editor.Editor
+import sam.apps.jbook_reader.tabs.TabContainer
+
+dynamic component App styledwith "css/style.css" {
+	Stage {
+		scene : Scene {
+			stylesheets : ["css/style.css"],
+			BorderPane id root {
+				center : SplitPane id splitPane{
+					BookmarksPane id bookmarks,
+					BorderPane {
+						center :  Editor,
+						top : TabContainer
+						
+					} 
+				}
+			}
+		}
+	}
+}

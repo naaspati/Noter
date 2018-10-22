@@ -1,6 +1,5 @@
 package sam.apps.jbook_reader.editor;
 
-import static sam.fx.helpers.FxButton.button;
 import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.util.function.Consumer;
@@ -16,6 +15,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import sam.apps.jbook_reader.Utils;
 import sam.apps.jbook_reader.datamaneger.Entry;
+import sam.fxml.Button2;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
@@ -27,7 +27,7 @@ class UnitEditor extends BorderPane {
 		setCenter(content);
 
 		if(onExpanded != null) {
-			Button expandButton = button("edit", null, e -> onExpanded.accept(this.item));
+			Button expandButton = new Button2("edit", null, e -> onExpanded.accept(this.item));
 			addClass(expandButton, "expand-button");
 
 			Pane p = new Pane();
