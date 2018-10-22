@@ -43,6 +43,9 @@ public class Entry extends TreeItem<String> {
 		return super.getChildren();
 	}
 	Element getElement(Document doc) {
+		if(!(element == null || titleModified || contentModified || childrenModified))
+			return element;
+		
 		log();
 
 		if(element == null) {
