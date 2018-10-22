@@ -11,7 +11,6 @@
 <?import sam.apps.jbook_reader.BookmarksPane?>
 <?import sam.apps.jbook_reader.editor.Editor?>
 <?import sam.apps.jbook_reader.tabs.TabContainer?>
-<?scenebuilder-stylesheet css/style.css?>
 
 <fx:root xmlns:fx="http://javafx.com/fxml" type="Stage">
 

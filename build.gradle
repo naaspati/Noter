@@ -47,7 +47,7 @@ task install(type: Copy, dependsOn:installDist) {
 }
 
 jar {
-  exclude '*.fxgraph'
+  exclude 'fxml/*.fxgraph'
 }
 
 defaultTasks 'install'

@@ -11,7 +11,7 @@ import sam.apps.jbook_reader.BookmarksPane
 import sam.apps.jbook_reader.editor.Editor
 import sam.apps.jbook_reader.tabs.TabContainer
 
-dynamic component App styledwith "css/style.css" {
+dynamic component App {
 	Stage {
 		scene : Scene {
 			stylesheets : ["css/style.css"],
