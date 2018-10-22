@@ -1,4 +1,4 @@
-package sam.apps.jbook_reader;
+package sam.noter;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,13 +8,13 @@ import java.util.HashMap;
 import java.util.logging.Level;
 
 import javafx.stage.FileChooser;
-import sam.apps.jbook_reader.tabs.Tab;
 import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
+import sam.noter.tabs.Tab;
 
 public class BoundBooks {
 	private final HashMap<String, String> boundBooks = new HashMap<>();

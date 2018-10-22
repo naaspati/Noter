@@ -1,4 +1,4 @@
-package sam.apps.jbook_reader;
+package sam.noter;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;

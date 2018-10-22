@@ -1,21 +1,26 @@
-package sam.apps.jbook_reader;
+package sam.noter.bookmark;
 
 
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.apps.jbook_reader.App.GRAYSCALE_EFFECT;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
+import static sam.noter.App.GRAYSCALE_EFFECT;
+import static sam.noter.bookmark.BookmarkType.CHILD;
+import static sam.noter.bookmark.BookmarkType.RELATIVE;
+import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
 import java.util.List;
 
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
-import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -37,12 +42,13 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
-import sam.apps.jbook_reader.datamaneger.Entry;
-import sam.apps.jbook_reader.tabs.Tab;
 import sam.fx.helpers.FxFxml;
 import sam.fxml.Button2;
-
-public class BookmarksPane extends BorderPane {
+import sam.noter.App;
+import sam.noter.datamaneger.Entry;
+import sam.noter.tabs.Tab;
+import sam.reference.WeakAndLazy;
+public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 
 	@FXML
 	private TreeView<String> tree;
@@ -54,14 +60,12 @@ public class BookmarksPane extends BorderPane {
 	@FXML private Button2 removeButton;        
 	@FXML private RadioButton expandCollpase;  
 	@FXML private Button2 showHideButton;      
-	
-	private final Actions actions = Actions.getInstance();
 
 	private final Button show = new Button2("show","Chevron Right_20px.png", null) ;
 	private final VBox showBox = new VBox(show);
-	private final ReadOnlyObjectWrapper<Tab> currentTab;
+	private final ReadOnlyObjectProperty<Tab> currentTab;
 
-	public BookmarksPane(ReadOnlyObjectWrapper<Tab> currentTab) throws IOException {
+	public BookmarksPane(ReadOnlyObjectProperty<Tab> currentTab) throws IOException {
 		FxFxml.load(this, true);
 		this.currentTab = currentTab;
 
@@ -95,6 +99,7 @@ public class BookmarksPane extends BorderPane {
 		addButton.disableProperty().bind(currentTabNull);
 		expandCollpase.disableProperty().bind(currentTabNull);
 		
+		currentTab.addListener(this);
 		this.disableProperty().bind(currentTabNull);
 	}
 
@@ -130,28 +135,28 @@ public class BookmarksPane extends BorderPane {
 	}
 	
 	@FXML
-	public void removeAction(ActionEvent e) {
-		 actions.removeBookmarkAction(tree, getCurrentTab());
-	}
-	
-	@FXML
 	public void expandCollpaseAction(ActionEvent e) {
 		TreeItem<String> ti = selectionModel.getSelectedItem();
 		expandBookmarks(tree.getRoot().getChildren(), expandCollpase.isSelected());
 		if(ti != null)
 			selectionModel.select(ti);
 	}
-	private Tab getCurrentTab() {
+	private Tab currentTab() {
 		return currentTab.get();
 	}
 
 	@FXML
 	public void addAction(ActionEvent e) {
-		//TODO
 		if(e.getSource() == addChildButton)
-			actions.addNewBookmark(tree, getCurrentTab(), BookmarkType.CHILD);
+			addNewBookmark(CHILD);
 		else if(e.getSource() == addButton)
-				actions.addNewBookmark(tree, getCurrentTab(), BookmarkType.RELATIVE);
+				addNewBookmark(RELATIVE);
+	}
+	
+	private final WeakAndLazy<BookmarkAddeder> adder = new WeakAndLazy<>(BookmarkAddeder::new);
+	
+	private void addNewBookmark(BookmarkType bookMarkType) {
+		adder.get().addNewBookmark(bookMarkType, selectionModel, tree, currentTab());
 	}
 	private void expandBookmarks(List<TreeItem<String>> children, boolean expanded) {
 		if(children.isEmpty())
@@ -166,17 +171,44 @@ public class BookmarksPane extends BorderPane {
 	public Menu getBookmarkMenu() {
 		return new Menu("_Bookmark",
 				null,
-				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> actions.addNewBookmark(tree, getCurrentTab(), BookmarkType.RELATIVE), currentTab.isNull()),
-				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(tree, getCurrentTab(), BookmarkType.CHILD), selectedItemNull),
-				menuitem("Add Bookmark Relative to Parent", combination(KeyCode.N, ALT_DOWN, SHIFT_DOWN), e -> actions.addNewBookmark(tree, getCurrentTab(), BookmarkType.RELATIVE_TO_PARENT), selectedItemNull),
+				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> addNewBookmark(RELATIVE), currentTab.isNull()),
+				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> addNewBookmark(CHILD), selectedItemNull),
+				menuitem("Add Bookmark Relative to Parent", combination(KeyCode.N, ALT_DOWN, SHIFT_DOWN), e -> addNewBookmark(RELATIVE_TO_PARENT), selectedItemNull),
 				new SeparatorMenuItem(),
-				menuitem("Remove bookmark", e -> actions.removeBookmarkAction(tree, getCurrentTab()), selectedItemNull),
-				menuitem("Undo Removed bookmark", e -> actions.undoRemoveBookmark(getCurrentTab()), actions.undoDeleteSizeProperty().isEqualTo(0)),
+				menuitem("Remove bookmark", this::removeAction, selectedItemNull),
+				menuitem("Undo Removed bookmark", e -> remover().undoRemoveBookmark(currentTab()), undoDeleteSize.isEqualTo(0)),
 				new SeparatorMenuItem(),
-				menuitem("Move bookmark", e -> actions.moveBookmarks(tree, selectionModel.getSelectedItems()), selectedItemNull)
+				menuitem("Move bookmark", e -> mover().moveBookmarks(currentTab(), selectionModel), selectedItemNull)
 				);
 	}
-	public void setRoot(TreeItem<String> root) {
-		tree.setRoot(root);
+	@FXML
+	private void removeAction(ActionEvent e) {
+		remover().removeAction(selectionModel, currentTab());
+	}
+
+	private BookmarkRemover remover; 
+	private final SimpleIntegerProperty undoDeleteSize = new SimpleIntegerProperty();
+	
+	private BookmarkRemover remover() {
+		if(remover == null) {
+			remover = new BookmarkRemover();
+			undoDeleteSize.bind(remover.undoDeleteSize);
+		}
+		return remover;
+	}
+	private BookmarkMover mover;
+	private BookmarkMover mover() {
+		if(mover == null)
+			mover = new BookmarkMover();
+		return mover;
+	}
+
+	@Override
+	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newValue) {
+		if(remover != null) {
+			remover.tabClosed(oldValue);
+			remover.switchTab(newValue);
+		}
+		tree.setRoot(newValue == null ? null : newValue.getRootItem());
 	}
 }

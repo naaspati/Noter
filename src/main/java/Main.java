@@ -5,7 +5,7 @@ import java.io.IOException;
 import org.kohsuke.args4j.CmdLineException;
 
 import javafx.application.Application;
-import sam.apps.jbook_reader.App;
+import sam.noter.App;
 
 public class Main {
 

@@ -1,12 +1,12 @@
-package sam.apps.jbook_reader;
+package sam.noter;
 
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.apps.jbook_reader.Utils.APP_DATA;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
+import static sam.noter.Utils.APP_DATA;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +29,11 @@ import org.json.JSONException;
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.control.Alert.AlertType;
@@ -51,9 +53,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import sam.apps.jbook_reader.editor.Editor;
-import sam.apps.jbook_reader.tabs.Tab;
-import sam.apps.jbook_reader.tabs.TabContainer;
 import sam.config.Session;
 import sam.config.SessionPutGet;
 import sam.fx.alert.FxAlert;
@@ -62,8 +61,12 @@ import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsException;
+import sam.noter.bookmark.BookmarksPane;
+import sam.noter.editor.Editor;
+import sam.noter.tabs.Tab;
+import sam.noter.tabs.TabContainer;
 
-public class App extends Application implements SessionPutGet {
+public class App extends Application implements SessionPutGet, ChangeListener<Tab> {
 	private static App INSTANCE;
 	
 	static {
@@ -76,20 +79,20 @@ public class App extends Application implements SessionPutGet {
 	
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
-
-	private final ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
+	
+	private final TabContainer tabsContainer = TabContainer.getInstance();
+	private final ReadOnlyObjectProperty<Tab> currentTab = tabsContainer.tabProperty();
 	private final BookmarksPane bookmarks = MyUtilsException.noError(() -> new BookmarksPane(currentTab));
 	private final MultipleSelectionModel<TreeItem<String>> selectionModel = bookmarks.getSelectionModel();
 	
 	private final BooleanBinding currentTabNull = currentTab.isNull();
-	private final Actions actions = Actions.getInstance();
 
 	private final SimpleObjectProperty<File> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 	private WeakReference<SearchBox> weakSearchBox = new WeakReference<SearchBox>(null);
 
-	private final TabContainer tabsContainer = TabContainer.getInstance();
-	private final Editor editor = Editor.getInstance(currentTab.getReadOnlyProperty(), selectionModel.selectedItemProperty());
+	
+	private final Editor editor = Editor.getInstance(currentTab, selectionModel.selectedItemProperty());
 	private static Stage stage;
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
 	private BoundBooks boundBooks;
@@ -117,14 +120,16 @@ public class App extends Application implements SessionPutGet {
 
 		splitPane.setDividerPositions(0, 0.2);
 		splitPane.widthProperty().addListener((p, o, n) -> splitPane.setDividerPosition(0, 0.2));
-		prepareTabsContainer();
+		currentTab.addListener(this);
 		root.setTop(getMenubar());
 
+		stage.getScene().getStylesheets().add("css/style.css");
 		loadIcon(stage);
 		showStage(stage);
 		readRecents();
 		
 		boundBooks = new BoundBooks();
+		
 		
 		new FilesLookup().parse(getParameters().getRaw(), tabsContainer::addTab);
 	}
@@ -173,23 +178,8 @@ public class App extends Application implements SessionPutGet {
 			e.consume();
 		});
 	}
-	private void prepareTabsContainer() {
-		tabsContainer.setOnTabSwitch(this::switchTab);
-		tabsContainer.setOnTabClosed(tab -> {
-			File p = tab.getJbookPath();
-			if(p == null)
-				return;
-
-			List<MenuItem> list = recentsMenu.getItems(); 
-
-			list.add(0, recentsMenuItem(p));
-			if(list.size() > 10)
-				list.subList(10, list.size()).clear();
-			actions.tabClosed(tab);
-		});
-	}
 	private MenuItem recentsMenuItem(File path) {
-		MenuItem mi =  menuitem(path.toString(), e -> actions.open(tabsContainer, path, recentsMenu));
+		MenuItem mi =  menuitem(path.toString(), e -> tabsContainer.open(path, recentsMenu));
 		mi.getStyleClass().add("recent-mi");
 		mi.setUserData(path);
 		return mi;
@@ -306,14 +296,14 @@ public class App extends Application implements SessionPutGet {
 
 		Menu menu = new Menu("_File", null, 
 				menuitem("_New", combination(KeyCode.N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsContainer.addBlankTab(), searchActive),
-				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> actions.open(tabsContainer, null, recentsMenu), searchActive),
+				menuitem("_Open...", combination(KeyCode.O, SHORTCUT_DOWN), e -> tabsContainer.open(null, recentsMenu), searchActive),
 				recentsMenu,
-				menuitem("Open Containing Folder", e -> actions.open_containing_folder(getHostServices(), getCurrentTab()), fileNull),
-				menuitem("Reload From Disk", e -> actions.reload_from_disk(getCurrentTab()), fileNull),
-				menuitem("_Save", combination(KeyCode.S, SHORTCUT_DOWN), e -> actions.save(getCurrentTab(), false), fileNull),
-				menuitem("Save _As", combination(KeyCode.S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {actions.save_as(getCurrentTab(), false);updateCurrentFile();}, tabNull),
+				menuitem("Open Containing Folder", e -> getCurrentTab().open_containing_folder(getHostServices()), fileNull),
+				menuitem("Reload From Disk", e -> getCurrentTab().reload_from_disk(), fileNull),
+				menuitem("_Save", combination(KeyCode.S, SHORTCUT_DOWN), e -> getCurrentTab().save(false), fileNull),
+				menuitem("Save _As", combination(KeyCode.S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {getCurrentTab().save_as(false);updateCurrentFile();}, tabNull),
 				menuitem("Sav_e All", combination(KeyCode.S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
-				menuitem("Rename", e -> {actions.rename(getCurrentTab()); updateCurrentFile();}, fileNull),
+				menuitem("Rename", e -> {getCurrentTab().rename(); updateCurrentFile();}, fileNull),
 				menuitem("Bind Book", e -> {boundBooks.bindBook(getCurrentTab());}, fileNull),
 				new SeparatorMenuItem(),
 				menuitem("_Close",combination(KeyCode.W, SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
@@ -333,17 +323,27 @@ public class App extends Application implements SessionPutGet {
 		currentFile.set(t.getJbookPath());
 		stage.setTitle(t.getTabTitle());
 	}
-	private void switchTab(final Tab newTab) {
-		currentTab.set(newTab);
-		boolean b = newTab == null;
-		stage.setTitle(b ? null : newTab.getTabTitle());
-		currentFile.set(b ? null : newTab.getJbookPath());
-		bookmarks.setRoot(b ? null : newTab.getRootItem());
-		actions.switchTab(newTab);
-	}
 
 	public Editor editor() {
 		return editor;
+	}
+	@Override
+	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newTab) {
+		boolean b = newTab == null;
+		
+		stage.setTitle(b ? null : newTab.getTabTitle());
+		currentFile.set(b ? null : newTab.getJbookPath());
+		
+		if(oldValue == null) return;
+		File p = oldValue.getJbookPath();
+		if(p == null)
+			return;
+
+		List<MenuItem> list = recentsMenu.getItems(); 
+
+		list.add(0, recentsMenuItem(p));
+		if(list.size() > 10)
+			list.subList(10, list.size()).clear();
 	}
 
 }

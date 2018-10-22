@@ -1,4 +1,4 @@
-package sam.apps.jbook_reader.datamaneger;
+package sam.noter.datamaneger;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -12,7 +12,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 
 import javafx.scene.control.TreeItem;
-import sam.apps.jbook_reader.datamaneger.EntryUtils.TwoValue;
+import sam.noter.datamaneger.EntryUtils.TwoValue;
 
 /**
  * DataManeger and View Controller

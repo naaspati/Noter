@@ -8,9 +8,9 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.stage.Stage?>
-<?import sam.apps.jbook_reader.BookmarksPane?>
-<?import sam.apps.jbook_reader.editor.Editor?>
-<?import sam.apps.jbook_reader.tabs.TabContainer?>
+<?import sam.noter.bookmark.BookmarksPane?>
+<?import sam.noter.editor.Editor?>
+<?import sam.noter.tabs.TabContainer?>
 
 <fx:root xmlns:fx="http://javafx.com/fxml" type="Stage">
 
@@ -31,9 +31,6 @@
 					</SplitPane>
 				</center>
 			</BorderPane>
-			<stylesheets>
-				<String fx:value="css/style.css" />
-			</stylesheets>
 		</Scene>
 	</scene>
 </fx:root>

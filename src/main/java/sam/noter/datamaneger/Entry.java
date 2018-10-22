@@ -1,4 +1,4 @@
-package sam.apps.jbook_reader.datamaneger;
+package sam.noter.datamaneger;
 
 import java.util.List;
 import java.util.Objects;
@@ -7,14 +7,17 @@ import java.util.stream.Stream.Builder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 
-public class Entry extends TreeItem<String> { 
+public class Entry extends TreeItem<String> {
+
 	private String content;
 	private long lastModified = -1;
 	private boolean titleModified, contentModified, childrenModified;
 	private Element element;
 	private final DataManeger maneger;
+	private boolean childrenSet;
 
 	public static Entry cast(TreeItem<String> item) {
 		return (Entry)item;
@@ -28,12 +31,20 @@ public class Entry extends TreeItem<String> {
 	Entry(Element element, DataManeger maneger) {
 		this.element = element;
 		setValue(EntryUtils.getTitle(element));
-		getChildren().setAll(EntryUtils.getChildren(element, maneger));
 		this.maneger = maneger;
 	}
+	@Override
+	public ObservableList<TreeItem<String>> getChildren() {
+		if(!childrenSet) {
+			if(element != null)
+				super.getChildren().setAll(EntryUtils.getChildren(element, maneger));
+			childrenSet = true;
+		}
+		return super.getChildren();
+	}
 	Element getElement(Document doc) {
-		log(); //TODO remove
-		
+		log();
+
 		if(element == null) {
 			element = EntryUtils.createEntry(doc, this);
 			contentModified = false;
@@ -50,8 +61,7 @@ public class Entry extends TreeItem<String> {
 		if(childrenModified) {
 			EntryUtils.setChildren(element, doc, getChildren().isEmpty() ? null : getChildren().stream().map(t -> ((Entry)t).getElement(doc)));
 			childrenModified = false;
-		}
-		else {
+		} else {
 			for (int i = 0; i < getChildren().size(); i++)
 				((Entry)getChildren().get(i)).getElement(doc);
 		}
@@ -68,6 +78,17 @@ public class Entry extends TreeItem<String> {
 					(contentModified ? "content " : "") +
 					(childrenModified ? "children " : ""));			
 		}
+	}
+	public void removeElement() {
+		getTitle();
+		getContent();
+		getChildren();
+		titleModified = true; 
+		contentModified  = true; 
+		childrenModified = true;
+		
+		getChildren().forEach(e -> ((Entry)e).removeElement());
+		element = null;
 	}
 	public long getLastModified() {
 		if(lastModified == -1)
@@ -105,7 +126,7 @@ public class Entry extends TreeItem<String> {
 
 		for (int i = 0; i < getChildren().size(); i++)
 			((Entry)getChildren().get(i)).walk(collector);
-		
+
 		return collector; 
 	}
 	public Entry addChild(String title, Entry relativeTo) {
@@ -138,7 +159,13 @@ public class Entry extends TreeItem<String> {
 		modifiedChildren().add(index, child);
 	}
 	public void addAll(int index, List<TreeItem<String>> list) {
-		modifiedChildren().addAll(index, list);
+		List<TreeItem<String>> items = modifiedChildren();
+		if(index < 0)
+			items.addAll(0, list);
+		else if(index >= items.size())
+			items.addAll(list);
+		else
+			items.addAll(index, list);
 	}
 	public void addAll(List<TreeItem<String>> list) {
 		modifiedChildren().addAll(list);
