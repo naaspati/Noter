@@ -29,8 +29,7 @@ class UnitEditor extends BorderPane {
 		content.setEditable(false);
 
 		if(onExpanded != null) {
-			Button expandButton = new Button2("edit", null, e -> onExpanded.accept(this.item));
-			addClass(expandButton, "expand-button");
+			Button expandButton = new Button2("edit", "Expand_20px.png", e -> onExpanded.accept(this.item));
 
 			Pane p = new Pane();
 			HBox titleContainer = new HBox(title, p, expandButton);

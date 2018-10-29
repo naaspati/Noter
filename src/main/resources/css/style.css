@@ -74,12 +74,15 @@
 	-fx-border-color:lightgray;
 	-fx-background-color:white;
 }
+#center-editor .title {
+	-fx-alignment:CENTER_RIGHT;
+	-fx-font-size:0.7em;
+	-fx-padding:2;
+}
 .unit-editor .title {
 	-fx-padding:3px;
 }
-.unit-editor  .expand-button {
-	-fx-graphic:url(Expand_20px.png);
-}
+
 #popup-box {
 	-fx-background-color:black;
 	-fx-border-width:0.5;

@@ -5,6 +5,7 @@ import static sam.fx.helpers.FxClassHelper.addClass;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
@@ -18,23 +19,23 @@ class UnitContainer extends ScrollPane {
 	private final WeakList<UnitEditor> unitEditors;
 	private boolean wrapText;
 	private Entry item;
+	private final ObservableList<Node> list;
 	
 	public UnitContainer(Consumer<Entry> onExpanded) {
 		unitEditors  = new WeakList<>(() -> new UnitEditor(onExpanded));
 		
 		setContent(root);
+		list = root.getChildren();
 		setFitToWidth(true);
 		addClass(root,"container");
 		this.root.setPadding(new Insets(10, 0, 10, 0));
 	}
 	
 	private void resizeContainer(int newSize) {
-		List<Node> list = root.getChildren();
-
 		if(root.getChildren().size() > newSize) {
-			list = list.subList(newSize, list.size());
-			list.forEach(n -> unitEditors.add((UnitEditor)n));
-			list.clear();
+			List<Node> list2 = list.subList(newSize, list.size());
+			list2.forEach(n -> unitEditors.add((UnitEditor)n));
+			list2.clear();
 		}
 		else {
 			while(list.size() != newSize)
@@ -54,24 +55,23 @@ class UnitContainer extends ScrollPane {
 	}
 	
 	private void forEach(Consumer<UnitEditor> action) {
-		root.getChildren().forEach(n -> action.accept((UnitEditor)n));
+		list.forEach(n -> action.accept((UnitEditor)n));
 	}
 	public void updateTitle(Entry item) {
 		forEach(UnitEditor::updateTitle);
 	}
 	public boolean isEmpty() {
-		return root.getChildren().isEmpty();
+		return list.isEmpty();
 	}
 	public UnitEditor first() {
-		return (UnitEditor) root.getChildren().get(0);
+		return (UnitEditor) list.get(0);
 	}
 	public void updateFont() {
 		forEach(UnitEditor::updateFont);
 	}
-
 	public void clear() {
 		forEach(unitEditors::add);
-		root.getChildren().clear();
+		list.clear();
 	}
 
 	public void setItem(Entry item) {
@@ -79,14 +79,10 @@ class UnitContainer extends ScrollPane {
 		resizeContainer(item.getChildren().size() + 1);
 		first().setItem(item);
 		int index = 1;
-		for (TreeItem<String> ti : item.getChildren()) getUnitEditorAt(index++).setItem((Entry)ti); 
+		for (TreeItem<String> ti : item.getChildren()) ((UnitEditor) list.get(index++)).setItem((Entry)ti); 
 
 		setVvalue(0);
 	}
-	private UnitContainer getUnitEditorAt(int i) {
-		return (UnitContainer) root.getChildren().get(i);
-	}
-
 	public Entry getItem() {
 		return item;
 	}

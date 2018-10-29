@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Pos;
 import javafx.scene.control.TextArea;
 import sam.noter.datamaneger.Entry;
 import sam.reference.ReferenceUtils;
@@ -30,6 +31,7 @@ public class CenterEditor extends UnitEditor implements ChangeListener<String> {
 
 	public CenterEditor() {
 		super(null);
+		setId("center-editor");
 	}
 	private static final ZoneOffset offset  = ZoneOffset.of("+05:30");
 	private static final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.MEDIUM);

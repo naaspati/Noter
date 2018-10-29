@@ -8,47 +8,30 @@ import static sam.noter.editor.ViewType.EXPANDED;
 import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import javafx.stage.Window;
-import javafx.util.StringConverter;
 import sam.config.Session;
 import sam.config.SessionPutGet;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.logging.MyLoggerFactory;
+import sam.myutils.MyUtilsCheck;
 import sam.noter.datamaneger.Entry;
 import sam.reference.WeakAndLazy;
 
@@ -71,8 +54,6 @@ public class Editor extends BorderPane implements SessionPutGet {
 
 	private final Window parent;
 	private final IdentityHashMap<Entry, Stack<ViewType>> history = new IdentityHashMap<>();
-
-	 
 
 	private static Font font;
 
@@ -106,7 +87,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 	}
 	public void init(ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty){
 		Objects.requireNonNull(selectedItemProperty);
-		selectedItemProperty.addListener((p, o, n) -> changed((Entry)n, EXPANDED));
+		selectedItemProperty.addListener((p, o, n) -> changed((Entry)n, null));
 		disableProperty().bind(selectedItemProperty.isNull());		
 	}
 	@FXML
@@ -131,96 +112,13 @@ public class Editor extends BorderPane implements SessionPutGet {
 		combinedTextWL.ifPresent(u -> u.setWrapText(wrap));
 	}
 	public void setFont() {
-		Stage stage = new Stage(StageStyle.UTILITY);
-		stage.initModality(Modality.APPLICATION_MODAL);
-		stage.initOwner(parent);
-		stage.setTitle("Select Font");
+		Font font = new FontSetter(parent).getFont();
+		if(font == null) return;
+		
+		centerEditor.updateFont();
+		unitsContainerWL.ifPresent(UnitContainer::updateFont);
+		combinedTextWL.ifPresent(t -> t.setFont(font));
 
-		GridPane root = new GridPane();
-		root.setHgap(5);
-		root.setVgap(5);
-
-		// family, weight, posture, size
-		root.addRow(0, Stream.of("family:", "weight:", "posture:", "size:").map(Text::new).toArray(Text[]::new));
-
-		ComboBox<String> family = new ComboBox<>(FXCollections.observableArrayList(Font.getFamilies()));
-		ComboBox<FontWeight> weight = new ComboBox<>(FXCollections.observableArrayList(FontWeight.values()));
-		ComboBox<FontPosture> posture = new ComboBox<>(FXCollections.observableArrayList(FontPosture.values()));
-		ComboBox<Double> size = new ComboBox<>();
-		IntStream.rangeClosed(8, 12).mapToDouble(s -> s).forEach(size.getItems()::add);
-		IntStream.iterate(14, i -> i + 2).limit(8).mapToDouble(s -> s).forEach(size.getItems()::add);
-		size.getItems().addAll(36d, 48d, 72d);
-		size.setEditable(true);
-
-		Font font = Optional.of(Editor.font).orElse(Font.font("Consolas"));
-
-		family.setValue(font.getFamily());
-		weight.setValue(FontWeight.NORMAL);
-		posture.setValue(FontPosture.REGULAR);
-		size.setValue(font.getSize());
-		size.setMaxWidth(70);
-		family.setMaxWidth(150);
-		posture.setMaxWidth(100);
-		weight.setMaxWidth(100);
-
-		Double[] size2 = {font.getSize()};
-		size.setConverter(new StringConverter<Double>() {
-			@Override
-			public String toString(Double object) {
-				size2[0] = object;
-				String s = String.valueOf(object);
-				return s.endsWith(".0") ? s.substring(0, s.length() - 2) : s;
-			}
-
-			@Override
-			public Double fromString(String string) {
-				try {
-					Double.parseDouble(string);
-				} catch (NumberFormatException e) {}
-
-				return size2[0];
-			}
-		});
-
-		root.addRow(1, family, weight, posture, size);
-
-		TextArea ta = new TextArea(IntStream.range(0, 10).mapToObj(String::valueOf).collect(Collectors.joining("", "The quick brown fox jumps over the lazy dog ", "")));
-		ta.setWrapText(true);
-		ta.fontProperty().bind(Bindings.createObjectBinding(() -> Font.font(family.getValue(), weight.getValue(), posture.getValue(), size.getValue()), family.valueProperty(), weight.valueProperty(), posture.valueProperty(), size.valueProperty()));
-
-		root.addRow(2, new Text("Dummy text"));
-		root.add(ta, 0, 3, GridPane.REMAINING, GridPane.REMAINING);
-
-		BorderPane root1 = new BorderPane(root);
-		Button ok = new Button("OK");
-		Button cancel = new Button("Cancel");
-		ok.setPrefWidth(70);
-		cancel.setPrefWidth(70);
-		cancel.setOnAction(e -> stage.hide());
-		HBox bottom = new HBox(10, cancel, ok);
-		bottom.setAlignment(Pos.CENTER_RIGHT);
-		bottom.setPadding(new Insets(10));
-		root1.setBottom(bottom);
-
-		root1.setPadding(new Insets(10, 10, 0, 10));
-		root1.setStyle("-fx-background-color:white");
-
-		stage.setScene(new Scene(root1));
-		stage.setWidth(470);
-
-		ok.setOnAction(e -> {
-			Editor.font = ta.getFont(); 
-			stage.hide();
-			centerEditor.updateFont();
-			unitsContainerWL.ifPresent(UnitContainer::updateFont);
-			combinedTextWL.ifPresent(t -> t.setFont(font));
-
-			sessionPut("font.family", family.getValue());
-			sessionPut("font.weight",weight.getValue().toString());
-			sessionPut("font.posture",posture.getValue().toString());
-			sessionPut("font.size", size.getValue().toString());
-		});
-		stage.showAndWait();
 	}
 
 	public void consume(Consumer<TextArea> e) {
@@ -232,8 +130,6 @@ public class Editor extends BorderPane implements SessionPutGet {
 		}
 	}
 	public void changed(Entry item, ViewType view) {
-		if(view == null) view = CENTER;
-
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			maintitle.setText(null);
@@ -243,15 +139,24 @@ public class Editor extends BorderPane implements SessionPutGet {
 			combineContentBtn.setVisible(false);
 			return;
 		}
+		
+		if(view == null) {
+			Stack<ViewType> stack = history.get(item);
+			if(MyUtilsCheck.isEmpty(stack))
+				view = CENTER;
+			else 
+				view = stack.pop();
+		};
 
 		switch (view) {
 			case EXPANDED:
 				setCenterEditor(item);
-				history.remove(item);
+				addHistory(item);
 				break;
 			case CENTER:
 				setCenterEditor(item);
-				addHistory(item);
+				history.remove(item);
+				backBtn.setVisible(false);
 				break;
 			case COMBINED_CHILDREN:
 				setCombined_children(item);
@@ -306,9 +211,13 @@ public class Editor extends BorderPane implements SessionPutGet {
 			setCenter(centerEditor);
 
 		centerEditor.setItem(item);
+		maintitle.setText(item.getTitle());
 
 		unitsContainerWL.ifPresent(UnitContainer::clear);
 		combinedTextWL.ifPresent(CombinedText::clear);
+		
+		combineChildrenBtn.setVisible(!item.getChildren().isEmpty());
+		combineContentBtn.setVisible(!item.getChildren().isEmpty());
 	}
 	public void updateTitle(Entry ti) {
 		unitsContainerWL.ifPresent(u -> u.updateTitle(ti));
