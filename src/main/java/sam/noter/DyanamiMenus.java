@@ -28,14 +28,17 @@ import javafx.scene.input.KeyCombination;
 import sam.fx.alert.FxAlert;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
+import sam.noter.editor.Editor;
 
 public class DyanamiMenus {
 	private final Logger LOGGER = MyLoggerFactory.logger(DyanamiMenus.class.getSimpleName());
 	private MenuBar bar;
 	private ClassLoader loader;
+	private Editor editor;
 
-	public void load(MenuBar bar) throws JSONException, IOException {
+	public void load(MenuBar bar, Editor editor) throws JSONException, IOException {
 		this.bar = bar;
+		this.editor = editor;
 		String s = System2.lookup("dynamic.menus.file");
 		if(s == null) {
 			LOGGER.warning("dynamic.menus.file variable not set");
@@ -125,7 +128,7 @@ public class DyanamiMenus {
 			LOGGER.fine(() -> clsName+": gabaged");
 			consume(mi, clsName);
 		} else {
-			App.getInstance().editor().consume(c);			
+			editor.consume(c);			
 		}
 	}
 	@SuppressWarnings("unchecked")

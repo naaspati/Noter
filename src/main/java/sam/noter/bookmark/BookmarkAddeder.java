@@ -18,9 +18,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.stage.Window;
 import sam.logging.InitFinalized;
 import sam.myutils.MyUtilsCheck;
-import sam.noter.App;
 import sam.noter.Utils;
 import sam.noter.datamaneger.Entry;
 import sam.noter.tabs.Tab;
@@ -31,10 +31,10 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 	private final TextArea ta = new TextArea();
 	private final StringBuilder sb = new StringBuilder();
 	
-	public BookmarkAddeder() {
+	public BookmarkAddeder(Window parent) {
 		super(AlertType.CONFIRMATION);
 		setTitle("Add New Bookmark");
-		initOwner(App.getStage());
+		initOwner(parent);
 
 		HBox hb = new HBox(10, new Text("Title "), tf);
 		getDialogPane().setContent(hb);   

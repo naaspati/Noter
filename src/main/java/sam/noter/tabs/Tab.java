@@ -12,14 +12,16 @@ import java.util.function.Consumer;
 
 import javafx.application.HostServices;
 import javafx.geometry.Side;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
+import javafx.stage.Stage;
+import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
@@ -45,7 +47,7 @@ public class Tab extends DataManeger {
 	}
 	private void init(Consumer<Tab> onSelect) {
 		view.getChildren().addAll(title, close);
-		title.setMaxWidth(70);
+		//TODO title.setMaxWidth(70);
 
 		setClass(view, "tab");
 		setClass(title, "title");
@@ -132,7 +134,7 @@ public class Tab extends DataManeger {
 				return ar;
 		}
 
-		File file = Utils.getFile("save file", getTabTitle());
+		File file = Utils.getFile(Session.get(Stage.class), "save file", getTabTitle());
 
 		if(file == null)
 			return ActionResult.CANCEL;
@@ -161,7 +163,7 @@ public class Tab extends DataManeger {
 	}
 
 	public void  rename()  {
-		File file = Utils.getFile("rename", getJbookPath().getName());
+		File file = Utils.getFile(Session.get(Stage.class), "rename", getJbookPath().getName());
 		if(file == null) {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;

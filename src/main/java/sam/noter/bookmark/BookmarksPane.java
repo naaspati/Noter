@@ -12,6 +12,8 @@ import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
 import java.util.List;
 
 import javafx.beans.binding.BooleanBinding;
@@ -42,11 +44,14 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
+import javafx.stage.Window;
 import sam.fx.helpers.FxFxml;
 import sam.fxml.Button2;
-import sam.noter.App;
 import sam.noter.datamaneger.Entry;
+import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
+import sam.noter.tabs.TabContainer;
+import sam.reference.ReferenceUtils;
 import sam.reference.WeakAndLazy;
 public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 
@@ -54,7 +59,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private TreeView<String> tree;
 	private final MultipleSelectionModel<TreeItem<String>> selectionModel;
 	private final BooleanBinding selectedItemNull;
-	
+
 	@FXML private Button2 addButton;           
 	@FXML private Button2 addChildButton;      
 	@FXML private Button2 removeButton;        
@@ -64,14 +69,28 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private final Button show = new Button2("show","Chevron Right_20px.png", null) ;
 	private final VBox showBox = new VBox(show);
 	private final ReadOnlyObjectProperty<Tab> currentTab;
+	private final Editor editor;
+	private final Window parent;
+	private final TabContainer tabcontainer;
+	private final HashMap<Tab, WeakReference<TreeItem<String>>> history = new HashMap<>();
 
-	public BookmarksPane(ReadOnlyObjectProperty<Tab> currentTab) throws IOException {
+	public BookmarksPane(ReadOnlyObjectProperty<Tab> currentTab, Editor editor, Window parent, TabContainer tabcontainer) throws IOException {
 		FxFxml.load(this, true);
 		this.currentTab = currentTab;
+		this.editor = editor;
+		this.parent = parent;
+		this.tabcontainer = tabcontainer;
 
 		this.selectionModel = tree.getSelectionModel();
+		selectionModel.selectedItemProperty()
+		.addListener((p, o, n) -> {
+			if(n != null)
+				n.getChildren();
+		});
 		this.selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
 		this.selectedItemNull = selectionModel.selectedItemProperty().isNull();
+
+		this.adder = new WeakAndLazy<>(() -> new BookmarkAddeder(parent));
 
 		tree.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
 			if(e.getClickCount() > 1) {
@@ -95,10 +114,10 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		addButton.effectProperty().bind(new When(addButton.disableProperty()).then(GRAYSCALE_EFFECT).otherwise((ColorAdjust)null));
 
 		BooleanBinding currentTabNull = currentTab.isNull();
-		
+
 		addButton.disableProperty().bind(currentTabNull);
 		expandCollpase.disableProperty().bind(currentTabNull);
-		
+
 		currentTab.addListener(this);
 		this.disableProperty().bind(currentTabNull);
 	}
@@ -118,7 +137,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.setHeaderText("Rename Bookmark");
 		d.setTitle("Rename");
 		d.initModality(Modality.APPLICATION_MODAL);
-		d.initOwner(App.getStage());
+		d.initOwner(parent);
 		d.showAndWait()
 		.ifPresent(s -> {
 			if(s == null || s.equals(e.getOldValue()))
@@ -126,14 +145,14 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 
 			Entry ti = (Entry) e.getTreeItem();
 			ti.setTitle(s);
-			App.getInstance().editor().updateTitle(ti);
+			editor.updateTitle(ti);
 		});
 	}
 
 	public MultipleSelectionModel<TreeItem<String>> getSelectionModel() {
 		return selectionModel;
 	}
-	
+
 	@FXML
 	public void expandCollpaseAction(ActionEvent e) {
 		TreeItem<String> ti = selectionModel.getSelectedItem();
@@ -150,11 +169,11 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		if(e.getSource() == addChildButton)
 			addNewBookmark(CHILD);
 		else if(e.getSource() == addButton)
-				addNewBookmark(RELATIVE);
+			addNewBookmark(RELATIVE);
 	}
-	
-	private final WeakAndLazy<BookmarkAddeder> adder = new WeakAndLazy<>(BookmarkAddeder::new);
-	
+
+	private final WeakAndLazy<BookmarkAddeder> adder;
+
 	private void addNewBookmark(BookmarkType bookMarkType) {
 		adder.get().addNewBookmark(bookMarkType, selectionModel, tree, currentTab());
 	}
@@ -167,7 +186,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			expandBookmarks(t.getChildren(), expanded);
 		}
 	}
-	
+
 	public Menu getBookmarkMenu() {
 		return new Menu("_Bookmark",
 				null,
@@ -188,7 +207,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 
 	private BookmarkRemover remover; 
 	private final SimpleIntegerProperty undoDeleteSize = new SimpleIntegerProperty();
-	
+
 	private BookmarkRemover remover() {
 		if(remover == null) {
 			remover = new BookmarkRemover();
@@ -199,7 +218,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private BookmarkMover mover;
 	private BookmarkMover mover() {
 		if(mover == null)
-			mover = new BookmarkMover();
+			mover = new BookmarkMover(tabcontainer, parent);
 		return mover;
 	}
 
@@ -209,6 +228,29 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			remover.tabClosed(oldValue);
 			remover.switchTab(newValue);
 		}
-		tree.setRoot(newValue == null ? null : newValue.getRootItem());
+
+		if(oldValue != null && tree.getRoot() != null)
+			history.put(oldValue, new  WeakReference<>(selectionModel.getSelectedItem()));
+
+		selectionModel.clearSelection();
+		Entry root = newValue == null ?  null : newValue.getRootItem(); 
+		tree.setRoot(root);
+
+		if(root != null){
+			TreeItem<String> item = ReferenceUtils.get(history.get(newValue));
+			if(item != null) selectionModel.select(item);
+			else {
+				if(!root.getChildren().isEmpty())
+					selectionModel.select(root.getChildren().get(0));
+			}
+		}
+	}
+	public ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty() {
+		return selectionModel.selectedItemProperty();
+	}
+
+	void clearAndSelect(Entry entry) {
+		selectionModel.clearSelection();
+		selectionModel.select(entry);
 	}
 }

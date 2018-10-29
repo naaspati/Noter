@@ -28,6 +28,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.stage.Window;
 import sam.fx.alert.FxAlert;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.ActionResult;
@@ -41,25 +42,17 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	private final ScrollPane sp = new ScrollPane(tabsBox);
 	private ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
 	private final Consumer<Tab> onSelect;
+	private final BoundBooks boundBooks;
 
 	private double div = 0;
+	private final Window window;
 
-	private static transient TabContainer instance;
-
-	public static TabContainer getInstance() {
-		if (instance == null) {
-			synchronized (TabContainer.class) {
-				if (instance == null)
-					instance = new TabContainer();
-			}
-		}
-		return instance;
-	}
-
-	private TabContainer() {
+	public TabContainer(Window window, BoundBooks boundBooks) {
+		this.window = window;
 		setId("tab-container");
 		onSelect = currentTab::set;
 		currentTab.addListener(this);
+		this.boundBooks = boundBooks;
 
 		addClass(tabsBox, "tab-box");
 
@@ -154,7 +147,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		tabsBox.getChildren().add(tab.getView());
 		tab.setOnClose(this::closeTab);
 		tab.setContextMenu(closeTabsContextMenu);
-		File file = BoundBooks.getInstance().openBook(tab);
+		File file = boundBooks.openBook(tab);
 		tab.setBoundBook(file);
 		if(setCurrent)
 			currentTab.set(tab);
@@ -232,7 +225,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	public void open(List<File> jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
-			File file = Utils.getFile("select a file to open...", null);
+			File file = Utils.getFile(window, "select a file to open...", null);
 
 			if(file == null)
 				return;
@@ -253,9 +246,9 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	@Override
 	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newTab) {
-		if(oldValue != null)
+		if(oldValue != null) {
 			oldValue.setActive(false);
-		if(newTab != null)
+		} if(newTab != null)
 			newTab.setActive(true);
 		sp.setHvalue(newTab == null ? 0 : div*(tabsBox.getChildren().indexOf(newTab.getView()) - 1));
 	}

@@ -23,8 +23,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import sam.logging.InitFinalized;
-import sam.noter.App;
 import sam.noter.datamaneger.Entry;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
@@ -34,6 +34,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	private final Button moveBelow = new Button("Move Below");
 	private final Button moveAsFirstChild = new Button("Move As First Child");
 	private final Button moveAsLastChild = new Button("Move As Last Child");
+	private final TabContainer tabcontainer;
 
 	private TreeItem<TreeItem<String>> root; 
 	private final TreeView<TreeItem<String>> view = new TreeView<>();
@@ -41,10 +42,11 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	private Tab  currentTab, selectedTab;
 	private FlowPane tabs = new FlowPane();
 
-	public BookmarkMover() {
+	public BookmarkMover(TabContainer tabcontainer, Window stage) {
 		super(StageStyle.UNIFIED);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(App.getStage());
+		initOwner(stage);
+		this.tabcontainer = tabcontainer;
 
 		moveAbove.setOnAction(this);
 		moveBelow.setOnAction(this);
@@ -79,7 +81,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		this.currentTab = selectedTab;
 		this.selectionModel = selectionModel;
 		tabs.getChildren().clear();
-		TabContainer.getInstance().forEach(t -> tabs.getChildren().add(tab(t)));
+		tabcontainer.forEach(t -> tabs.getChildren().add(tab(t)));
 		tabs.setVisible(tabs.getChildren().size() != 1);
 		((Hyperlink)tabs.getChildren().get(0)).fire();
 		showAndWait();

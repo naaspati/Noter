@@ -41,11 +41,9 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TreeItem;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
@@ -61,58 +59,56 @@ import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsException;
 import sam.noter.bookmark.BookmarksPane;
+import sam.noter.bookmark.SearchBox;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 
 public class App extends Application implements SessionPutGet, ChangeListener<Tab> {
-	private static App INSTANCE;
-	
 	static {
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
 	}
 
-	public static App getInstance() {
-		return INSTANCE;
-	}
-	
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
-	
-	private final TabContainer tabsContainer = TabContainer.getInstance();
-	private final ReadOnlyObjectProperty<Tab> currentTab = tabsContainer.tabProperty();
-	private final BookmarksPane bookmarks = MyUtilsException.noError(() -> new BookmarksPane(currentTab));
-	private final MultipleSelectionModel<TreeItem<String>> selectionModel = bookmarks.getSelectionModel();
-	
-	private final BooleanBinding currentTabNull = currentTab.isNull();
+
+	private TabContainer tabsContainer;
+	private ReadOnlyObjectProperty<Tab> currentTab;
+	private BookmarksPane bookmarks;
+
+	private BooleanBinding currentTabNull;
 
 	private final SimpleObjectProperty<File> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 	private WeakReference<SearchBox> weakSearchBox = new WeakReference<SearchBox>(null);
 
-	
-	private final Editor editor = Editor.getInstance(currentTab, selectionModel.selectedItemProperty());
-	private static Stage stage;
+	private Editor editor;
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
 	private BoundBooks boundBooks;
-	
+	private Stage stage;
+
 	static {
 		GRAYSCALE_EFFECT.setSaturation(-1);
 	}
-	public static Stage getStage() {
-		return stage;
-	}
 	@Override
 	public void start(Stage stage) throws Exception {
-		App.INSTANCE = this;
-		App.stage = stage;
+		this.stage = stage;
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
 		Session.put(Stage.class, stage);
-		
+
+		boundBooks = new BoundBooks(stage);
+
+		tabsContainer = new TabContainer(stage, boundBooks);
+		currentTab = tabsContainer.tabProperty();
+		currentTabNull = currentTab.isNull();
+
+		editor = new Editor(stage);
+		bookmarks = new BookmarksPane(currentTab, editor, stage, tabsContainer);
+		editor.init(bookmarks.selectedItemProperty());
+
 		new FxFxml(this, stage, this)
 		.putBuilder(BookmarksPane.class, bookmarks)
 		.putBuilder(TabContainer.class, tabsContainer)
@@ -128,13 +124,11 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 		loadIcon(stage);
 		showStage(stage);
 		readRecents();
-		
-		boundBooks = new BoundBooks();
-		
+
 		List<File> files  = new FilesLookup().parse(getParameters().getRaw());
 		tabsContainer.addTabs(files);
 	}
-	
+
 	private void loadIcon(Stage stage) throws IOException {
 		Path p = Paths.get("notebook.png");
 		if(Files.exists(p))
@@ -185,15 +179,16 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 		mi.setUserData(path);
 		return mi;
 	}
-	
+
 	private Tab getCurrentTab() {
 		return currentTab.get();
 	}
-	
+
 	private void exit() {
+		editor.close();
 		boundBooks.save();
 		if(tabsContainer.closeAll()) {
-			
+
 			sessionPut("stage.width", String.valueOf(stage.getWidth()));
 			sessionPut("stage.height", String.valueOf(stage.getHeight()));
 			sessionPut("stage.x", String.valueOf(stage.getX()));
@@ -222,7 +217,7 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 				.map(s -> getDebugMenu())
 				.orElse(new Menu()));
 
-		new DyanamiMenus().load(bar);
+		new DyanamiMenus().load(bar, editor);
 		return bar;
 	}
 	private Menu getDebugMenu() {
@@ -263,7 +258,7 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 					SearchBox sb = weakSearchBox.get();
 
 					if(sb == null) {
-						sb = new SearchBox(selectionModel, getCurrentTab());
+						sb = new SearchBox(stage, bookmarks, getCurrentTab());
 						weakSearchBox = new WeakReference<>(sb);
 						sb.setOnHidden(e_e -> {
 							tabsContainer.setDisable(false);
@@ -331,10 +326,10 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 	@Override
 	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newTab) {
 		boolean b = newTab == null;
-		
+
 		stage.setTitle(b ? null : newTab.getTabTitle());
 		currentFile.set(b ? null : newTab.getJbookPath());
-		
+
 		if(oldValue == null) return;
 		File p = oldValue.getJbookPath();
 		if(p == null)

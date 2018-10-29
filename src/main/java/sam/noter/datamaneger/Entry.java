@@ -2,6 +2,7 @@ package sam.noter.datamaneger;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.stream.Stream.Builder;
 
 import org.w3c.dom.Document;
@@ -12,27 +13,32 @@ import javafx.scene.control.TreeItem;
 
 public class Entry extends TreeItem<String> {
 
-	private String content;
+	private String content0;
 	private long lastModified = -1;
 	private boolean titleModified, contentModified, childrenModified;
 	private Element element;
 	private final DataManeger maneger;
 	private boolean childrenSet;
+	private Supplier<String> contentProxy;
 
 	public static Entry cast(TreeItem<String> item) {
 		return (Entry)item;
 	}
 	Entry(String title, String content, long lastModified, DataManeger maneger) {
 		super(title);
-		this.content = content;
+		this.content0 = content;
 		this.lastModified = lastModified;
 		this.maneger = maneger;
+	}
+	public void setContentProxy(Supplier<String> contentProxy) {
+		this.contentProxy = contentProxy;
 	}
 	Entry(Element element, DataManeger maneger) {
 		this.element = element;
 		setValue(EntryUtils.getTitle(element));
 		this.maneger = maneger;
 	}
+	
 	@Override
 	public ObservableList<TreeItem<String>> getChildren() {
 		if(!childrenSet) {
@@ -58,7 +64,7 @@ public class Entry extends TreeItem<String> {
 			titleModified = false;
 		}
 		if(contentModified) {
-			EntryUtils.setContent(element, content, doc);
+			EntryUtils.setContent(element, getContent(), doc);
 			contentModified = false;
 		}
 		if(childrenModified) {
@@ -112,15 +118,19 @@ public class Entry extends TreeItem<String> {
 		maneger.setModified();
 	}
 	public String getContent() {
-		if(content == null)
-			content = EntryUtils.getContent(element);
+		if(contentProxy != null) return contentProxy.get();
+		return content_0();
+	}
+	private String content_0() {
+		if(content0 == null)
+			content0 = EntryUtils.getContent(element);
 
-		return content; 
+		return content0;
 	}
 	public void setContent(String content) {
-		if(contentModified || !Objects.equals(content, this.content)) {
+		if(contentModified || !Objects.equals(content, content_0())) {
 			contentModified = true;
-			this.content = content; 
+			this.content0 = content; 
 			setModified();
 		}
 	}
@@ -172,5 +182,11 @@ public class Entry extends TreeItem<String> {
 	}
 	public void addAll(List<TreeItem<String>> list) {
 		modifiedChildren().addAll(list);
+	}
+	// special method used by DataManeger
+	void setAll(Entry[] entries) {
+		childrenModified = false;
+		childrenSet = true;
+		super.getChildren().setAll(entries);
 	}	
 }

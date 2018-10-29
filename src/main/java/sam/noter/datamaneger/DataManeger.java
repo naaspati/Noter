@@ -22,7 +22,7 @@ import sam.noter.datamaneger.EntryUtils.TwoValue;
  */
 public class DataManeger {
 	private File jbookPath;
-	private final Entry rootItem = new Entry(null, null, -1, this);
+	private final Entry rootItem = new Entry("ROOT", "ROOT", -1, this);
 	private Document document;
 	private boolean modified; 
 
@@ -45,7 +45,7 @@ public class DataManeger {
 			return;
 
 		TwoValue value = EntryUtils.parse(jbookPath, this);
-		rootItem.getChildren().setAll(value.entries);
+		rootItem.setAll(value.entries);
 		document = value.doc;
 		setModified(false);
 	}

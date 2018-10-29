@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.logging.Level;
 
 import javafx.stage.FileChooser;
+import javafx.stage.Window;
 import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
@@ -19,15 +20,10 @@ import sam.noter.tabs.Tab;
 public class BoundBooks {
 	private final HashMap<String, String> boundBooks = new HashMap<>();
 	private boolean modified;
-	
-	private static volatile BoundBooks INSTANCE;
+	private final Window parent;
 
-	public static BoundBooks getInstance() {
-			return INSTANCE;
-	}
-
-	public BoundBooks() throws IOException {
-		BoundBooks.INSTANCE = this; 
+	public BoundBooks(Window parent) throws IOException {
+		this.parent = parent;
 		Path path = getPath();
 		if(Files.notExists(path)) return;
 
@@ -72,7 +68,7 @@ public class BoundBooks {
 		if(file != null && file.exists()) 
 			fc.setInitialDirectory(file);
 
-		file = fc.showOpenDialog(App.getStage());
+		file = fc.showOpenDialog(parent);
 		if(tab.getTabTitle() != null)
 			fc.setTitle("Book for: "+tab.getTabTitle());
 

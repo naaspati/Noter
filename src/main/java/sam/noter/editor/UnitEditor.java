@@ -14,17 +14,19 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import sam.fxml.Button2;
+import sam.myutils.MyUtilsCheck;
 import sam.noter.Utils;
 import sam.noter.datamaneger.Entry;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
 	protected final TextArea content = new TextArea();
-	protected volatile Entry item;
-
+	protected Entry item;
+	
 	public UnitEditor(Consumer<Entry> onExpanded) {
 		updateFont();
 		setCenter(content);
+		content.setEditable(false);
 
 		if(onExpanded != null) {
 			Button expandButton = new Button2("edit", null, e -> onExpanded.accept(this.item));
@@ -38,8 +40,7 @@ class UnitEditor extends BorderPane {
 
 			addClass(titleContainer, "title-box");
 			setTop(titleContainer);
-		}
-		else {
+		} else {
 			setTop(title);
 			addClass(title, "title");
 			title.setMaxWidth(Double.MAX_VALUE);
@@ -47,22 +48,17 @@ class UnitEditor extends BorderPane {
 
 		addClass(this, "unit-editor");
 		addClass(content, "content");
-
-		content.textProperty().addListener((prop, old, _new) -> {
-			if(item != null)
-				item.setContent(_new);
-		});
 	}
-
-	public void setItem(Entry item) {
+	
+	public void setItem(Entry e) {
 		this.item = null;
-		title.setText(item.getTitle());
-		content.setText(item.getContent());
+		title.setText(e.getTitle());
+		content.setText(e.getContent());
 	
 		String text = content.getText();
-		long count = text == null || text.isEmpty() ? 0 : text.chars().filter(s -> s == '\n').count();
+		long count = MyUtilsCheck.isEmpty(text) ? 0 : text.chars().filter(s -> s == '\n').count();
 		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
-		this.item = item;
+		this.item = e;
 	}
 	public void updateFont() {
 		title.setFont(Editor.getFont());

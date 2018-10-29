@@ -1,4 +1,4 @@
-package sam.noter;
+package sam.noter.bookmark;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,9 +14,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TreeItem;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -25,12 +23,12 @@ import javafx.stage.Stage;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
+import sam.noter.bookmark.BookmarksPane;
 import sam.noter.datamaneger.Entry;
 import sam.noter.tabs.Tab;
 
 public final class SearchBox extends Popup {
 	private final TextField searchF = new TextField();
-	private final MultipleSelectionModel<TreeItem<String>> selectionModel;
 	private Tab tab;
 	private final Button previous, next, clear;
 	private final CheckBox inBookmarks = new CheckBox("Bookmarks"); 
@@ -40,13 +38,16 @@ public final class SearchBox extends Popup {
 	private int index = 0;
 	private List<Entry> result = new ArrayList<>();
 	private Iterator<Entry> iterator;
+	private final Stage stage;
+	private BookmarksPane bookmarks;
 
-	public SearchBox(MultipleSelectionModel<TreeItem<String>> selectionModel, Tab tab2) {
+	public SearchBox(Stage stage, BookmarksPane bookmarks, Tab tab2) {
 		super();
+		this.bookmarks = bookmarks;
+		this.stage = stage;
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
 
 		this.tab = tab2;
-		this.selectionModel = selectionModel;
 
 		searchF.setPrefColumnCount(20);
 
@@ -88,8 +89,7 @@ public final class SearchBox extends Popup {
 
 		searchF.setOnAction(e -> searchAction());
 
-		Stage stage = App.getStage(); 
-		show(App.getStage());
+		show(stage);
 		listener = new WeakChangeListener<>((pp, o, n) -> setLocation());
 		setLocation();
 
@@ -106,7 +106,7 @@ public final class SearchBox extends Popup {
 	public void start(Tab tab) {
 		this.tab = tab;
 		clear();
-		show(App.getStage());
+		show(stage);
 	}
 	private void searchAction() {
 		String text = searchF.getText();
@@ -167,11 +167,9 @@ public final class SearchBox extends Popup {
 		return null;
 	}
 	private void select(int index) {
-		selectionModel.clearSelection();
-		selectionModel.select(result.get(index));
+		bookmarks.clearAndSelect(result.get(index));
 	}
 	private void setLocation() {
-		Stage stage = App.getStage();
 		setX(stage.getX() + stage.getWidth() - getWidth());
 		setY(stage.getY() + 30);	
 	}

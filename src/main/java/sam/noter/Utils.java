@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import javafx.scene.control.TreeItem;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Window;
 import sam.myutils.System2;
 
 public class Utils {
@@ -50,7 +51,7 @@ public class Utils {
 		return sb;
 	}
 
-	public static File getFile(String title, String suggestedName) {
+	public static File getFile(Window parent, String title, String suggestedName) {
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
@@ -70,7 +71,7 @@ public class Utils {
 			chooser.setInitialDirectory(file);
 		else
 			chooser.setInitialDirectory(new File("."));
-		file = suggestedName == null ?  chooser.showOpenDialog(App.getStage()) : chooser.showSaveDialog(App.getStage());
+		file = suggestedName == null ?  chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
 
 		if(file != null) {
 			try {
