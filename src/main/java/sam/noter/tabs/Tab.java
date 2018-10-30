@@ -10,6 +10,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import javafx.application.HostServices;
 import javafx.geometry.Orientation;
@@ -29,29 +30,31 @@ import sam.io.fileutils.FileOpenerNE;
 import sam.noter.ActionResult;
 import sam.noter.Utils;
 import sam.noter.Utils.FileChooserType;
-import sam.noter.datamaneger.RootEntry;
+import sam.noter.dao.Entry;
+import sam.noter.dao.RootEntry;
+import sam.noter.dao.RootEntryFactory;
 
-public class Tab extends RootEntry {
-
-	private final HBox view = new HBox(5);
+public class Tab extends HBox {
+	private final RootEntry root;
 	private final Label title = new Label();
 	private final Button close = new Button("x");
 	private final Button open = new Button("o");
 
 	public Tab(File path, Consumer<Tab> onSelect) throws Exception {
-		super(path);
+		root = RootEntryFactory.getInstance().load(path);
 		init(onSelect);
 		setTabTitle(path.getName());
 	}
 	public Tab(Consumer<Tab> onSelect) throws Exception {
-		super();
+		root = RootEntryFactory.getInstance().create();
 		init(onSelect);
 	}
 	private void init(Consumer<Tab> onSelect) {
-		view.getChildren().addAll(title,new Separator(Orientation.VERTICAL), open, close);
-		//TODO title.setMaxWidth(70);
+		setSpacing(5);
+		getChildren().addAll(title,new Separator(Orientation.VERTICAL), open, close);
+		root.setOnModified(this::notifyModified);
 
-		setClass(view, "tab");
+		setClass(this, "tab");
 		setClass(title, "title");
 		setClass(close, "close");
 		setClass(open, "open");
@@ -59,13 +62,11 @@ public class Tab extends RootEntry {
 		open.setOnAction(e -> FileOpenerNE.openFile((File)open.getUserData()));
 		close.setTooltip(new Tooltip("close tab"));
 		
-		view.setOnMouseClicked(e -> {
+		setOnMouseClicked(e -> {
 			if(e.getButton() == MouseButton.PRIMARY)
 				onSelect.accept(this);
 		});
 	}
-	
-	public HBox getView() { return view; }
 
 	public void setTabTitle(String string) { 
 		title.setText(string.replace(".jbook", ""));
@@ -73,21 +74,21 @@ public class Tab extends RootEntry {
 		}
 	public String getTabTitle() { return title.getText(); }
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
-	@Override
+	
 	public void setJbookPath(File path) {
 		setTabTitle(path.getName());
-		super.setJbookPath(path);
+		root.setJbookPath(path);
 	}
 	public boolean isActive() {
-		return view.getStyleClass().contains("active");
+		return getStyleClass().contains("active");
 	}
 	public void setActive(boolean b) {
-		toggleClass(view, "active", b);
+		toggleClass(this, "active", b);
 	}
 	public void setContextMenu(ContextMenu cm) {
-		view.setOnContextMenuRequested(e -> {
+		setOnContextMenuRequested(e -> {
 			cm.setUserData(Tab.this);
-			cm.show(view, Side.BOTTOM, 0, 0);
+			cm.show(this, Side.BOTTOM, 0, 0);
 		});
 	}
 	public void setBoundBook(File file) {
@@ -111,7 +112,7 @@ public class Tab extends RootEntry {
 			return save_as(false);
 
 		try {
-			save();
+			root.save();
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(getJbookPath(), "failed to save", e);
 			return ActionResult.FAILED;
@@ -133,7 +134,7 @@ public class Tab extends RootEntry {
 			return ActionResult.CANCEL;
 
 		try {
-			save(file);
+			root.save(file);
 			setJbookPath(file);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(getJbookPath(), "failed to save", e);
@@ -190,17 +191,27 @@ public class Tab extends RootEntry {
 
 	public void  reload_from_disk()  {
 		try {
-			reload();
+			root.reload();
 			FxPopupShop.showHidePopup("realoaded "+getJbookPath().getName(), 1500);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(getJbookPath(), "failed to reload", e);
 		}
 	}
 	
-	@Override
+	public File getJbookPath() {
+		return root.getJbookPath();
+	}
 	protected void notifyModified() {
-		super.notifyModified();
-		toggleClass(view, "modified", isModified());
+		toggleClass(this, "modified", root.isModified());
+	}
+	public Stream<Entry> walk() {
+		return root.walk();
+	}
+	public boolean isModified() {
+		return root.isModified();
 	}
 	
+	public Entry getRoot() {
+		return (Entry)root;
+	}
 }

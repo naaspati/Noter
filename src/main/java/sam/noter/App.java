@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.json.JSONException;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -184,6 +185,12 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 		return currentTab.get();
 	}
 
+	@Override
+	public void stop() throws Exception {
+		super.stop();
+		Utils.stop();
+	}
+
 	private void exit() {
 		boundBooks.save();
 		if(tabsContainer.closeAll()) {
@@ -201,7 +208,7 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 			} catch (IOException e) {
 				MyLoggerFactory.bySimpleName(getClass()).log(Level.SEVERE,  "failed to save: recents.txt  ", e);   
 			}
-			System.exit(0);
+			Platform.exit();
 		}
 	}
 	private MenuBar getMenubar() throws JSONException, IOException {

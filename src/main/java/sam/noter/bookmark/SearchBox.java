@@ -23,7 +23,7 @@ import javafx.stage.Stage;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
-import sam.noter.datamaneger.EntryXML;
+import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 
 public final class SearchBox extends Popup {
@@ -35,8 +35,8 @@ public final class SearchBox extends Popup {
 	private WeakChangeListener<Number> listener;
 
 	private int index = 0;
-	private List<EntryXML> result = new ArrayList<>();
-	private Iterator<EntryXML> iterator;
+	private List<Entry> result = new ArrayList<>();
+	private Iterator<Entry> iterator;
 	private final Stage stage;
 	private BookmarksPane bookmarks;
 
@@ -131,7 +131,7 @@ public final class SearchBox extends Popup {
 		if(index < result.size() - 1)
 			select(++index);
 		else {
-			EntryXML e = nextInIterator();
+			Entry e = nextInIterator();
 			if(e == null)
 				FxPopupShop.showHidePopup("nothing found", 2000);
 			else
@@ -147,12 +147,12 @@ public final class SearchBox extends Popup {
 		select(--index);
 		updateDisable();
 	}
-	private EntryXML nextInIterator() {
+	private Entry nextInIterator() {
 		boolean inB = inBookmarks.isSelected(), inC = inContent.isSelected();
 		String text = searchF.getText();
 
 		while(iterator.hasNext()) {
-			EntryXML e = iterator.next();
+			Entry e = iterator.next();
 			if(
 					(inB && e.getTitle() != null && e.getTitle().contains(text)) ||
 					(inC && e.getContent() != null && e.getContent().contains(text))

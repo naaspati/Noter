@@ -23,7 +23,7 @@ import sam.config.Session;
 import sam.logging.InitFinalized;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.Utils;
-import sam.noter.datamaneger.EntryXML;
+import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 import static sam.noter.Utils.castEntry;
 
@@ -54,7 +54,7 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 
 	public void addNewBookmark(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
 		this.tab = tab;
-		EntryXML item = (EntryXML)selectionModel.getSelectedItem();
+		Entry item = (Entry)selectionModel.getSelectedItem();
 
 		BookmarkType bt = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
 		setHeaderText(header(item, bt));
@@ -71,7 +71,7 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 		});
 	}
 
-	private TreeItem<String> process(ButtonType b, BookmarkType bt, EntryXML item, TreeView<String> tree) {
+	private TreeItem<String> process(ButtonType b, BookmarkType bt, Entry item, TreeView<String> tree) {
 		if(b != ButtonType.OK) return null;
 
 		String title = tf.getText();
@@ -84,13 +84,13 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 				case CHILD: 
 					return item.addChild(title, null);
 				case RELATIVE_TO_PARENT:
-					return castEntry(item.getParent().getParent()).addChild(title, (EntryXML)item.getParent());
+					return castEntry(item.getParent().getParent()).addChild(title, (Entry)item.getParent());
 			}
 		}
 		return null;
 
 	}
-	private String header(EntryXML item, BookmarkType bt) {
+	private String header(Entry item, BookmarkType bt) {
 		String header = "Add new Bookmark";
 		if(item != null) {
 			switch (bt) {

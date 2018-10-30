@@ -15,12 +15,12 @@ import sam.fx.helpers.FxUtils;
 import sam.fxml.Button2;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.Utils;
-import sam.noter.datamaneger.EntryXML;
+import sam.noter.dao.Entry;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
 	protected final TextArea content = new TextArea();
-	protected EntryXML item;
+	protected Entry item;
 	
 	protected UnitEditor() {
 		updateFont();
@@ -31,7 +31,7 @@ class UnitEditor extends BorderPane {
 		addClass(content, "content");
 	}
 	
-	public UnitEditor(Consumer<EntryXML> onExpanded) {
+	public UnitEditor(Consumer<Entry> onExpanded) {
 		this();
 		Objects.requireNonNull(onExpanded);
 
@@ -44,7 +44,7 @@ class UnitEditor extends BorderPane {
 		setTop(titleContainer);
 	}
 	
-	public void setItem(EntryXML e) {
+	public void setItem(Entry e) {
 		this.item = null;
 		title.setText(e.getTitle());
 		content.setText(e.getContent());
@@ -61,7 +61,7 @@ class UnitEditor extends BorderPane {
 	public String getItemTitle() {
 		return item.getTitle();
 	}
-	public EntryXML getItem() {
+	public Entry getItem() {
 		return item;
 	}
 	public void updateTitle() {

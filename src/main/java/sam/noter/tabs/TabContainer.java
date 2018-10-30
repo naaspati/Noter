@@ -152,7 +152,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	private void addTab(Tab tab, boolean setCurrent) {
 		tabs.add(tab);
-		tabsBox.getChildren().add(tab.getView());
+		tabsBox.getChildren().add(tab);
 		tab.setOnClose(this::closeTab);
 		tab.setContextMenu(closeTabsContextMenu);
 		File file = boundBooks.openBook(tab);
@@ -173,7 +173,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		} 
 
 		tabs.remove(tab);
-		int index = tabsBox.getChildren().indexOf(tab.getView());
+		int index = tabsBox.getChildren().indexOf(tab);
 		tabsBox.getChildren().remove(index);
 
 		if(!tab.isActive())
@@ -260,6 +260,6 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 			oldValue.setActive(false);
 		} if(newTab != null)
 			newTab.setActive(true);
-		sp.setHvalue(newTab == null ? 0 : div*(tabsBox.getChildren().indexOf(newTab.getView()) - 1));
+		sp.setHvalue(newTab == null ? 0 : div*(tabsBox.getChildren().indexOf(newTab) - 1));
 	}
 }

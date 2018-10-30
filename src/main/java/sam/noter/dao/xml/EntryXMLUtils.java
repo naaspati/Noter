@@ -1,4 +1,4 @@
-package sam.noter.datamaneger;
+package sam.noter.dao.xml;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,11 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -24,32 +22,21 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.helpers.DefaultHandler;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 import sam.config.Session;
 import sam.noter.Utils;
 
 
-class EntryUtils {
+class EntryXMLUtils {
 	private static final String TITLE = "title";
 	private static final String ENTRIES = "entries";
 	private static final String CONTENT = "content";
 	private static final String CHILDREN = "children";
 	private static final String ENTRY = "entry";
 	private static final String LAST_MODIFIED = "lastmodified";
-
-	static class TwoValue {
-		final EntryXML[] entries;
-		final Document doc;
-		TwoValue(EntryXML[] entries, Document doc) {
-			this.entries = entries;
-			this.doc = doc;
-		}
-	}
-	static void parse(File path, RootEntry maneger) throws Exception {
+	
+	static void parse(File path, RootEntryXML maneger) throws Exception {
 		Document doc = 
 				DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
@@ -72,6 +59,7 @@ class EntryUtils {
 		for (Object o : iterable) 
 			rootElement.appendChild(((EntryXML) o).getElement(doc));
 		
+		Utils.createBackup(target);
 		write(doc, target);
 	}
 
@@ -80,7 +68,7 @@ class EntryUtils {
 		Path p = Utils.APP_DATA.resolve("xml.properties");
 		if(Files.exists(p)) {
 
-			INDENT = Optional.ofNullable(Session.getProperty(EntryUtils.class, "xml.indent"))
+			INDENT = Optional.ofNullable(Session.getProperty(EntryXMLUtils.class, "xml.indent"))
 					.map(String::trim)
 					.map(s -> s.equalsIgnoreCase("true") ? "yes" : s)
 					.map(s -> s.equalsIgnoreCase("false") ? "no" : s)
@@ -166,7 +154,7 @@ class EntryUtils {
 			return 0;
 		return Long.parseLong(n.getTextContent());
 	}
-	public static Element createEntry(Document doc, EntryXML entry) {
+	public static Element createEntryXML(Document doc, EntryXML entry) {
 		Element element = doc.createElement(ENTRY);
 
 		append(TITLE, entry.getTitle(), element, doc);

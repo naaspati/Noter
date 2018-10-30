@@ -1,8 +1,9 @@
-package sam.noter.datamaneger;
+package sam.noter.dao.xml;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -12,24 +13,21 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 
 import javafx.scene.control.TreeItem;
+import sam.noter.dao.Entry;
+import sam.noter.dao.RootEntry;
 
-/**
- * DataManeger and View Controller
- * 
- * @author Sameer
- *
- */
-public class RootEntry extends EntryXML {
+class RootEntryXML extends EntryXML implements RootEntry {
 	private File jbookPath;
 	private Document document;
 	private boolean modified; 
+	private Runnable onModified;
 
-	protected RootEntry() throws ParserConfigurationException {
+	public RootEntryXML() throws ParserConfigurationException {
 		document = DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
 				.newDocument();
 	}
-	protected RootEntry(File jbookPath) throws Exception {
+	protected RootEntryXML(File jbookPath) throws Exception {
 		Objects.requireNonNull(jbookPath, "Path to .jbook cannot be null");
 		if(!jbookPath.exists())
 			throw new FileNotFoundException("File not found: "+jbookPath);
@@ -39,58 +37,47 @@ public class RootEntry extends EntryXML {
 		this.jbookPath = jbookPath;
 		reload();
 	}
+
+	@Override
 	public void reload() throws Exception {
 		if(jbookPath == null)
 			return;
 
 		modified = false;
 		getChildren().clear();
-		EntryUtils.parse(jbookPath, this);
+		EntryXMLUtils.parse(jbookPath, this);
 		notifyModified();
 	}
 
-	protected void notifyModified() {
-	}
-	//override default behaviour
 	@Override
-	protected void loadChildren() {}
-
-	public boolean isModified() {
-		return modified;
+	public void setOnModified(Runnable action) {
+		this.onModified = action;
+	}
+	protected void notifyModified() {
+		if(onModified != null)
+			onModified.run();
 	}
 
-	public void save() throws Exception {
-		save(jbookPath);
-	}
+	//override default behaviour 
+	@Override protected void loadChildren(List<TreeItem<String>> sink) {}
+	public void setDocument(Document doc) { this.document = doc; }
+
+	@Override public boolean isModified() { return modified; }
+
+	@Override
 	public void save(File path) throws Exception {
 		if(!isModified() && jbookPath != null)
 			return;
 
-		EntryUtils.save(document, getChildren(), path);
+		EntryXMLUtils.save(document, getChildren(), path);
 		jbookPath = path;
 		modified = false;
 		notifyModified();
 	}
-	public Stream<EntryXML> walk() {
-		return _walk(null);
-	} 
-	public Stream<EntryXML> _walk(TreeItem<String> item) {
-		Stream.Builder<EntryXML> builder = Stream.builder();
-		if(item == null)
-			return this.walk(builder).build().skip(1);
-		else
-			return ((EntryXML)item).walk(builder).build();
-	}
-	public File getJbookPath() {
-		return jbookPath;
-	}
-	public void setJbookPath(File path) {
-		jbookPath = path;
-	}
 
-	public void setDocument(Document doc) {
-		this.document = doc;
-	}
+	@Override public File getJbookPath() { return jbookPath; }
+	@Override public void setJbookPath(File path) { jbookPath = path; }
+
 	@Override
 	protected void setChildModified() {
 		super.setChildModified();
@@ -98,5 +85,17 @@ public class RootEntry extends EntryXML {
 
 		this.modified = true;
 		notifyModified();
+	}
+
+	@Override
+	public Stream<Entry> walk() {
+		return _walk(null);
+	} 
+	public Stream<Entry> _walk(TreeItem<String> item) {
+		Stream.Builder<Entry> builder = Stream.builder();
+		if(item == null)
+			return this.walk(builder).build().skip(1);
+		else
+			return ((EntryXML)item).walk(builder).build();
 	}
 }

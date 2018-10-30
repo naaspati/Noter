@@ -31,7 +31,7 @@ import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsCheck;
-import sam.noter.datamaneger.EntryXML;
+import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
@@ -44,13 +44,13 @@ public class Editor extends BorderPane implements SessionPutGet {
 	@FXML private Button2 combineContentBtn;
 	@FXML private Button2 combineChildrenBtn;
 
-	private final Consumer<EntryXML> onExpanded = t -> changed(t, EXPANDED);
+	private final Consumer<Entry> onExpanded = t -> changed(t, EXPANDED);
 	private WeakAndLazy<UnitContainer> unitsContainerWL = new WeakAndLazy<>(() -> new UnitContainer(onExpanded));
 	private WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
 	private final CenterEditor centerEditor = new CenterEditor();
 
-	private EntryXML currentItem;
-	private final IdentityHashMap<EntryXML, Stack<ViewType>> history0 = new IdentityHashMap<>();
+	private Entry currentItem;
+	private final IdentityHashMap<Entry, Stack<ViewType>> history0 = new IdentityHashMap<>();
 
 	private static Font font;
 
@@ -86,7 +86,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 	
 	public void init(ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabContainer container){
 		Objects.requireNonNull(selectedItemProperty);
-		selectedItemProperty.addListener((p, o, n) -> changed((EntryXML)n, PREVIOUS));
+		selectedItemProperty.addListener((p, o, n) -> changed((Entry)n, PREVIOUS));
 		disableProperty().bind(selectedItemProperty.isNull());
 		container.currentTabProperty().addListener((p, o, n) -> {tab = n;});
 		container.addOnTabClosing(tab -> {
@@ -132,7 +132,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 			centerEditor.consume(e);
 		}
 	}
-	private void changed(EntryXML item, ViewType view) {
+	private void changed(Entry item, ViewType view) {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);
@@ -182,7 +182,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		}
 		currentItem = item;
 	}
-	private void setCombined_text(EntryXML item) {
+	private void setCombined_text(Entry item) {
 		CombinedText c = combinedTextWL.get();
 		if(getCenter() == c && c.getItem() == item) return;
 
@@ -194,7 +194,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 
 		buttonsVisible();
 	}
-	private void setCombined_children(EntryXML item) {
+	private void setCombined_children(Entry item) {
 		UnitContainer c = unitsContainerWL.get();
 		if(getCenter() == c && c.getItem() == item) return;
 
@@ -213,13 +213,13 @@ public class Editor extends BorderPane implements SessionPutGet {
 		combineContentBtn.setVisible(false);
 	}
 
-	private void addHistory(ViewType type, EntryXML item) {
+	private void addHistory(ViewType type, Entry item) {
 		if(type == null) return;
 		Stack<ViewType> stack = history(item, true);
 		if(stack.isEmpty() || stack.lastElement() != type)
 			stack.add(type);
 	}
-	private Stack<ViewType> history(EntryXML item, boolean create) {
+	private Stack<ViewType> history(Entry item, boolean create) {
 		Stack<ViewType> stack = history0.get(item);
 
 		if(create && stack == null) 
@@ -228,7 +228,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		return stack;
 	}
 
-	private void setCenterEditor(EntryXML item) {
+	private void setCenterEditor(Entry item) {
 		if(getCenter() != centerEditor)
 			setCenter(centerEditor);
 
@@ -241,7 +241,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		combineChildrenBtn.setVisible(!item.getChildren().isEmpty());
 		combineContentBtn.setVisible(!item.getChildren().isEmpty());
 	}
-	public void updateTitle(EntryXML ti) {
+	public void updateTitle(Entry ti) {
 		unitsContainerWL.ifPresent(u -> u.updateTitle(ti));
 
 		centerEditor.updateTitle();

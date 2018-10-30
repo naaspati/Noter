@@ -11,17 +11,17 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.VBox;
-import sam.noter.datamaneger.EntryXML;
+import sam.noter.dao.Entry;
 import sam.reference.WeakList;
 
 class UnitContainer extends ScrollPane {
 	private final VBox root = new VBox(15);
 	private final WeakList<UnitEditor> unitEditors;
 	private boolean wrapText;
-	private EntryXML item;
+	private Entry item;
 	private final ObservableList<Node> list;
 	
-	public UnitContainer(Consumer<EntryXML> onExpanded) {
+	public UnitContainer(Consumer<Entry> onExpanded) {
 		unitEditors  = new WeakList<>(() -> new UnitEditor(onExpanded));
 		
 		setContent(root);
@@ -57,7 +57,7 @@ class UnitContainer extends ScrollPane {
 	private void forEach(Consumer<UnitEditor> action) {
 		list.forEach(n -> action.accept((UnitEditor)n));
 	}
-	public void updateTitle(EntryXML item) {
+	public void updateTitle(Entry item) {
 		forEach(UnitEditor::updateTitle);
 	}
 	public boolean isEmpty() {
@@ -74,16 +74,16 @@ class UnitContainer extends ScrollPane {
 		list.clear();
 	}
 
-	public void setItem(EntryXML item) {
+	public void setItem(Entry item) {
 		this.item = item;
 		resizeContainer(item.getChildren().size() + 1);
 		first().setItem(item);
 		int index = 1;
-		for (TreeItem<String> ti : item.getChildren()) ((UnitEditor) list.get(index++)).setItem((EntryXML)ti); 
+		for (TreeItem<String> ti : item.getChildren()) ((UnitEditor) list.get(index++)).setItem((Entry)ti); 
 
 		setVvalue(0);
 	}
-	public EntryXML getItem() {
+	public Entry getItem() {
 		return item;
 	}
 }
