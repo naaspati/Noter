@@ -13,7 +13,7 @@
 <fx:root xmlns:fx="http://javafx.com/fxml" type="BorderPane" fx:id="editor">
 
 	<top>
-		<HBox alignment="CENTER"> 
+		<HBox spacing="10" alignment="CENTER"> 
 			<Button2 fx:id="backBtn" tip="backup" icon="Back_30px.png" onAction="#historyBack" visible="false"/> 
 			<Label fx:id="maintitle" wrapText="true" HBox.hgrow="ALWAYS"> 
 				<padding>

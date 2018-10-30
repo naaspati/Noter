@@ -9,6 +9,7 @@ import javafx.geometry.Insets
 dynamic component Editor {
 	BorderPane id editor {
 		top: HBox {
+			spacing : 10,
 			styleClass : ["control-box"],
 			alignment : "CENTER",
 			Button2 id backBtn {

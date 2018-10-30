@@ -188,5 +188,8 @@ public class Entry extends TreeItem<String> {
 		childrenModified = false;
 		childrenSet = true;
 		super.getChildren().setAll(entries);
+	}
+	public boolean isEmpty() {
+		return getChildren().isEmpty();
 	}	
 }

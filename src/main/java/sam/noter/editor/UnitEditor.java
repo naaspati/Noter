@@ -2,6 +2,7 @@ package sam.noter.editor;
 
 import static sam.fx.helpers.FxClassHelper.addClass;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.geometry.Insets;
@@ -11,8 +12,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.Priority;
+import sam.fx.helpers.FxUtils;
 import sam.fxml.Button2;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.Utils;
@@ -23,30 +23,26 @@ class UnitEditor extends BorderPane {
 	protected final TextArea content = new TextArea();
 	protected Entry item;
 	
-	public UnitEditor(Consumer<Entry> onExpanded) {
+	protected UnitEditor() {
 		updateFont();
 		setCenter(content);
 		content.setEditable(false);
 
-		if(onExpanded != null) {
-			Button expandButton = new Button2("edit", "Expand_20px.png", e -> onExpanded.accept(this.item));
-
-			Pane p = new Pane();
-			HBox titleContainer = new HBox(title, p, expandButton);
-			titleContainer.setPadding(new Insets(5, 10, 5, 10));
-
-			HBox.setHgrow(p, Priority.ALWAYS);
-
-			addClass(titleContainer, "title-box");
-			setTop(titleContainer);
-		} else {
-			setTop(title);
-			addClass(title, "title");
-			title.setMaxWidth(Double.MAX_VALUE);
-		}
-
 		addClass(this, "unit-editor");
 		addClass(content, "content");
+	}
+	
+	public UnitEditor(Consumer<Entry> onExpanded) {
+		this();
+		Objects.requireNonNull(onExpanded);
+
+		Button2 expandButton = new Button2("edit", "Expand_20px.png", e -> onExpanded.accept(this.item));
+
+		HBox titleContainer = new HBox(title, FxUtils.longPaneHbox(), expandButton);
+		titleContainer.setPadding(new Insets(5, 10, 5, 10));
+
+		addClass(titleContainer, "title-box");
+		setTop(titleContainer);
 	}
 	
 	public void setItem(Entry e) {

@@ -1,5 +1,7 @@
 package sam.noter.editor;
 
+import static sam.fx.helpers.FxClassHelper.addClass;
+
 import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -10,7 +12,6 @@ import java.util.function.Consumer;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.geometry.Pos;
 import javafx.scene.control.TextArea;
 import sam.noter.datamaneger.Entry;
 import sam.reference.ReferenceUtils;
@@ -30,8 +31,12 @@ public class CenterEditor extends UnitEditor implements ChangeListener<String> {
 	private IdentityHashMap<Entry, WeakReference<Save>> cache = new IdentityHashMap<>();
 
 	public CenterEditor() {
-		super(null);
+		super();
 		setId("center-editor");
+		
+		setTop(title);
+		addClass(title, "title");
+		title.setMaxWidth(Double.MAX_VALUE);
 	}
 	private static final ZoneOffset offset  = ZoneOffset.of("+05:30");
 	private static final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.MEDIUM);

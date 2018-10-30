@@ -4,6 +4,7 @@ import static sam.noter.editor.ViewType.CENTER;
 import static sam.noter.editor.ViewType.COMBINED_CHILDREN;
 import static sam.noter.editor.ViewType.COMBINED_TEXT;
 import static sam.noter.editor.ViewType.EXPANDED;
+import static sam.noter.editor.ViewType.PREVIOUS;
 
 import java.io.IOException;
 import java.util.IdentityHashMap;
@@ -11,7 +12,6 @@ import java.util.Objects;
 import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.logging.Logger;
 
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.event.ActionEvent;
@@ -36,7 +36,6 @@ import sam.noter.datamaneger.Entry;
 import sam.reference.WeakAndLazy;
 
 public class Editor extends BorderPane implements SessionPutGet {
-	private static final Logger LOGGER = MyLoggerFactory.logger(Editor.class.getSimpleName());
 
 	@FXML private BorderPane editor;
 	@FXML private Button2 backBtn;
@@ -44,16 +43,15 @@ public class Editor extends BorderPane implements SessionPutGet {
 	@FXML private Button2 combineContentBtn;
 	@FXML private Button2 combineChildrenBtn;
 
-	private final Consumer<Entry> onExpanded = t -> changed(t, EXPANDED);
+	private final Consumer<Entry> onExpanded = t -> changed0(t, EXPANDED);
 	private WeakAndLazy<UnitContainer> unitsContainerWL = new WeakAndLazy<>(() -> new UnitContainer(onExpanded));
 	private WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
 	private final CenterEditor centerEditor = new CenterEditor();
-	
+
 	private Entry currentItem;
-	private ViewType currentView;
 
 	private final Window parent;
-	private final IdentityHashMap<Entry, Stack<ViewType>> history = new IdentityHashMap<>();
+	private final IdentityHashMap<Entry, Stack<ViewType>> history0 = new IdentityHashMap<>();
 
 	private static Font font;
 
@@ -87,23 +85,22 @@ public class Editor extends BorderPane implements SessionPutGet {
 	}
 	public void init(ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty){
 		Objects.requireNonNull(selectedItemProperty);
-		selectedItemProperty.addListener((p, o, n) -> changed((Entry)n, null));
+		selectedItemProperty.addListener((p, o, n) -> changed0((Entry)n, PREVIOUS));
 		disableProperty().bind(selectedItemProperty.isNull());		
 	}
 	@FXML
 	private void changeEntry(ActionEvent e) {
 		ViewType t = e.getSource() == combineContentBtn ? COMBINED_TEXT : COMBINED_CHILDREN;
-		changed(centerEditor.getItem(), t);
+		changed0(centerEditor.getItem(), t);
 	}
 
 	@FXML
 	private void historyBack(Event e) {
-		Stack<ViewType> stack = history.get(currentItem);
-		if(stack == null || stack.isEmpty()){
-			backBtn.setDisable(true);
-			return;
-		}
-		changed(currentItem, stack.pop());
+		Stack<ViewType> stack = history(currentItem, false);
+		if(MyUtilsCheck.isNotEmpty(stack))
+			stack.pop();
+		
+		changed0(currentItem, PREVIOUS);
 	}
 
 	public void setWordWrap(boolean wrap) {
@@ -114,7 +111,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 	public void setFont() {
 		Font font = new FontSetter(parent).getFont();
 		if(font == null) return;
-		
+
 		centerEditor.updateFont();
 		unitsContainerWL.ifPresent(UnitContainer::updateFont);
 		combinedTextWL.ifPresent(t -> t.setFont(font));
@@ -129,7 +126,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 			centerEditor.consume(e);
 		}
 	}
-	public void changed(Entry item, ViewType view) {
+	public void changed0(Entry item, ViewType view) {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			maintitle.setText(null);
@@ -139,9 +136,11 @@ public class Editor extends BorderPane implements SessionPutGet {
 			combineContentBtn.setVisible(false);
 			return;
 		}
+
+		Objects.requireNonNull(view);
 		
-		if(view == null) {
-			Stack<ViewType> stack = history.get(item);
+		if(view == PREVIOUS) {
+			Stack<ViewType> stack = history(item,false);
 			if(MyUtilsCheck.isEmpty(stack))
 				view = CENTER;
 			else 
@@ -151,12 +150,15 @@ public class Editor extends BorderPane implements SessionPutGet {
 		switch (view) {
 			case EXPANDED:
 				setCenterEditor(item);
-				addHistory(item);
+				addHistory(EXPANDED,  item);
+				buttonsVisible();
 				break;
 			case CENTER:
 				setCenterEditor(item);
-				history.remove(item);
+				history0.remove(item);
 				backBtn.setVisible(false);
+				combineChildrenBtn.setVisible(!item.isEmpty());
+				combineContentBtn.setVisible(!item.isEmpty());
 				break;
 			case COMBINED_CHILDREN:
 				setCombined_children(item);
@@ -164,10 +166,10 @@ public class Editor extends BorderPane implements SessionPutGet {
 			case COMBINED_TEXT:
 				setCombined_text(item);
 				break;
+			default:
+				throw new IllegalArgumentException("unknown view: "+view);
 		}
-		
 		currentItem = item;
-		currentView = view;
 	}
 	private void setCombined_text(Entry item) {
 		CombinedText c = combinedTextWL.get();
@@ -176,11 +178,10 @@ public class Editor extends BorderPane implements SessionPutGet {
 		if(getCenter() != c)
 			setCenter(c);
 		c.setItem(item);
-		addHistory(item);
+		addHistory(COMBINED_TEXT, item);
 		maintitle.setText(null);
 
-		combineChildrenBtn.setVisible(true);
-		combineContentBtn.setVisible(false);
+		buttonsVisible();
 	}
 	private void setCombined_children(Entry item) {
 		UnitContainer c = unitsContainerWL.get();
@@ -189,23 +190,33 @@ public class Editor extends BorderPane implements SessionPutGet {
 		if(getCenter() != c)
 			setCenter(c);
 		c.setItem(item);
-		addHistory(item);
+		addHistory(COMBINED_CHILDREN,item);
 		maintitle.setText(item.getTitle());
 
-		combineChildrenBtn.setVisible(false);
-		combineContentBtn.setVisible(true);
+		buttonsVisible();
 	}
 
-	private void addHistory(Entry item) {
-		ViewType type = currentView;
-		if(type == null) return;
-		Stack<ViewType> stack = history.computeIfAbsent(item, v -> new Stack<>());
-		if(stack.isEmpty() || stack.lastElement() != type){
-			stack.add(type);
-			LOGGER.fine(() -> "ADD TO HISTORY: "+type+":  "+item.getTitle());
-		}
-		backBtn.setVisible(!stack.isEmpty());
+	private void buttonsVisible() {
+		backBtn.setVisible(true);
+		combineChildrenBtn.setVisible(false);
+		combineContentBtn.setVisible(false);
 	}
+
+	private void addHistory(ViewType type, Entry item) {
+		if(type == null) return;
+		Stack<ViewType> stack = history(item, true);
+		if(stack.isEmpty() || stack.lastElement() != type)
+			stack.add(type);
+	}
+	private Stack<ViewType> history(Entry item, boolean create) {
+		Stack<ViewType> stack = history0.get(item);
+
+		if(create && stack == null) 
+			history0.put(item, stack = new Stack<>());
+
+		return stack;
+	}
+
 	private void setCenterEditor(Entry item) {
 		if(getCenter() != centerEditor)
 			setCenter(centerEditor);
@@ -215,7 +226,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 
 		unitsContainerWL.ifPresent(UnitContainer::clear);
 		combinedTextWL.ifPresent(CombinedText::clear);
-		
+
 		combineChildrenBtn.setVisible(!item.getChildren().isEmpty());
 		combineContentBtn.setVisible(!item.getChildren().isEmpty());
 	}

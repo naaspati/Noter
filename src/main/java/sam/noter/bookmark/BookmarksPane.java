@@ -26,7 +26,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.RadioButton;
@@ -66,7 +65,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	@FXML private RadioButton expandCollpase;  
 	@FXML private Button2 showHideButton;      
 
-	private final Button show = new Button2("show","Chevron Right_20px.png", null) ;
+	private final Button2 show = new Button2("show","Chevron Right_20px.png", null) ;
 	private final VBox showBox = new VBox(show);
 	private final ReadOnlyObjectProperty<Tab> currentTab;
 	private final Editor editor;

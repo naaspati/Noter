@@ -12,7 +12,7 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -23,14 +23,13 @@ import javafx.stage.Stage;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
-import sam.noter.bookmark.BookmarksPane;
 import sam.noter.datamaneger.Entry;
 import sam.noter.tabs.Tab;
 
 public final class SearchBox extends Popup {
 	private final TextField searchF = new TextField();
 	private Tab tab;
-	private final Button previous, next, clear;
+	private final Button2 previous, next, clear;
 	private final CheckBox inBookmarks = new CheckBox("Bookmarks"); 
 	private final CheckBox inContent = new CheckBox("Content");
 	private WeakChangeListener<Number> listener;
@@ -57,7 +56,7 @@ public final class SearchBox extends Popup {
 				clear = new Button2("clear", "cancel-mark.png", e1 -> clear())
 				);
 		previous.setRotate(-180);
-		Consumer<Button> c = e -> e.opacityProperty().bind(new When(e.disableProperty()).then(0).otherwise(1));
+		Consumer<Button2> c = e -> e.opacityProperty().bind(new When(e.disableProperty()).then(0).otherwise(1));
 		c.accept(previous);
 		c.accept(next);
 		c.accept(clear);
@@ -70,7 +69,7 @@ public final class SearchBox extends Popup {
 		VBox vvb = new VBox(3, inBookmarks, inContent);
 		vvb.setPadding(new Insets(0, 0, 0, 10));
 
-		Button closeButton = new Button2("close", null, e11 -> {clear.fire(); hide();});
+		Button2 closeButton = new Button2("close", null, e11 -> {clear.fire(); hide();});
 		closeButton.setText("x");
 		closeButton.setPrefWidth(10);
 
@@ -99,7 +98,7 @@ public final class SearchBox extends Popup {
 		for (Node b : new Node[] {t, t2, closeButton, inContent, inBookmarks})
 			b.getStyleClass().add("text");
 		
-		for (Button b : new Button[] {previous, next, clear, closeButton})
+		for (ButtonBase b : new ButtonBase[] {previous, next, clear, closeButton})
 			b.getTooltip().setStyle("-fx-background-color:white;-fx-text-fill:black;");			
 	}
 	

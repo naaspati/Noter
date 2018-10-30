@@ -12,15 +12,17 @@ public class Button2 extends Button {
 	
 	public Button2(@NamedArg("tip") String tip, @NamedArg("icon") String icon) {
 		this(tip, icon, null);
+		
+		getStyleClass().clear();
 	}
 	public Button2(String tip, String icon, EventHandler<ActionEvent> action) {
 		super(null, new ImageView(iconDir+icon));
-		
-		getStyleClass().clear();
 		
 		if(tip != null)
 			setTooltip(new Tooltip(tip));
 		if(action != null) 
 			setOnAction(action);
+		
+		getStyleClass().clear();
 	}
 }
