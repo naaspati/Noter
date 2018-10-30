@@ -23,17 +23,16 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.Window;
 import javafx.util.StringConverter;
 import sam.config.Session;
 
 class FontSetter extends Stage {
 	private Font font;
 	
-	public FontSetter(Window parent) {
+	public FontSetter() {
 		super(StageStyle.UTILITY);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(parent);
+		initOwner(Session.get(Stage.class));
 		setTitle("Select Font");
 
 		GridPane root = new GridPane();

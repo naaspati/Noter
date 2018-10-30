@@ -99,15 +99,15 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
 		Session.put(Stage.class, stage);
 
-		boundBooks = new BoundBooks(stage);
+		boundBooks = new BoundBooks();
 
-		tabsContainer = new TabContainer(stage, boundBooks);
-		currentTab = tabsContainer.tabProperty();
+		tabsContainer = new TabContainer(boundBooks);
+		currentTab = tabsContainer.currentTabProperty();
 		currentTabNull = currentTab.isNull();
 
-		editor = new Editor(stage);
-		bookmarks = new BookmarksPane(currentTab, editor, stage, tabsContainer);
-		editor.init(bookmarks.selectedItemProperty());
+		editor = new Editor();
+		bookmarks = new BookmarksPane(editor, tabsContainer);
+		editor.init(bookmarks.selectedItemProperty(), tabsContainer);
 
 		new FxFxml(this, stage, this)
 		.putBuilder(BookmarksPane.class, bookmarks)
@@ -185,10 +185,8 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 	}
 
 	private void exit() {
-		editor.close();
 		boundBooks.save();
 		if(tabsContainer.closeAll()) {
-
 			sessionPut("stage.width", String.valueOf(stage.getWidth()));
 			sessionPut("stage.height", String.valueOf(stage.getHeight()));
 			sessionPut("stage.x", String.valueOf(stage.getX()));
@@ -317,7 +315,11 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 			return;
 
 		currentFile.set(t.getJbookPath());
-		stage.setTitle(t.getTabTitle());
+		setTitle(t);
+	}
+
+	private void setTitle(Tab t) {
+		stage.setTitle(t == null || t.getJbookPath() == null ? null : t.getJbookPath().toString());
 	}
 
 	public Editor editor() {
@@ -327,7 +329,7 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newTab) {
 		boolean b = newTab == null;
 
-		stage.setTitle(b ? null : newTab.getTabTitle());
+		setTitle(newTab);
 		currentFile.set(b ? null : newTab.getJbookPath());
 
 		if(oldValue == null) return;

@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -20,16 +21,16 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
-import javafx.stage.Stage;
-import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.noter.ActionResult;
 import sam.noter.Utils;
+import sam.noter.Utils.FileChooserType;
 import sam.noter.datamaneger.DataManeger;
 
 public class Tab extends DataManeger {
+
 	private final HBox view = new HBox(5);
 	private final Label title = new Label();
 	private final Button close = new Button("x");
@@ -66,7 +67,7 @@ public class Tab extends DataManeger {
 	public HBox getView() { return view; }
 
 	public void setTabTitle(String string) { 
-		title.setText(string);
+		title.setText(string.replace(".jbook", ""));
 		title.setTooltip(new Tooltip(string));
 		}
 	public String getTabTitle() { return title.getText(); }
@@ -134,7 +135,7 @@ public class Tab extends DataManeger {
 				return ar;
 		}
 
-		File file = Utils.getFile(Session.get(Stage.class), "save file", getTabTitle());
+		File file = getFile("save file", FileChooserType.SAVE);
 
 		if(file == null)
 			return ActionResult.CANCEL;
@@ -163,17 +164,30 @@ public class Tab extends DataManeger {
 	}
 
 	public void  rename()  {
-		File file = Utils.getFile(Session.get(Stage.class), "rename", getJbookPath().getName());
+		File file = getFile("rename", FileChooserType.SAVE);
 		if(file == null) {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
+		
+		if(Objects.equals(getJbookPath(), file))
+			return;
+		
 		try {
-			setJbookPath(Files.move(getJbookPath().toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING).toFile());
+			Files.move(getJbookPath().toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			setJbookPath(file);
 		} catch (IOException e) {
 			FxAlert.showErrorDialog("source: "+getJbookPath()+"\ntarget: "+file, "failed to rename", e);
 		}
 	}
+	
+	public File getFile(String title, FileChooserType type) {
+		File file = getJbookPath();
+		File expectedDir = file == null ? null : file.getParentFile();
+		
+		return Utils.chooseFile(title, expectedDir, this.title.getText()+".jbook", type);
+	}
+	
 	public void  open_containing_folder(HostServices hs)  {
 		Optional.of(this)
 		.map(Tab::getJbookPath)

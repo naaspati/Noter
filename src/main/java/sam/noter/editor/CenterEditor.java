@@ -18,11 +18,11 @@ import sam.noter.datamaneger.Entry;
 import sam.reference.ReferenceUtils;
 
 class CenterEditor extends UnitEditor implements ChangeListener<String> {
-	private class Save {
+	class Save {
 		private final String title, content;
 		private final int anchor, caret;
 
-		public Save(CenterEditor c) {
+		private Save(CenterEditor c) {
 			this.title = c.title.getText();
 			this.content = c.content.getText();
 			anchor = c.content.getAnchor();

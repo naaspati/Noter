@@ -24,6 +24,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import sam.config.Session;
 import sam.logging.InitFinalized;
 import sam.noter.datamaneger.Entry;
 import sam.noter.tabs.Tab;
@@ -42,10 +43,10 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	private Tab  currentTab, selectedTab;
 	private FlowPane tabs = new FlowPane();
 
-	public BookmarkMover(TabContainer tabcontainer, Window stage) {
+	public BookmarkMover(TabContainer tabcontainer) {
 		super(StageStyle.UNIFIED);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(stage);
+		initOwner(Session.get(Stage.class));
 		this.tabcontainer = tabcontainer;
 
 		moveAbove.setOnAction(this);

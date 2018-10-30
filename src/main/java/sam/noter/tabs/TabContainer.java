@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javafx.application.Platform;
@@ -28,12 +30,12 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.stage.Window;
 import sam.fx.alert.FxAlert;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
 import sam.noter.Utils;
+import sam.noter.Utils.FileChooserType;
 
 public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	private final HBox tabsBox = new HBox(2);
@@ -43,12 +45,11 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	private ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
 	private final Consumer<Tab> onSelect;
 	private final BoundBooks boundBooks;
+	private final ArrayList<Consumer<Tab>> tabclosing = new ArrayList<>(); 
 
 	private double div = 0;
-	private final Window window;
 
-	public TabContainer(Window window, BoundBooks boundBooks) {
-		this.window = window;
+	public TabContainer(BoundBooks boundBooks) {
 		setId("tab-container");
 		onSelect = currentTab::set;
 		currentTab.addListener(this);
@@ -85,6 +86,13 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 		Platform.runLater(() -> div = 1d/tabsBox.getChildren().size());
 	}
+	
+	public boolean removeOnTabClosing(Consumer<Tab> action) {
+		return tabclosing.remove(action);
+	}
+	public void addOnTabClosing(Consumer<Tab> action) {
+		tabclosing.add(action);
+	}
 
 	private final ContextMenu closeTabsContextMenu = new ContextMenu();
 
@@ -110,19 +118,19 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 			FxAlert.showErrorDialog(null, "failed to create Tab", e);
 			return;
 		}
+		
+		Pattern pattern = Pattern.compile("New (\\d+)");
+		
+		int n = tabs.stream()
+		.map(Tab::getTabTitle)
+		.map(pattern::matcher)
+		.filter(Matcher::find)
+		.map(m -> m.group(1))
+		.mapToInt(Integer::parseInt)
+		.max()
+		.orElse(0);
 
-		String title;
-		int n = 1;
-		loop:
-			while(true) {
-				title = "New "+(n++);
-				for (Tab t : tabs) {
-					if(title.equals(t.getTabTitle()))
-						continue loop;
-				}
-				break;
-			}
-		tab.setTabTitle(title);
+		tab.setTabTitle("New "+(n+1));
 		addTab(tab, true);
 	}
 
@@ -155,7 +163,9 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	public void closeTab(Tab tab) {
 		if(tab == null)
 			return;
-
+		
+		tabclosing.forEach(c -> c.accept(tab));
+		
 		if(tab.isModified()) {
 			ActionResult ar = tab.save(true);
 			if(ar != ActionResult.NO && ar != ActionResult.SUCCESS)
@@ -225,7 +235,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	public void open(List<File> jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
-			File file = Utils.getFile(window, "select a file to open...", null);
+			File file = Utils.chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
 
 			if(file == null)
 				return;
@@ -240,7 +250,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		.removeIf(mi -> files.contains(mi.getUserData()));
 	}
 
-	public ReadOnlyObjectProperty<Tab> tabProperty() {
+	public ReadOnlyObjectProperty<Tab> currentTabProperty() {
 		return currentTab.getReadOnlyProperty();
 	}
 

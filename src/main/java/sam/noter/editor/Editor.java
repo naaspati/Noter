@@ -24,7 +24,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import javafx.stage.Window;
 import sam.config.Session;
 import sam.config.SessionPutGet;
 import sam.fx.helpers.FxFxml;
@@ -33,6 +32,8 @@ import sam.fxml.Button2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.datamaneger.Entry;
+import sam.noter.tabs.Tab;
+import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
 
 public class Editor extends BorderPane implements SessionPutGet {
@@ -43,14 +44,12 @@ public class Editor extends BorderPane implements SessionPutGet {
 	@FXML private Button2 combineContentBtn;
 	@FXML private Button2 combineChildrenBtn;
 
-	private final Consumer<Entry> onExpanded = t -> changed0(t, EXPANDED);
+	private final Consumer<Entry> onExpanded = t -> changed(t, EXPANDED);
 	private WeakAndLazy<UnitContainer> unitsContainerWL = new WeakAndLazy<>(() -> new UnitContainer(onExpanded));
 	private WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
 	private final CenterEditor centerEditor = new CenterEditor();
 
 	private Entry currentItem;
-
-	private final Window parent;
 	private final IdentityHashMap<Entry, Stack<ViewType>> history0 = new IdentityHashMap<>();
 
 	private static Font font;
@@ -79,19 +78,26 @@ public class Editor extends BorderPane implements SessionPutGet {
 		return null;
 	}
 
-	public Editor(Window parent) throws IOException {
+	public Editor() throws IOException {
 		FxFxml.load(this, true);
-		this.parent = parent;
 	}
-	public void init(ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty){
+	
+	private Tab tab;
+	
+	public void init(ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabContainer container){
 		Objects.requireNonNull(selectedItemProperty);
-		selectedItemProperty.addListener((p, o, n) -> changed0((Entry)n, PREVIOUS));
-		disableProperty().bind(selectedItemProperty.isNull());		
+		selectedItemProperty.addListener((p, o, n) -> changed((Entry)n, PREVIOUS));
+		disableProperty().bind(selectedItemProperty.isNull());
+		container.currentTabProperty().addListener((p, o, n) -> {tab = n;});
+		container.addOnTabClosing(tab -> {
+			if(tab == this.tab)
+				changed(null, CENTER);
+		});
 	}
 	@FXML
 	private void changeEntry(ActionEvent e) {
 		ViewType t = e.getSource() == combineContentBtn ? COMBINED_TEXT : COMBINED_CHILDREN;
-		changed0(centerEditor.getItem(), t);
+		changed(centerEditor.getItem(), t);
 	}
 
 	@FXML
@@ -100,7 +106,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		if(MyUtilsCheck.isNotEmpty(stack))
 			stack.pop();
 		
-		changed0(currentItem, PREVIOUS);
+		changed(currentItem, PREVIOUS);
 	}
 
 	public void setWordWrap(boolean wrap) {
@@ -109,7 +115,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		combinedTextWL.ifPresent(u -> u.setWrapText(wrap));
 	}
 	public void setFont() {
-		Font font = new FontSetter(parent).getFont();
+		Font font = new FontSetter().getFont();
 		if(font == null) return;
 
 		centerEditor.updateFont();
@@ -126,14 +132,18 @@ public class Editor extends BorderPane implements SessionPutGet {
 			centerEditor.consume(e);
 		}
 	}
-	public void changed0(Entry item, ViewType view) {
+	private void changed(Entry item, ViewType view) {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
+			combinedTextWL.ifPresent(CombinedText::clear);
+			
 			maintitle.setText(null);
 			super.setCenter(null);
 			backBtn.setVisible(false);
 			combineChildrenBtn.setVisible(false);
 			combineContentBtn.setVisible(false);
+			
+			currentItem = null;
 			return;
 		}
 
@@ -245,8 +255,4 @@ public class Editor extends BorderPane implements SessionPutGet {
 				maintitle.setText(u.first().getItemTitle());
 		}
 	}
-	public void close() {
-		centerEditor.close();
-	}
-
 }

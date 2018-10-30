@@ -5,19 +5,28 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
 import javafx.stage.FileChooser;
-import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.stage.FileChooser.ExtensionFilter;
+import sam.config.Session;
+import sam.io.serilizers.StringReader2;
+import sam.io.serilizers.StringWriter2;
+import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
 
 public class Utils {
+	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class.getSimpleName());
+
 	public static final Path APP_DATA = Optional.ofNullable(System2.lookup("app_data")).map(Paths::get).orElse(Paths.get("app_data"));
 
 	private Utils() {}
@@ -50,37 +59,44 @@ public class Utils {
 
 		return sb;
 	}
+	
+	public enum FileChooserType {
+		OPEN, SAVE
+	}
 
-	public static File getFile(Window parent, String title, String suggestedName) {
+	public static File chooseFile(String title, File expectedDir, String expectedFilename, FileChooserType type) {
+		Objects.requireNonNull(type);
+		
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
-
-		final Path p = APP_DATA.resolve("last-visited-folder.txt");
-
-		String path;
-		try {
-			path = Files.exists(p) ? new String(Files.readAllBytes(p)) : null;
-		} catch (IOException e) {
-			path = null;
-		}
-
-		chooser.setInitialFileName(suggestedName);
-		File file = path == null ? null : new File(path);
-		if(file != null && file.exists())
-			chooser.setInitialDirectory(file);
-		else
-			chooser.setInitialDirectory(new File("."));
-		file = suggestedName == null ?  chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
-
-		if(file != null) {
+		Window parent = Session.get(Stage.class);
+		
+		if(expectedDir == null || !expectedDir.isDirectory()){
+			final Path p = Utils.APP_DATA.resolve("last-visited-folder.txt");
 			try {
-				Files.write(p, file.getParent().toString().replace('\\', '/').getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+				expectedDir = Files.exists(p) ? new File(StringReader2.getText(p)) : null;
+			} catch (IOException e) {
+				LOGGER.log(Level.WARNING, "failed to read: "+p, e);
+				expectedDir = null;
+			}
+		}
+		
+		if(expectedDir != null && expectedDir.isDirectory())
+			chooser.setInitialDirectory(expectedDir);
+		
+		if(expectedFilename != null)
+			chooser.setInitialFileName(expectedFilename);
+		
+		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
+		
+		if(file != null) {
+			final Path p = Utils.APP_DATA.resolve("last-visited-folder.txt");
+			try {
+				StringWriter2.setText(p, file.getParent().toString().replace('\\', '/'));
 			} catch (IOException e) {}
 		}
-
+		
 		return file;
 	}
-	
-
 }

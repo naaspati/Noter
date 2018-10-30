@@ -43,7 +43,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
-import javafx.stage.Window;
+import javafx.stage.Stage;
+import sam.config.Session;
 import sam.fx.helpers.FxFxml;
 import sam.fxml.Button2;
 import sam.noter.datamaneger.Entry;
@@ -69,15 +70,13 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private final VBox showBox = new VBox(show);
 	private final ReadOnlyObjectProperty<Tab> currentTab;
 	private final Editor editor;
-	private final Window parent;
 	private final TabContainer tabcontainer;
 	private final HashMap<Tab, WeakReference<TreeItem<String>>> history = new HashMap<>();
 
-	public BookmarksPane(ReadOnlyObjectProperty<Tab> currentTab, Editor editor, Window parent, TabContainer tabcontainer) throws IOException {
+	public BookmarksPane(Editor editor, TabContainer tabcontainer) throws IOException {
 		FxFxml.load(this, true);
-		this.currentTab = currentTab;
+		this.currentTab = tabcontainer.currentTabProperty();
 		this.editor = editor;
-		this.parent = parent;
 		this.tabcontainer = tabcontainer;
 
 		this.selectionModel = tree.getSelectionModel();
@@ -89,7 +88,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		this.selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
 		this.selectedItemNull = selectionModel.selectedItemProperty().isNull();
 
-		this.adder = new WeakAndLazy<>(() -> new BookmarkAddeder(parent));
+		this.adder = new WeakAndLazy<>(BookmarkAddeder::new);
 
 		tree.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
 			if(e.getClickCount() > 1) {
@@ -136,7 +135,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.setHeaderText("Rename Bookmark");
 		d.setTitle("Rename");
 		d.initModality(Modality.APPLICATION_MODAL);
-		d.initOwner(parent);
+		d.initOwner(Session.get(Stage.class));
 		d.showAndWait()
 		.ifPresent(s -> {
 			if(s == null || s.equals(e.getOldValue()))
@@ -217,7 +216,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private BookmarkMover mover;
 	private BookmarkMover mover() {
 		if(mover == null)
-			mover = new BookmarkMover(tabcontainer, parent);
+			mover = new BookmarkMover(tabcontainer);
 		return mover;
 	}
 

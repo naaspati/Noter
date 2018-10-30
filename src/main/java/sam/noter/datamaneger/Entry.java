@@ -191,5 +191,5 @@ public class Entry extends TreeItem<String> {
 	}
 	public boolean isEmpty() {
 		return getChildren().isEmpty();
-	}	
+	}
 }
