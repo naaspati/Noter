@@ -12,12 +12,14 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import javafx.application.HostServices;
+import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
@@ -47,7 +49,7 @@ public class Tab extends DataManeger {
 		init(onSelect);
 	}
 	private void init(Consumer<Tab> onSelect) {
-		view.getChildren().addAll(title, close);
+		view.getChildren().addAll(title,new Separator(Orientation.VERTICAL), open, close);
 		//TODO title.setMaxWidth(70);
 
 		setClass(view, "tab");
@@ -99,12 +101,11 @@ public class Tab extends DataManeger {
 	}
 	public void setBoundBook(File file) {
 		if(file == null) 
-			view.getChildren().remove(open);
+			open.setVisible(false);
 		else {
+			open.setVisible(true);
 			open.setTooltip(new Tooltip("open bound book: "+file.getName()));
 			open.setUserData(file);
-			if(!view.getChildren().contains(open))
-				view.getChildren().add(1,open);
 		}
 	}	
 	
