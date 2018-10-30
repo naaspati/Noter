@@ -29,9 +29,9 @@ import sam.io.fileutils.FileOpenerNE;
 import sam.noter.ActionResult;
 import sam.noter.Utils;
 import sam.noter.Utils.FileChooserType;
-import sam.noter.datamaneger.DataManeger;
+import sam.noter.datamaneger.RootEntry;
 
-public class Tab extends DataManeger {
+public class Tab extends RootEntry {
 
 	private final HBox view = new HBox(5);
 	private final Label title = new Label();
@@ -43,7 +43,6 @@ public class Tab extends DataManeger {
 		init(onSelect);
 		setTabTitle(path.getName());
 	}
-
 	public Tab(Consumer<Tab> onSelect) throws Exception {
 		super();
 		init(onSelect);
@@ -74,14 +73,6 @@ public class Tab extends DataManeger {
 		}
 	public String getTabTitle() { return title.getText(); }
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
-
-	@Override
-	protected void setModified(boolean b) {
-		super.setModified(b);
-		if(view == null)
-			return;
-		toggleClass(view, "modified", isModified());
-	}
 	@Override
 	public void setJbookPath(File path) {
 		setTabTitle(path.getName());
@@ -204,6 +195,12 @@ public class Tab extends DataManeger {
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(getJbookPath(), "failed to reload", e);
 		}
+	}
+	
+	@Override
+	protected void notifyModified() {
+		super.notifyModified();
+		toggleClass(view, "modified", isModified());
 	}
 	
 }

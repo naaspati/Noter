@@ -1,12 +1,12 @@
 package sam.noter.bookmark;
 
-import sam.noter.datamaneger.Entry;
+import sam.noter.datamaneger.EntryXML;
 
 class PatrentChildRelation {
-	final Entry parent, child;
+	final EntryXML parent, child;
 	final int index;
-	PatrentChildRelation(Entry child) {
-		this.parent = (Entry) child.getParent();
+	PatrentChildRelation(EntryXML child) {
+		this.parent = (EntryXML) child.getParent();
 		this.child = child;
 		this.index = parent.indexOf(child);
 	}

@@ -12,7 +12,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 
 import javafx.scene.control.TreeItem;
-import sam.noter.datamaneger.EntryUtils.TwoValue;
 
 /**
  * DataManeger and View Controller
@@ -20,17 +19,17 @@ import sam.noter.datamaneger.EntryUtils.TwoValue;
  * @author Sameer
  *
  */
-public class DataManeger {
+public class RootEntry extends EntryXML {
 	private File jbookPath;
-	private final Entry rootItem = new Entry("ROOT", "ROOT", -1, this);
 	private Document document;
 	private boolean modified; 
 
-	protected DataManeger() throws ParserConfigurationException {
+	protected RootEntry() throws ParserConfigurationException {
 		document = DocumentBuilderFactory.newInstance()
-				.newDocumentBuilder().newDocument();
+				.newDocumentBuilder()
+				.newDocument();
 	}
-	protected DataManeger(File jbookPath) throws Exception {
+	protected RootEntry(File jbookPath) throws Exception {
 		Objects.requireNonNull(jbookPath, "Path to .jbook cannot be null");
 		if(!jbookPath.exists())
 			throw new FileNotFoundException("File not found: "+jbookPath);
@@ -44,24 +43,22 @@ public class DataManeger {
 		if(jbookPath == null)
 			return;
 
-		TwoValue value = EntryUtils.parse(jbookPath, this);
-		rootItem.setAll(value.entries);
-		document = value.doc;
-		setModified(false);
+		modified = false;
+		getChildren().clear();
+		EntryUtils.parse(jbookPath, this);
+		notifyModified();
 	}
-	public Entry getRootItem() {
-		return rootItem;
+
+	protected void notifyModified() {
 	}
+	//override default behaviour
+	@Override
+	protected void loadChildren() {}
+
 	public boolean isModified() {
 		return modified;
 	}
-	void setModified() {
-		if(!modified)
-			setModified(true);
-	}
-	protected void setModified(boolean b) {
-		this.modified = b;
-	}
+
 	public void save() throws Exception {
 		save(jbookPath);
 	}
@@ -69,24 +66,37 @@ public class DataManeger {
 		if(!isModified() && jbookPath != null)
 			return;
 
-		EntryUtils.save(document, rootItem.getChildren().stream().map(i -> (Entry)i), path);
+		EntryUtils.save(document, getChildren(), path);
 		jbookPath = path;
-		setModified(false);
+		modified = false;
+		notifyModified();
 	}
-	public Stream<Entry> walk() {
+	public Stream<EntryXML> walk() {
 		return _walk(null);
 	} 
-	public Stream<Entry> _walk(TreeItem<String> item) {
-		Stream.Builder<Entry> builder = Stream.builder();
+	public Stream<EntryXML> _walk(TreeItem<String> item) {
+		Stream.Builder<EntryXML> builder = Stream.builder();
 		if(item == null)
-			return rootItem.walk(builder).build().skip(1);
+			return this.walk(builder).build().skip(1);
 		else
-			return ((Entry)item).walk(builder).build();
+			return ((EntryXML)item).walk(builder).build();
 	}
 	public File getJbookPath() {
 		return jbookPath;
 	}
 	public void setJbookPath(File path) {
 		jbookPath = path;
+	}
+
+	public void setDocument(Document doc) {
+		this.document = doc;
+	}
+	@Override
+	protected void setChildModified() {
+		super.setChildModified();
+		if(modified) return;
+
+		this.modified = true;
+		notifyModified();
 	}
 }

@@ -26,7 +26,7 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import sam.config.Session;
 import sam.logging.InitFinalized;
-import sam.noter.datamaneger.Entry;
+import sam.noter.datamaneger.EntryXML;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 
@@ -109,20 +109,20 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		Node node = (Node) e1.getSource();
 		if(node.getUserData()  != null) {
 			selectedTab = (Tab) node.getUserData();
-			root = fillRootItem(selectedTab.getRootItem(), selectedTab == currentTab ? selectionModel.getSelectedItems() : Collections.emptyList());
+			root = fillRootItem(selectedTab, selectedTab == currentTab ? selectionModel.getSelectedItems() : Collections.emptyList());
 			view.setRoot(root);
 			return;
 		}
 
-		Entry item = (Entry)view.getSelectionModel().getSelectedItem().getValue();
-		Entry parent = (Entry) item.getParent(); 
+		EntryXML item = (EntryXML)view.getSelectionModel().getSelectedItem().getValue();
+		EntryXML parent = (EntryXML) item.getParent(); 
 		int index = parent.indexOf(item);
 		List<TreeItem<String>> list = new ArrayList<>(selectionModel.getSelectedItems());
 		selectionModel.clearSelection();
 		boolean b = selectedTab != currentTab;
 		list.forEach(t -> {
-			Entry e = (Entry)t; 
-			((Entry)e.getParent()).remove(t);
+			EntryXML e = (EntryXML)t; 
+			((EntryXML)e.getParent()).remove(t);
 			if(b) 
 				e.removeElement();
 		});

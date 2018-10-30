@@ -11,47 +11,44 @@ import org.w3c.dom.Element;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 
-public class Entry extends TreeItem<String> {
+public class EntryXML extends TreeItem<String> {
 
 	private String content0;
 	private long lastModified = -1;
-	private boolean titleModified, contentModified, childrenModified;
+	protected boolean titleModified, contentModified, childrenModified, childrenSet;
 	private Element element;
-	private final DataManeger maneger;
-	private boolean childrenSet;
 	private Supplier<String> contentProxy;
+	
+	protected EntryXML() {}
 
-	public static Entry cast(TreeItem<String> item) {
-		return (Entry)item;
-	}
-	Entry(String title, String content, long lastModified, DataManeger maneger) {
+	EntryXML(String title, String content, long lastModified) {
 		super(title);
 		this.content0 = content;
 		this.lastModified = lastModified;
-		this.maneger = maneger;
 	}
 	public void setContentProxy(Supplier<String> contentProxy) {
 		this.contentProxy = contentProxy;
 	}
-	Entry(Element element, DataManeger maneger) {
+	EntryXML(Element element) {
 		this.element = element;
 		setValue(EntryUtils.getTitle(element));
-		this.maneger = maneger;
 	}
-	
 	@Override
 	public ObservableList<TreeItem<String>> getChildren() {
-		if(!childrenSet) {
-			if(element != null)
-				super.getChildren().setAll(EntryUtils.getChildren(element, maneger));
-			childrenSet = true;
-		}
+		loadChildren();
 		return super.getChildren();
+	}
+	protected void loadChildren() {
+		if(childrenSet) return;
+
+		if(element != null)
+			EntryUtils.collectChildren(element, super.getChildren());
+		childrenSet = true;
 	}
 	Element getElement(Document doc) {
 		if(!(element == null || titleModified || contentModified || childrenModified))
 			return element;
-		
+
 		log();
 
 		if(element == null) {
@@ -68,11 +65,11 @@ public class Entry extends TreeItem<String> {
 			contentModified = false;
 		}
 		if(childrenModified) {
-			EntryUtils.setChildren(element, doc, getChildren().isEmpty() ? null : getChildren().stream().map(t -> ((Entry)t).getElement(doc)));
+			EntryUtils.setChildren(element, doc, getChildren().isEmpty() ? null : getChildren().stream().map(t -> ((EntryXML)t).getElement(doc)));
 			childrenModified = false;
 		} else {
 			for (int i = 0; i < getChildren().size(); i++)
-				((Entry)getChildren().get(i)).getElement(doc);
+				((EntryXML)getChildren().get(i)).getElement(doc);
 		}
 		return element;
 	}
@@ -89,14 +86,15 @@ public class Entry extends TreeItem<String> {
 		}
 	}
 	public void removeElement() {
-		getTitle();
-		getContent();
-		getChildren();
+		setTitle(getTitle());
+		setContent(getContent());
+		modifiedChildren();
+		
 		titleModified = true; 
 		contentModified  = true; 
 		childrenModified = true;
-		
-		getChildren().forEach(e -> ((Entry)e).removeElement());
+
+		getChildren().forEach(e -> ((EntryXML)e).removeElement());
 		element = null;
 	}
 	public long getLastModified() {
@@ -113,10 +111,6 @@ public class Entry extends TreeItem<String> {
 			setModified();
 		}
 	}
-	void setModified() {
-		lastModified = System.currentTimeMillis();
-		maneger.setModified();
-	}
 	public String getContent() {
 		if(contentProxy != null) return contentProxy.get();
 		return content_0();
@@ -132,18 +126,19 @@ public class Entry extends TreeItem<String> {
 			contentModified = true;
 			this.content0 = content; 
 			setModified();
+			lastModified = System.currentTimeMillis();
 		}
 	}
-	Builder<Entry> walk(Builder<Entry> collector) {
+	Builder<EntryXML> walk(Builder<EntryXML> collector) {
 		collector.accept(this);
 
 		for (int i = 0; i < getChildren().size(); i++)
-			((Entry)getChildren().get(i)).walk(collector);
+			((EntryXML)getChildren().get(i)).walk(collector);
 
 		return collector; 
 	}
-	public Entry addChild(String title, Entry relativeTo) {
-		Entry child = new Entry(title, null, System.currentTimeMillis(), maneger);
+	public EntryXML addChild(String title, EntryXML relativeTo) {
+		EntryXML child = new EntryXML(title, null, System.currentTimeMillis());
 
 		if(relativeTo == null)
 			add(child);
@@ -154,21 +149,21 @@ public class Entry extends TreeItem<String> {
 		}
 		return child;
 	}
-	public int indexOf(Entry item) {
+	public int indexOf(EntryXML item) {
 		return getChildren().indexOf(item);
 	}
 	private List<TreeItem<String>> modifiedChildren() {
 		childrenModified = true;
-		maneger.setModified();
+		setModified();
 		return getChildren();
 	}
 	public boolean remove(TreeItem<String> t) {
 		return modifiedChildren().remove(t);
 	}
-	public boolean add(Entry child) {
+	public boolean add(EntryXML child) {
 		return modifiedChildren().add(child);
 	}
-	public void add(int index, Entry child) {
+	public void add(int index, EntryXML child) {
 		modifiedChildren().add(index, child);
 	}
 	public void addAll(int index, List<TreeItem<String>> list) {
@@ -183,13 +178,14 @@ public class Entry extends TreeItem<String> {
 	public void addAll(List<TreeItem<String>> list) {
 		modifiedChildren().addAll(list);
 	}
-	// special method used by DataManeger
-	void setAll(Entry[] entries) {
-		childrenModified = false;
-		childrenSet = true;
-		super.getChildren().setAll(entries);
-	}
 	public boolean isEmpty() {
 		return getChildren().isEmpty();
+	}
+	private void setModified() {
+		if(((EntryXML)getParent()) != null)
+			((EntryXML)getParent()).setChildModified();
+	}
+	protected void setChildModified() {
+		childrenModified = true;
 	}
 }

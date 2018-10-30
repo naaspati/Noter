@@ -8,9 +8,8 @@ import java.util.Optional;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
-import sam.noter.datamaneger.Entry;
+import sam.noter.Utils;
 import sam.noter.tabs.Tab;
-
 public class BookmarkRemover {
 	private HashMap<Tab, LinkedList<PatrentChildRelation[]>> deletedItems = new HashMap<>();
 	final SimpleIntegerProperty undoDeleteSize = new SimpleIntegerProperty();
@@ -25,7 +24,7 @@ public class BookmarkRemover {
 			deletedItems.put(tab, list);
 		}
 		PatrentChildRelation[] ditems = selectionModel.getSelectedItems().stream()
-				.map(Entry::cast)
+				.map(Utils::castEntry)
 				.map(PatrentChildRelation::new)
 				.toArray(PatrentChildRelation[]::new);
 

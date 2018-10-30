@@ -4,11 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -22,7 +24,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.helpers.DefaultHandler;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.control.TreeItem;
 import sam.config.Session;
 import sam.noter.Utils;
 
@@ -36,47 +42,44 @@ class EntryUtils {
 	private static final String LAST_MODIFIED = "lastmodified";
 
 	static class TwoValue {
-		final Entry[] entries;
+		final EntryXML[] entries;
 		final Document doc;
-		TwoValue(Entry[] entries, Document doc) {
+		TwoValue(EntryXML[] entries, Document doc) {
 			this.entries = entries;
 			this.doc = doc;
 		}
 	}
-	static TwoValue parse(File path, DataManeger maneger) throws Exception {
+	static void parse(File path, RootEntry maneger) throws Exception {
 		Document doc = 
 				DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
 				.parse(path);
 
 		doc.normalize();
+		maneger.setDocument(doc);
 
-		Entry[] entries = 
-				Optional.of(doc.getElementsByTagName(ENTRIES))
-				.filter(list -> list.getLength() != 0)
-				.map(e -> e.item(0).getChildNodes())
-				.map(list ->  toEntries(list, maneger))
-				.orElse(new Entry[0]);
-		
-		return new TwoValue(entries, doc);
+		Optional.of(doc.getElementsByTagName(ENTRIES))
+		.filter(list -> list.getLength() != 0)
+		.map(e -> e.item(0).getChildNodes())
+		.ifPresent(list -> collectChildren(list, maneger.getChildren()));
 	}
-	static void save(Document doc, Stream<Entry> entries, File target) throws Exception {
+	static void save(Document doc, Iterable<?> iterable, File target) throws Exception {
 		clearNode(doc);
 
 		Element rootElement = doc.createElement(ENTRIES);
 		doc.appendChild(rootElement);
-
-		entries.map(e -> e.getElement(doc))
-		.forEach(rootElement::appendChild);
-
+		
+		for (Object o : iterable) 
+			rootElement.appendChild(((EntryXML) o).getElement(doc));
+		
 		write(doc, target);
 	}
-	
+
 	private static final String INDENT; 
 	static {
 		Path p = Utils.APP_DATA.resolve("xml.properties");
 		if(Files.exists(p)) {
-			
+
 			INDENT = Optional.ofNullable(Session.getProperty(EntryUtils.class, "xml.indent"))
 					.map(String::trim)
 					.map(s -> s.equalsIgnoreCase("true") ? "yes" : s)
@@ -86,7 +89,7 @@ class EntryUtils {
 			INDENT = null;
 		}
 	}
-	
+
 	private static void write(Document doc, File target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
 		Transformer transformer = 
 				TransformerFactory.newInstance()
@@ -94,29 +97,30 @@ class EntryUtils {
 
 		if(INDENT != null)
 			transformer.setOutputProperty(OutputKeys.INDENT, INDENT);
-		
+
 		StreamResult result = new StreamResult(target);
 		transformer.transform(new DOMSource(doc), result);
 	}
 
-	public static Entry[] getChildren(Element node, DataManeger maneger) {
+	public static void collectChildren(Element node, List<TreeItem<String>> sink) {
 		Node n = getChild(node, CHILDREN);
-		return toEntries(n == null ? null : n.getChildNodes(), maneger);
+		collectChildren(n == null ? null : n.getChildNodes(), sink);
 	}
-	private static Entry[] toEntries(NodeList list, DataManeger maneger) {
-		if(list == null || list.getLength() == 0)
-			return new Entry[0];
-
-		return IntStream.range(0, list.getLength())
-				.mapToObj(list::item)
-				.filter(item -> ENTRY.equals(item.getNodeName()))
-				.map(n1 -> new Entry((Element)n1, maneger))
-				.toArray(Entry[]::new);
+	private static void collectChildren(NodeList list, List<TreeItem<String>> sink) {
+		int size = list == null ? 0 : list.getLength();
+		if(size == 0) return;
+		
+		for (int i = 0; i < size; i++) {
+			Node item = list.item(i);
+			if(!ENTRY.equals(item.getNodeName()))
+				continue;
+			sink.add(new EntryXML((Element)item));
+		}
 	}
 	public static Node getChild(Element parent, String childName) {
 		if(parent == null)
 			return null; 
-		
+
 		NodeList list = parent.getChildNodes();
 
 		for (int i = 0; i < list.getLength(); i++) {
@@ -162,7 +166,7 @@ class EntryUtils {
 			return 0;
 		return Long.parseLong(n.getTextContent());
 	}
-	public static Element createEntry(Document doc, Entry entry) {
+	public static Element createEntry(Document doc, EntryXML entry) {
 		Element element = doc.createElement(ENTRY);
 
 		append(TITLE, entry.getTitle(), element, doc);

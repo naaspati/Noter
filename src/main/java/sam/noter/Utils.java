@@ -23,6 +23,7 @@ import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
+import sam.noter.datamaneger.EntryXML;
 
 public class Utils {
 	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class.getSimpleName());
@@ -96,7 +97,9 @@ public class Utils {
 				StringWriter2.setText(p, file.getParent().toString().replace('\\', '/'));
 			} catch (IOException e) {}
 		}
-		
 		return file;
+	}
+	public static EntryXML castEntry(TreeItem<String> parent) {
+		return (EntryXML)parent;
 	}
 }

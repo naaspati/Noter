@@ -23,9 +23,9 @@ import sam.config.Session;
 import sam.logging.InitFinalized;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.Utils;
-import sam.noter.datamaneger.Entry;
+import sam.noter.datamaneger.EntryXML;
 import sam.noter.tabs.Tab;
-
+import static sam.noter.Utils.castEntry;
 
 class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinalized  {
 	private final TextField tf = new TextField();
@@ -54,7 +54,7 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 
 	public void addNewBookmark(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
 		this.tab = tab;
-		Entry item = (Entry)selectionModel.getSelectedItem();
+		EntryXML item = (EntryXML)selectionModel.getSelectedItem();
 
 		BookmarkType bt = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
 		setHeaderText(header(item, bt));
@@ -71,27 +71,26 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 		});
 	}
 
-	private TreeItem<String> process(ButtonType b, BookmarkType bt, Entry item, TreeView<String> tree) {
+	private TreeItem<String> process(ButtonType b, BookmarkType bt, EntryXML item, TreeView<String> tree) {
 		if(b != ButtonType.OK) return null;
 
 		String title = tf.getText();
 		if(item == null)
-			return Entry.cast(tree.getRoot()).addChild(title, null);
+			return castEntry(tree.getRoot()).addChild(title, null);
 		else {
 			switch (bt) {
 				case RELATIVE:
-					return Entry.cast(item.getParent()).addChild(title, item);
+					return castEntry(item.getParent()).addChild(title, item);
 				case CHILD: 
 					return item.addChild(title, null);
 				case RELATIVE_TO_PARENT:
-					return Entry.cast(item.getParent().getParent()).addChild(title, (Entry)item.getParent());
+					return castEntry(item.getParent().getParent()).addChild(title, (EntryXML)item.getParent());
 			}
 		}
 		return null;
 
 	}
-
-	private String header(Entry item, BookmarkType bt) {
+	private String header(EntryXML item, BookmarkType bt) {
 		String header = "Add new Bookmark";
 		if(item != null) {
 			switch (bt) {

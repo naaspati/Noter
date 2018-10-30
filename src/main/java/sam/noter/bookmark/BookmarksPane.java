@@ -47,7 +47,7 @@ import javafx.stage.Stage;
 import sam.config.Session;
 import sam.fx.helpers.FxFxml;
 import sam.fxml.Button2;
-import sam.noter.datamaneger.Entry;
+import sam.noter.datamaneger.EntryXML;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
@@ -141,7 +141,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			if(s == null || s.equals(e.getOldValue()))
 				return;
 
-			Entry ti = (Entry) e.getTreeItem();
+			EntryXML ti = (EntryXML) e.getTreeItem();
 			ti.setTitle(s);
 			editor.updateTitle(ti);
 		});
@@ -231,7 +231,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			history.put(oldValue, new  WeakReference<>(selectionModel.getSelectedItem()));
 
 		selectionModel.clearSelection();
-		Entry root = newValue == null ?  null : newValue.getRootItem(); 
+		EntryXML root = newValue == null ?  null : newValue; 
 		tree.setRoot(root);
 
 		if(root != null){
@@ -247,7 +247,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		return selectionModel.selectedItemProperty();
 	}
 
-	void clearAndSelect(Entry entry) {
+	void clearAndSelect(EntryXML entry) {
 		selectionModel.clearSelection();
 		selectionModel.select(entry);
 	}

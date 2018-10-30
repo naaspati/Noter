@@ -2,31 +2,31 @@ package sam.noter.editor;
 
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeItem;
-import sam.noter.datamaneger.Entry;
+import sam.noter.datamaneger.EntryXML;
 import sam.reference.WeakAndLazy;
 
 class CombinedText extends TextArea {
 
 	private final WeakAndLazy<StringBuilder> buffer = new WeakAndLazy<>(StringBuilder::new);
-	private Entry item;
+	private EntryXML item;
 
 	public CombinedText() {
 		setEditable(false);
 	}
 
-	private String combineChildrenContent(Entry item) {
+	private String combineChildrenContent(EntryXML item) {
 		StringBuilder sb = buffer.get();
 		sb.setLength(0);
 
 		combine(sb, item);
 
 		for (TreeItem<String> e : item.getChildren()) 
-			combine(sb, (Entry)e);
+			combine(sb, (EntryXML)e);
 
 		return sb.toString();
 	}
 
-	private StringBuilder combine(StringBuilder sb, Entry u) {
+	private StringBuilder combine(StringBuilder sb, EntryXML u) {
 		append(sb, '#', u.getTitle().length() + 10);
 		sb.append('\n')
 		.append("     ").append(u.getTitle()).append('\n');
@@ -42,11 +42,11 @@ class CombinedText extends TextArea {
 			sb.append(c);
 	}
 
-	public void setItem(Entry item) {
+	public void setItem(EntryXML item) {
 		this.item = item;
 		setText(combineChildrenContent(item));
 	}
-	public Entry getItem() {
+	public EntryXML getItem() {
 		return item;
 	}
 }

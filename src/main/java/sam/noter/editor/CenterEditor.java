@@ -14,7 +14,7 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
-import sam.noter.datamaneger.Entry;
+import sam.noter.datamaneger.EntryXML;
 import sam.reference.ReferenceUtils;
 
 class CenterEditor extends UnitEditor implements ChangeListener<String> {
@@ -29,7 +29,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			caret = c.content.getCaretPosition();
 		}
 	}
-	private IdentityHashMap<Entry, WeakReference<Save>> cache = new IdentityHashMap<>();
+	private IdentityHashMap<EntryXML, WeakReference<Save>> cache = new IdentityHashMap<>();
 
 	public CenterEditor() {
 		super();
@@ -51,7 +51,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 		item = null;
 	}
 	@Override
-	public void setItem(Entry entry) {
+	public void setItem(EntryXML entry) {
 		if(this.item == entry) return;
 
 		close();
