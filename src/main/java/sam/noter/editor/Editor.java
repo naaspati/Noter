@@ -91,7 +91,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		container.currentTabProperty().addListener((p, o, n) -> {tab = n;});
 		container.addOnTabClosing(tab -> {
 			if(tab == this.tab)
-				changed(null, CENTER);
+				centerEditor.commit();
 		});
 	}
 	@FXML

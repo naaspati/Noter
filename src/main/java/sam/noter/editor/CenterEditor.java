@@ -34,7 +34,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 	public CenterEditor() {
 		super();
 		setId("center-editor");
-		
+
 		setTop(title);
 		addClass(title, "title");
 		title.setMaxWidth(Double.MAX_VALUE);
@@ -105,5 +105,9 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 	public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
 		item.setContent(newValue);
 		content.textProperty().removeListener(this);
+	}
+	public void commit() {
+		if(item != null)
+			item.setContent(content.getText());
 	}
 }
