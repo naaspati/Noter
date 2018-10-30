@@ -27,7 +27,7 @@ import javafx.stage.Window;
 import javafx.util.StringConverter;
 import sam.config.Session;
 
-public class FontSetter extends Stage {
+class FontSetter extends Stage {
 	private Font font;
 	
 	public FontSetter(Window parent) {

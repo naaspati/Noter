@@ -10,13 +10,14 @@ import java.time.format.FormatStyle;
 import java.util.IdentityHashMap;
 import java.util.function.Consumer;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
 import sam.noter.datamaneger.Entry;
 import sam.reference.ReferenceUtils;
 
-public class CenterEditor extends UnitEditor implements ChangeListener<String> {
+class CenterEditor extends UnitEditor implements ChangeListener<String> {
 	private class Save {
 		private final String title, content;
 		private final int anchor, caret;
@@ -68,7 +69,8 @@ public class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			this.item = entry;
 			title.setText(save.title);
 			content.setText(save.content);
-			content.selectRange(save.anchor, save.caret);
+			content.requestFocus();
+			Platform.runLater(() -> content.selectRange(save.anchor, save.caret));
 		} else {
 			super.setItem(entry);
 			title.setText("Modified: "+time(entry.getLastModified()));	
