@@ -1,9 +1,7 @@
 package sam.noter;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,7 +17,6 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import java.util.zip.GZIPOutputStream;
 
 import javafx.scene.control.TreeItem;
 import javafx.stage.FileChooser;
@@ -116,16 +113,14 @@ public class Utils {
 		return (Entry)parent;
 	}
 
-	public static void createBackup(File target) {
-		if(target == null || !target.exists())
+	public static void createBackup(File file) {
+		if(file == null || !file.exists())
 			return;
 		
-		try(FileInputStream is = new FileInputStream(target);
-				OutputStream os = Files.newOutputStream(BACKUP_DIR.resolve(target.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')+".gzip"));
-				GZIPOutputStream gos = new GZIPOutputStream(os)) {
-			FilesUtilsIO.pipe(is, gos);
+		try {
+			Files.copy(file.toPath(), BACKUP_DIR.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')));
 		} catch (IOException e) {
-			LOGGER.log(Level.WARNING, "failed to backup: "+target, e);
+			LOGGER.log(Level.WARNING, "failed to backup: "+file, e);
 		}
 	}
 

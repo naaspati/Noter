@@ -11,19 +11,16 @@ import javafx.scene.control.TreeItem;
 import sam.noter.dao.Entry;
 
 class EntryXML extends Entry {
-	protected boolean titleModified, contentModified, childrenModified;
 	private Element element;
 	
 	EntryXML() {}
 	
 	EntryXML(String title, String content, long lastModified) {
 		super(title, content, lastModified);
-		this.content = content;
-		this.lastModified = lastModified;
 	}
 	EntryXML(Element element) {
+		super(EntryXMLUtils.getTitle(element));
 		this.element = element;
-		setValue(EntryXMLUtils.getTitle(element));
 	}
 	
 	@Override
@@ -72,12 +69,11 @@ class EntryXML extends Entry {
 		}
 	}
 	
+	@Override
 	public void setTitle(String title) {
-		if(titleModified || !Objects.equals(title, getTitle())) {
-			titleModified = true;
-			setValue(title);
+		super.setTitle(title);
+		if(titleModified)
 			setModified();
-		}
 	}
 	protected void setModified() {
 		if(((EntryXML)getParent()) != null)
@@ -126,30 +122,11 @@ class EntryXML extends Entry {
 		}
 	}
 
-	private List<TreeItem<String>> modifiedChildren() {
+	@Override
+	protected List<TreeItem<String>> modifiedChildren() {
 		childrenModified = true;
 		setModified();
 		return getChildren();
-	}
-	@Override
-	public void addAll(List<TreeItem<String>> list) {
-		modifiedChildren().addAll(list);
-	}
-	@Override
-	public boolean remove(TreeItem<String> t) {
-		return modifiedChildren().remove(t);
-	}
-	@Override
-	public boolean add(Entry child) {
-		return modifiedChildren().add(child);
-	}
-	@Override
-	public void add(int index, Entry child) {
-		modifiedChildren().add(index, child);
-	}
-	@Override
-	public void addAll(int index, List<TreeItem<String>> list) {
-		addAll(index, list, modifiedChildren());
 	}
 	@Override
 	protected Entry newEntry(String title, String content, long currentTimeMillis) {
