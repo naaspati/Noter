@@ -17,9 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
@@ -47,15 +45,14 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import sam.config.Session;
-import sam.config.SessionPutGet;
+import sam.config.SessionHelper;
 import sam.fx.alert.FxAlert;
+import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
@@ -66,7 +63,7 @@ import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 
-public class App extends Application implements SessionPutGet, ChangeListener<Tab> {
+public class App extends Application implements SessionHelper, ChangeListener<Tab> {
 	static {
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
 	}
@@ -228,15 +225,14 @@ public class App extends Application implements SessionPutGet, ChangeListener<Ta
 	private Menu getDebugMenu() {
 		return new Menu("debug", null,
 				menuitem("no content bookmarks", e_e -> {
-					String sb = getCurrentTab().walk()
-							.filter(e -> e.getContent() == null || e.getContent().trim().isEmpty())
-							.peek(e -> e.setExpanded(true))
-							.reduce(new StringBuilder(), (sb2, t) -> Utils.treeToString(t, sb2), StringBuilder::append).toString();
-
-					Clipboard cb = Clipboard.getSystemClipboard();
-					Map<DataFormat, Object> map = new HashMap<>();
-					map.put(DataFormat.PLAIN_TEXT, sb);
-					cb.setContent(map);
+					StringBuilder sb = new StringBuilder();
+					getCurrentTab().walk(e -> {
+						if(e.getContent() == null || e.getContent().trim().isEmpty()) {
+							e.setExpanded(true);
+							sb.append(e.toTreeString());							
+						}
+					});
+					FxClipboard.copyToClipboard(sb.toString());
 
 					FxAlert.alertBuilder(AlertType.INFORMATION)
 					.expandableText(sb)

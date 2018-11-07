@@ -1,0 +1,2143 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<root>
+<entries>
+<entry>
+<title>General</title>
+<lastmodified>1538813619990</lastmodified>
+<content><![CDATA[- C is a general-purpose, procedural programming language.
+- C is inherently a call by value language, as the parameters of a function are local
+  variables initialized with the argument values. 
+]]></content>
+<children>
+<entry>
+<title>Features of C</title>
+<lastmodified>1538814450120</lastmodified>
+<content><![CDATA[C is a popular language. The following features are responsible for its huge popularity:
+ - C is a small language. It has only 32 keywords. Hence, it can be leared quickly.
+ - It has a powerful library of built-in functions. C derives its strength from this library.
+ - It is a portable language. A C program written for one platform
+   (say, Windows) can be ported to another platform with minor
+   changes (say, Solaris).
+ - C programs execute fast. Thus, C programs are used where efficiency matters.
+ - All the constructs required for structured programming are available in C.
+ - Good number of constructs required for low-level programming
+   are available in C, hence C can be used for systems programming.
+ - Pointers are available in C, which add to its power.
+ - The facility of recursion is available in C for solving tricky problems.
+ - C has the ability to extend itself. Programmers can add the
+   functions coded by them to a library of functions.
+ - C is almost a strongly typed language.
+
+
+------------------------------------------------
+C is almost a strongly typed language.
+   C’s strong type checking is evident in a function call. If a function expects an int type
+argument and you pass a string of characters to that function as an argument (instead of
+the int type argument), then the compiler reports an error and halts the compilation of
+the program, confirming that C is a strongly typed language.
+   Notice that I used the term almost in the previous Note because, to a certain extent,
+implicit type conversion is allowed in C, which makes C an “almost” strongly typed
+language, rather than a perfectly strongly typed language.
+
+]]></content>
+<id>13</id>
+</entry>
+<entry>
+<title>reserved keywords</title>
+<lastmodified>1538897356401</lastmodified>
+<content><![CDATA[auto           extern         short          while          
+break          float          signed         _Alignas       
+case           for            sizeof         _Alignof       
+char           goto           static         _Atomic        
+const          if             struct         _Bool          
+continue       inline         switch         _Complex       
+default        int            typedef        _Generic       
+do             long           union          _Imaginary     
+double         register       unsigned       _Noreturn      
+else           restrict       void           _Static_assert 
+enum           return         volatile       _Thread_local  
+]]></content>
+<id>14</id>
+</entry>
+</children>
+<id>0</id>
+</entry>
+<entry>
+<title>Data types</title>
+<lastmodified>1539775917238</lastmodified>
+<content><![CDATA[see:: {"page":24, "id":39, "isbn":"1491904755", "book_name":"C in a Nutshell, 2nd Edition"}
+
+The types in C can be classified as follows:
+  • Basic types
+    — Standard and extended integer types
+    — Real and complex floating-point types
+  • Enumerated types
+  • The type void
+  • Derived types
+    — Pointer types
+    — Array types
+    — Structure types
+  • Union types
+  • Function types
+
+- arithmetic types: The basic types and the enumerated types together make up the arithmetic types.
+- scalar types: The arithmetic types and the pointer types together are called the scalar types.
+- aggregate types: array types and structure types are referred to collectively as the aggregate types.
+   - Union types are not considered aggregate because only one of their members can store a value at any given time.
+
+- A function type describes the interface to a function; i.e. it specifies return type, and may all define parameters types.
+
+All other types describe objects. This description may or may not include the
+object’s storage size.
+- incomplete type: when type does not specifies object's size, the it's called  incomplete type
+- object type: if object's size is specified, then it is a of type of object.
+  e.g. 
+    extern float fArr[ ]; // External declaration
+   - define a float array
+   - since array size is not specified then it's type is incomplete.
+
+
+]]></content>
+<children>
+<entry>
+<title>Integer type</title>
+<lastmodified>1540101314999</lastmodified>
+<children>
+<entry>
+<title>_Bool</title>
+<lastmodified>1540101584891</lastmodified>
+<content><![CDATA[- introduced in C99 
+- unsigned integer type
+
+1 = true
+0 = false
+
+- if #include <stdbool.h>
+  then C allows use of identifiers 
+   - bool, true, false
+
+- bool is a synonym for the type _Bool
+- true and false are symbolic constants equal to 1 and 0.
+
+
+]]></content>
+<id>17</id>
+</entry>
+<entry>
+<title>char</title>
+<lastmodified>1540101749027</lastmodified>
+<content><![CDATA[- type char is also one of the standard integer types. 
+- However, the one-word type name char is synonymous either with signed char or with unsigned char,
+  depending on the compiler. Because this choice is left up to the implementation,
+  char, signed char, and unsigned char are formally three different types.
+
+- If your program relies on char being able to hold values less
+  than zero or greater than 127, you should be using either
+  signed char or unsigned char instead.]]></content>
+<id>18</id>
+</entry>
+</children>
+<id>15</id>
+</entry>
+<entry>
+<title>Floating-Point Types</title>
+<lastmodified>1540107858807</lastmodified>
+<content><![CDATA[float         For variables with single precision
+double        For variables with double precision
+long double   For variables with extended precision
+
+]]></content>
+<id>16</id>
+</entry>
+</children>
+<id>1</id>
+</entry>
+<entry>
+<title>Literals</title>
+<lastmodified>1540113089890</lastmodified>
+<content><![CDATA[- a literal is a token that denotes a fixed value,
+- may be an integer, a floating-point number, a character, or a string. 
+- ]]></content>
+<children>
+<entry>
+<title>String</title>
+<lastmodified>1540113753365</lastmodified>
+<content><![CDATA[- A string literal consists of a sequence of characters (and/or escape sequences)
+  enclosed in double quotation marks.
+- A string literal is a static array of char that contains character codes followed by a
+  string terminator, the null character \0 
+- The empty string "" occupies exactly one byte in memory, which holds the terminating null character.
+- Characters that cannot be represented in one byte are stored as multibyte characters.
+
+-  A string literal can also be used to initialize a pointer to char:
+      char *pStr = "Hello, world!"; // pStr points to the first -> character, 'H'
+
+   - In such an initializer, the string literal represents the address of its first element, just
+     as an array name would. 
+
+
+]]></content>
+<children>
+<entry>
+<title>wide-string literal </title>
+<lastmodified>1540114149419</lastmodified>
+<content><![CDATA[A wide-string literal is defined using the prefix L:
+  L"Here's a wide-string literal."
+]]></content>
+<id>20</id>
+</entry>
+<entry>
+<title>multiline</title>
+<lastmodified>1540116010213</lastmodified>
+<content><![CDATA[see:: {page:47, "id":39, "isbn":"1491904755", "book_name":"C in a Nutshell, 2nd Edition"}]]></content>
+<id>21</id>
+</entry>
+</children>
+<id>19</id>
+</entry>
+</children>
+<id>2</id>
+</entry>
+<entry>
+<title>Statements</title>
+<lastmodified>1540229845182</lastmodified>
+<content><![CDATA[- A statement specifies one or more actions to be performed such as assigning a value
+  to a variable, passing control to a function, or jumping to another statement. 
+- The sum total of all the statements in a program determines what the program does.
+
+- Jumps and loops are statements that control the flow of the program.
+- Except when those control statements result in jumps, statements are executed sequentially
+
+]]></content>
+<children>
+<entry>
+<title>Expression Statements</title>
+<lastmodified>1540229984165</lastmodified>
+<content><![CDATA[- An expression statement is an expression followed by a semicolon:
+    [expression] ;
+
+
+e.g.
+y = x; // An assignment
+sum = a + b; // Calculation and assignment
+++x;
+printf("Hello, world\n"); // A function call
+]]></content>
+<children>
+<entry>
+<title>discard return value</title>
+<lastmodified>1540229695257</lastmodified>
+<content><![CDATA[- If a statement is a function call and the return value of the function is not needed, it
+  can be discarded explicitly by casting the function as void:
+     char name[32];
+     /* ... */
+     (void)strcpy( name, "Jim" ); // Explicitly discard the return value.]]></content>
+<id>24</id>
+</entry>
+<entry>
+<title>null statement</title>
+<lastmodified>1540230021582</lastmodified>
+<content><![CDATA[- statement only containing a semicolon is called null statement.
+
+
+e.g.
+  for ( i = 0; s[i] != '\0'; ++i ) // Loop conditions
+     ; // A null statement
+
+]]></content>
+<id>25</id>
+</entry>
+</children>
+<id>22</id>
+</entry>
+<entry>
+<title>Block statements</title>
+<lastmodified>1540230066965</lastmodified>
+<content><![CDATA[- A compound statement, called a block for short, groups a number of statements and
+  declarations together between braces to form a single statement:
+    { [list of declarations and statements] }
+
+- Unlike simple statements, block statements are not terminated by a semicolon.
+]]></content>
+<id>23</id>
+</entry>
+</children>
+<id>3</id>
+</entry>
+<entry>
+<title>Functions</title>
+<lastmodified>1540231886528</lastmodified>
+<content><![CDATA[- The defnition of a function consists of a:
+  - function head (or the declarator) : specifies the name of the function, 
+      the type of its return value, and the types and names of its parameters, if any. 
+  - function block : specify what the function does. 
+
+- A function cannot return a function or an array. 
+  However, you can define a function that returns a pointer to a function or a pointer to an array.
+
+
+syntex
+  [function_specifier] [storage_class_specifier]  type name(parameter_declarations)  // funnction head
+   {
+      /** declarations and statements */          // function block
+   }
+
+
+where 
+  function_specifier:  inline or _Noreturn
+  storage_class_specifier:  extern or static
+
+see:: Functions and Storage Class Speciers
+
+
+]]></content>
+<children>
+<entry>
+<title>Functions and Storage Class Speci&#129;ers</title>
+<lastmodified>1540232612379</lastmodified>
+<content><![CDATA[- extern is the default storage class for functions. 
+- a ordinary function definition without static or inline specifier:
+  - can be placed in any source file
+  - can be accessed from any source file
+  - because it's is an external identifier (i.e. an identifier with  external linkage)
+
+- function can be hidden from other source file, by using static identifier.
+- name of static function is not external identifier.
+
+
+  
+]]></content>
+<id>26</id>
+</entry>
+<entry>
+<title>parameters</title>
+<lastmodified>1540287457248</lastmodified>
+<content><![CDATA[- The parameters of a function are ordinary local variables. 
+- The program creates them and initializes them with the values of 
+  the corresponding arguments when a function call occurs.
+- Their scope is the function block.
+- A function can change the value of a parameter without affecting the value 
+  of the argument in the context of the function call. 
+]]></content>
+<children>
+<entry>
+<title>Arrays</title>
+<lastmodified>1540286359858</lastmodified>
+<content><![CDATA[passing arrays as
+   type name[ ]
+is same as 
+   type *name
+
+
+]]></content>
+<id>31</id>
+</entry>
+</children>
+<id>27</id>
+</entry>
+<entry>
+<title>main() Function</title>
+<lastmodified>1540287360315</lastmodified>
+<content><![CDATA[- standard syntex:
+    int main( void ) { /* … */ }
+        A function with no parameters, returning int
+
+    int main( int argc, char *argv[ ] ) { /* … */ }
+      A function with two parameters whose types are int and char **, returning int
+
+- nonstandard syntax 
+    int main( int argc, char *argv[ ], char *envp[ ] ) { /* … */ }
+        A function returning int, with three parameters, the first of which has the type
+        int, while the other two have the type char **
+
+--------------------------------------------
+return value:
+  - 0 or EXIT_SUCCESS indicates that the program was successful; 
+  - any nonzero return value, and in particular the value of EXIT_FAILURE, 
+    indicates that the program failed in some way. 
+
+- EXIT_SUCCESS and EXIT_FAILURE are defined in the header file stdlib.h. 
+-  In the C99 and later standards, if the program flow reaches the 
+   closing brace } of main()’s function block, the status value returned
+   to the execution environment is 0. Ending the main() function is equivalent to call‐
+   ing the standard library function exit(), whose argument becomes the return value
+  of main()
+
+--------------------------------------------
+parameters:
+• argc (short for argument count) is either 0 or the number of string tokens in
+  the command line that started the program. The name of the program itself is
+  included in this count.
+
+• argv (short for arguments vector) is an array of pointers to char that point to
+  the individual string tokens received on the command line:
+   — The number of elements in this array is one more than the value of argc;
+     the last element, argv[argc], is always a null pointer.
+   — If argc is greater than 0, then the first string, argv[0], contains the name by
+     which the program was invoked. If the execution environment does not
+     supply the program name, the string is empty.
+   — If argc is greater than 1, then the strings argv[1] through argv[argc - 1]
+     contain the program’s command-line arguments.
+
+• envp (short for environment pointer) in the nonstandard, three-parameter ver‐
+  sion of main() is an array of pointers to the strings that make up the program’s
+  environment. Typically, these strings have the form name=value. In standard C,
+  you can access the environment variables using the getenv() function.
+
+]]></content>
+<id>28</id>
+</entry>
+<entry>
+<title>Inline Functions</title>
+<lastmodified>1540288964928</lastmodified>
+<content><![CDATA[- Ordinarily, calling a function causes the computer to save its current instruction
+  address, jump to the function called and execute it, and then make the return jump
+  to the saved address. 
+  With small functions that you need to call often, this can
+  degrade the program’s runtime behavior substantially. 
+- The keyword inline is a request to the compiler to insert the function’s machine 
+  code wherever the function is called in the program. 
+     The result is that the function is executed as efficiently as if you had
+  inserted the statements from the function body in place of the function call in the
+  source code.
+- It is generally not a good idea to define a function containing loops, 
+  use inline instead to speed up the instructions inside a for loop.
+- The inline specifier is not imperative: the compiler may ignore it. 
+  e.g. Recursive functions are usually not compiled inline. 
+- The compiler must have the function definition at hand in order to 
+  insert the inline code. For this reason, function definitions with 
+  inline are customarily written in header files.
+
+- If all the declarations of a function in a given translation unit have the inline speci‐
+  fier but not the extern specifier, then the function has an inline defnition. An inline
+  definition is specific to the translation unit; it does not constitute an external defini‐
+  tion, and therefore another translation unit may contain an external definition of
+  the function. 
+]]></content>
+<id>29</id>
+</entry>
+<entry>
+<title>Non-Returning Functions</title>
+<lastmodified>1540348972270</lastmodified>
+<content><![CDATA[- The function specifier _Noreturn is new in C11. 
+- It informs the compiler that the function in question does not return, so that the compiler
+ can further optimize the code: on a call to a non-returning function, there is no need to
+ push the return address or the contents of the CPU registers onto the stack. The compiler
+ can also issue an “unreachable code” warning if there are other instructions in the same block
+ after the non-returning function call.
+
+- examples of noreturn functions:
+   abort(), exit(), _Exit(), quick_exit() and thread_exit();
+       these functions do not return because their purpose is to end the
+       execution of a thread or of the whole program.
+
+- It is important that you only declare a function with _Noreturn if it absolutely cannot return.
+- with #include <stdnoreturn.h>  you can also use the synonym noreturn instead of the keyword _Noreturn.
+
+
+]]></content>
+<id>30</id>
+</entry>
+</children>
+<id>4</id>
+</entry>
+<entry>
+<id>95</id>
+<title>aa</title>
+<lastmodified>1541229487849</lastmodified>
+<children/>
+</entry>
+<entry>
+<title>execution environments</title>
+<lastmodified>1540286790788</lastmodified>
+<content><![CDATA[C makes a distinction between two possible execution environments:
+
+Freestanding
+   A program in a freestanding environment runs without the support of an oper‐
+   ating system, and therefore only has minimal capabilities of the standard
+   library available to it .
+
+Hosted
+   In a hosted environment, a C program runs under the control, and with the
+   support, of an operating system. The full capabilities of the standard library are
+   available.]]></content>
+<id>5</id>
+</entry>
+<entry>
+<title>Strings</title>
+<lastmodified>1540351701891</lastmodified>
+<content><![CDATA[- A string is a continuous sequence of characters terminated by '\0', the null character.
+- The length of a string is considered to be the number of characters excluding the
+  terminating null character. 
+- There is no string type in C, and consequently there are
+  no operators that accept strings as operands.
+- strings are stored in arrays whose elements have the type char or a widecharacter type—that is, 
+  one of the types wchar_t, char16_t, or char32_t. 
+- Strings of wide characters are also called wide strings.
+
+e.g. both are equivalent:
+  char str1[30] = "Let's go"; // String length: 8; array length: 30.
+  char str1[30] = { 'L', 'e', 't', '\'', 's',' ', 'g', 'o', '\0' }
+
+
+- An array holding a string must always be at least one element longer than the string
+  length to accommodate the terminating null character.
+]]></content>
+<id>6</id>
+</entry>
+<entry>
+<id>97</id>
+<title>string-after-pointer-before</title>
+<lastmodified>1541229723323</lastmodified>
+<children/>
+</entry>
+<entry>
+<title>Pointers</title>
+<lastmodified>1540355315362</lastmodified>
+<content><![CDATA[- A pointer is a reference to a data object or a function.
+- A pointer represents both the address and the type of an object or function. 
+- 
+- useful in 
+   - defining "call-by-reference" functions
+   - implementing dynamic data structures such as linked lists and trees
+
+
+]]></content>
+<children>
+<entry>
+<title>Null Pointers</title>
+<lastmodified>1540397965526</lastmodified>
+<content><![CDATA[- A null pointer is what results when you convert a null pointer constant to a pointer type.
+- A null pointer constant is an integer constant expression with the value of 0, or such an 
+  expression cast as the type void *.
+- The macro NULL is defined in stdlib.h, stdio.h, and other header files as a null
+  pointer constant.
+
+- A null pointer is always unequal to any valid pointer to an object or function.
+- Null pointers are implicitly converted to other pointer types as necessary for 
+  assignment operations or for comparisons using == or !=. 
+]]></content>
+<id>32</id>
+</entry>
+<entry>
+<title>void Pointers</title>
+<lastmodified>1540398612586</lastmodified>
+<content><![CDATA[- A pointer to void, or void pointer for short, is a pointer with the type void *. 
+- As there are no objects with the type void, the type void * is used as the all-purpose pointer type. 
+- a void pointer can represent the address of any object—but not its type. 
+- To access an object in memory, you must always convert a void pointer into an appropriate object pointer.
+
+- To declare a function that can be called with different types of pointer arguments,
+  you can declare the appropriate parameters as pointers to void.
+  - When you call such a function, the compiler implicitly converts an object 
+    pointer argument into a void pointer. 
+  - The compiler likewise converts void pointers into object pointers where necessary.
+
+e.g.
+  void *memset( void *s, int c, size_t n );
+
+The memset() function assigns the value of c to each of the n bytes of memory in
+the block beginning at the address s.
+]]></content>
+<id>33</id>
+</entry>
+<entry>
+<title>dereferencing</title>
+<lastmodified>1540399649626</lastmodified>
+<content><![CDATA[- The indirection operator * yields the location in memory whose address is stored in a pointer.
+- If ptr is a pointer, then *ptr designates the object (or function) that ptr points to. 
+- dereferencing a pointer: Using the indirection operator is sometimes called dereferencing a pointer.
+- The type of the pointer determines the type of object that is assumed to be at that
+  location in memory. 
+- indirection operator * must be used only with a pointer that contains
+   a valid address. 
+
+-  indirection operator * is a unary operator;
+
+
+Example 9-1. Dereferencing a pointer
+
+double x, y, *ptr;   // Two double variables and a pointer to double.
+ptr = &x;            // Let ptr point to x.
+*ptr = 7.8;          // Assign the value 7.8 to the variable x.
+*ptr *= 2.5;         // Multiply x by 2.5.
+y = *ptr + 0.5;      // Assign y the result of the addition x + 0.5
+
+*ptr is equivalent to the variable x itself.
+
+----------------------------------------------
+char c = 'A', *cPtr = &c, **cPtrPtr = &cPtr;
+
+The expression *cPtrPtr now yields the char pointer cPtr, and the value of
+**cPtrPtr is the char variable c.]]></content>
+<id>34</id>
+</entry>
+<entry>
+<title>pointer declaration VS indirection operator</title>
+<lastmodified>1540400162518</lastmodified>
+<content><![CDATA[pointer declaration: 
+  double *ptr;
+
+As declared here, ptr has the type double * (read: “pointer to double”). Hence the
+expression *ptr would have the type double.
+
+- indirection operator * must be used only with a pointer that contains
+  a valid address. 
+- dereferencing an undefined pointer value—and might cause the program
+  to crash.
+- A pointer variable is itself an object in memory, which means that a pointer can
+  point to it. 
+]]></content>
+<id>35</id>
+</entry>
+<entry>
+<title>volatile</title>
+<lastmodified>1540471776222</lastmodified>
+<content><![CDATA[The type qualifier volatile is a hint to the compiler that
+the object so qualified may be modified not only by the present program, but also
+by other processes or events.]]></content>
+<id>36</id>
+</entry>
+<entry>
+<title>Constant Pointers and Pointers to Constant Objects</title>
+<lastmodified>1540472049428</lastmodified>
+<content><![CDATA[- When you define a constant pointer, you must also initialize it because you can’t
+  modify it later.
+
+int var;                     // An object with type int.
+int *const c_ptr = &var;    // A constant pointer to int.
+*c_ptr = 123;               // OK: we can modify the object referenced.
+++c_ptr;                   // Error: we can't modify the pointer.
+
+
+You can modify a pointer that points to an object that has a const-qualified type
+(also called a pointer to const). However, you can only use such a pointer to read the
+referenced object, not to modify it. For this reason, pointers to const are commonly
+called read-only pointers. The referenced object itself may or may not be constant.
+e.g.:
+
+int var;                      // An object with type int.
+const int c_var = 100,        // A constant int object.
+          *ptr_to_const;      // A pointer to const int: the pointer
+                              // itself is not constant!
+ptr_to_const = &c_var;        // OK: Let ptr_to_const point to c_var.
+var = 2 * *ptr_to_const;      // OK. Equivalent to: var = 2 * c_var;
+ptr_to_const = &var;          // OK: Let ptr_to_const point to var.
+if ( c_var < *ptr_to_const )  // OK: "read-only" access.
+*ptr_to_const = 77;           // Error: we can't modify var using
+                              // ptr_to_const, even though var is
+                              // not constant.]]></content>
+<id>37</id>
+</entry>
+<entry>
+<title>restrict</title>
+<lastmodified>1540472668184</lastmodified>
+<content><![CDATA[- from C99
+- applicable only to object pointers. 
+- A pointer qualified with restrict is called a restricted pointer.
+- There is a special relationship between a restrict-qualified pointer and the object
+  it points to: during the lifetime of the pointer, either the object is not modified
+  or the object is not accessed except through the restrict-qualified pointer.
+
+skipped:: see:: {"page": 151, "book_name":"C in a Nutshell, 2nd Edition","id":39, "isbn":"1491904755"}
+
+]]></content>
+<id>38</id>
+</entry>
+</children>
+<id>7</id>
+</entry>
+<entry>
+<id>96</id>
+<title>abcn</title>
+<lastmodified>1541229557554</lastmodified>
+<children/>
+</entry>
+<entry>
+<title>Structures, Unions, and Bit-Fields</title>
+<lastmodified>1540484077663</lastmodified>
+<content><![CDATA[record: group of pieces of information that describe the object is called record.
+       - Records make it easy to organize, present, and store information about similar
+         objects.
+
+field: record is composed with fields.
+
+]]></content>
+<children>
+<entry>
+<title>Structure</title>
+<lastmodified>1540487998852</lastmodified>
+<content><![CDATA[- A structure type is a type defined within the program that specifies the format of
+  a record, including the names and types of its members, and the order in which
+ they are stored. 
+
+syntex: 
+  struct [tag_name] { member_declaration_list };
+
+e.g.
+  struct Date { short month, day, year; };
+
+- identifier Date is this structure type’s tag. 
+- The identifiers year, month, and day are the names of its members. 
+- A structure type cannot contain itself as a member, as its definition is not complete
+  until the closing brace (}).
+- However, structure types can and often do contain pointers to their own type. 
+  Such self-referential structures are used in implementing linked lists and binary trees.
+  e.g. 
+     struct Cell { struct Song song; // This record's data.
+                   struct Cell *pNext; // A pointer to the next record.
+     };
+
+- The keyword struct must be included whenever you use the structure type. 
+     struct Song song1, song2, *pSong = &song1;
+
+- You can also use typedef to define a one-word name for a structure type:
+    typedef struct Song Song_t;              // Song_t is now a synonym for
+                                             // struct Song.
+    Song_t song1, song2, *pSong = &song1;    // Two struct Song objects and a
+                                             // struct Song pointer.
+
+
+- You can also define a structure type without a tag. This approach is practical only if
+  you define objects at the same time and don’t need the type for anything else, or if
+  you define the structure type in a typedef declaration so that it has a name after all.
+  Here is an example:
+     typedef struct { struct Cell *pFirst, *pLast; } SongList_t;
+
+  This typedef declaration defines SongList_t as a name for the structure type
+  whose members are two pointers to struct Cell named pFirst and pLast.
+
+---------------------------------------------------------
+Incomplete Structure Types
+
+- You can define pointers to a structure type even when the structure type has not yet
+  been defined. 
+  Thus, the definition of SongList_t in the previous example would be
+  permissible and correct even if struct Cell had not yet been defined. 
+
+]]></content>
+<children>
+<entry>
+<title>Objects</title>
+<lastmodified>1540488105084</lastmodified>
+<content><![CDATA[struct Date { short month, day, year; };
+
+struct Song {
+  char title[64];
+  char artist[32];
+  char composer[32];
+  short duration;        // Playing time in seconds.
+  struct Date published; // Date of publication.
+};
+
+typedef struct Song Song_t;]]></content>
+<id>43</id>
+</entry>
+<entry>
+<title>Accessing Members</title>
+<lastmodified>1540488428857</lastmodified>
+<content><![CDATA[- Two operators allow you to access the members of a structure object: 
+  - the dot operator (.) and 
+  - the arrow operator (->). 
+  Both of them are binary operators whose right operand is the name of a member.
+
+--------------------------------------------------------
+e.g.
+
+  Song_t song1, song2,               // Two objects of type Song_t,
+                    *pSong = &song1; // and a pointer to Song_t.
+
+  // Copy a string to the title of song1:
+  strcpy(song1.title, "Havana Club");
+
+  // Likewise for the composer member:
+  strcpy(song1.composer, "Ottmar Liebert");
+
+  song1.duration = 251; // Playing time.
+
+  // The member published is itself a structure:
+  song1.published.year = 1998; // Year of publication.
+  if ((*pSong).duration > 180)
+    printf("The song %s is more than 3 minutes long.\n", (*pSong).title);
+
+--------------------------------------------------------
+- Because the pointer pSong points to the object song1, the expression *pSong denotes
+  the object song1, and (*pSong).duration denotes the member duration in song1.
+- The parentheses are necessary because the dot operator has a higher precedence
+  than the indirection operator.
+- arrow operator: if you have a pointer p to a structure, 
+    then an expression of the form p->m is equivalent to (*p).m.
+  e.g.
+      if ((*pSong).duration > 180)
+          printf("The song %s is more than 3 minutes long.\n", (*pSong).title);
+    is same as:
+      if (pSong->duration > 180 )
+         printf( "The song %s is more than 3 minutes long.\n", pSong->title );
+
+
+
+
+
+ 
+ 
+
+]]></content>
+<id>44</id>
+</entry>
+<entry>
+<title>Initializing</title>
+<lastmodified>1540489046909</lastmodified>
+<content><![CDATA[using initialization list: this is a comma-separated list of initializers, 
+or initial values for the individual structure members, enclosed in braces.
+e.g.
+
+  Song_t mySong = {"What It Is",
+                   "Aubrey Haynie; Mark Knopfler",
+                   "Mark Knopfler",
+                   297,
+                   {9, 26, 2000}
+                   };
+
+
+- if number of initializers is less then number of members, then remaining 
+  members are initialized with default values.
+
+----------------------------------------------------------
+Initializing Specic Members
+
+Song_t aSong = {
+      .title = "I've Just Seen a Face",
+      .composer = "John Lennon; Paul McCartney",
+      127
+    };]]></content>
+<id>45</id>
+</entry>
+<entry>
+<title>in Memory</title>
+<lastmodified>1540489643728</lastmodified>
+<content><![CDATA[- The members of a structure object are stored in memory in the order in which they
+  are declared in the structure type’s definition.
+- The address of the first member is identical with the address of the structure object itself.
+- The address of each member declared after the first one is greater than those of members declared earlier.
+
+-----------------------------------------------------
+offsetof(structure_type, member )
+
+- defined in the header file stddef.h. 
+- The result has the type size_t. 
+
+- highly discourges to compute offset manually,
+  it most likey be different from computed result
+  because of alignment and padding.
+
+- You should always use the sizeof operator to obtain a structure’s size, and the offsetof macro to
+  obtain the positions of its members.
+
+e.g.
+  char *ptr = (char *)pSong + offsetof( Song_t, composer );
+
+where:  
+  - pSong is a pointer to a Song_t
+  - ptr is the address of the first character in the member composer.
+]]></content>
+<id>46</id>
+</entry>
+<entry>
+<title>Pointers as Members</title>
+<lastmodified>1540490271244</lastmodified>
+<content><![CDATA[- To include data items that can vary in size in a structure, it is a good idea to use a
+  pointer rather than including the actual data object in the structure. 
+- The pointer then addresses the data in a separate object for which you allocate 
+  the necessary storage space dynamically. 
+- Moreover, this indirect approach allows a structure to
+  have more than one variable-length “member.
+
+e.g.
+
+typedef struct {
+  struct Cell *pFirst, *pLast;
+} SongList_t;
+
+typedef struct Cell {
+  struct Song song;   // The record data.
+  struct Cell *pNext; // A pointer to the next record.
+} Cell_t;
+
+-------------------------------------------------------
+Special attention is required when manipulating such structures. For example, it
+generally makes little sense to copy structure objects with pointer members, or to
+save them in files. Usually, the data referenced needs to be copied or saved, and the
+pointer to it does not. For example, if you want to initialize a new list, named your
+List, with the existing list myList, you probably don’t want to do this:
+   SongList_t yourList = myList;
+
+Such an initialization simply makes a copy of the pointers in myList without 
+creating any new objects for yourList. 
+
+
+
+]]></content>
+<id>47</id>
+</entry>
+</children>
+<id>39</id>
+</entry>
+<entry>
+<title>Union</title>
+<lastmodified>1540492199039</lastmodified>
+<content><![CDATA[- A union is defined in the same way as a structure. 
+- Unlike the members of a  structure, all the members of a union start at the same address. 
+- you define a union type when you want to use the same location in memory for different types of objects.
+
+syntex:
+  union [tag_name] { member_declaration_list };
+
+e.g.
+  union Data { int i; double x; char str[16]; };
+
+- An object of this type can store an integer, a floating-point number, or a short string.
+- To obtain the size of a union, use the sizeof operator. 
+
+
+
+]]></content>
+<children>
+<entry>
+<title>Initializing</title>
+<lastmodified>1540492373558</lastmodified>
+<content><![CDATA[- Like structures, union objects are initialized by an initialization list. 
+- the list can only contain one initializer.
+
+e.g.
+
+  union Data var1 = { 77 },
+  var2 = { .str = "Mary" },
+  var3 = var1,
+  myData[100] = { {.x= 0.5}, { 1 }, var2 };
+
+]]></content>
+<id>48</id>
+</entry>
+</children>
+<id>40</id>
+</entry>
+<entry>
+<title>Anonymous Structures and Unions</title>
+<lastmodified>1540492981897</lastmodified>
+<content><![CDATA[- new feature of the C11
+- A structure or union is called anonymous if it is defined as an 
+  unnamed member of a structure or union type and has no tag name. 
+
+union WordByte {
+  short w;
+  struct { char b0, b1 }; // Anonymous structure
+};
+
+- The members of an anonymous structure or union are treated as members of the
+  structure or union type that contains the anonymous type.
+
+union WordByte wb = { 256 };
+char lowByte = wb.b0;
+
+struct Demo {
+  union // Anonymous union
+  { struct { long a, b; };      // Anonymous structure
+    struct { float x, y; } fl;  // Named member, not anonymous
+  }
+} dObj;]]></content>
+<id>41</id>
+</entry>
+<entry>
+<title>bit-field </title>
+<lastmodified>1540493934907</lastmodified>
+<content><![CDATA[- A bit-field is an integer variable composed of a specified
+  number of bits.
+- can be a member of structure or union
+- in bit-field, you break down an addressable memory unit into 
+  groups of individual bits that you can address by name.
+- If you declare several small bit-fields in succession, the 
+  compiler packs them into a single machine word. 
+- bit-fields offer the advantage of handling bits by name, 
+  like any other structure or union member.
+
+syntex: 
+  type [member_name] : width ;
+
+where 
+  type
+     An integer type that determines how the bit-field’s value is interpreted. The
+     type may be _Bool, int, signed int, unsigned int, or another type defined by
+     the given implementation. The type may also include type qualifiers.
+     Bit-fields with type signed int are interpreted as signed; bit-fields whose type
+     is unsigned int are interpreted as unsigned. Bit-fields of type int may be
+     signed or unsigned, depending on the compiler.
+
+  member_name
+     The name of the bit-field, which is optional. If you declare a bit-field with no
+     name, though, there is no way to access it. Nameless bit-fields can serve only as
+     padding to align subsequent bit-fields to a certain position in a machine word.
+
+  width
+     The number of bits in the bit-field. The width must be a constant integer
+     expression whose value is non-negative, and must be less than or equal to the
+     bit width of the specified type.
+
+- Nameless bit-fields can have zero width. In this case, the next bit-field declared is
+  aligned at the beginning of a new addressable storage unit.
+- When you declare a bit-field in a structure or union, the compiler allocates an
+  addressable unit of memory that is large enough to accommodate it. 
+- Usually, the storage unit allocated is a machine word whose size is that of the type int. 
+- If the following bit-field fits in the rest of the same storage unit, then it is defined as being
+  adjacent to the previous bit-field. If the next bit-field does not fit in the remaining
+  bits of the same unit, then the compiler allocates another storage unit, and may
+  place the next bit-field at the start of new unit, or wrap it across the end of one stor‐
+  age unit and the beginning of the next.
+
+--------------------------------------
+struct Date {
+  unsigned int month : 4; // 1 is January; 12 is December.
+  unsigned int day : 5;   // The day of the month (1 to 31).
+  signed int year : 22;   // (-2097152 to +2097151)
+  _Bool isDST : 1;        // True if daylight saving time is in effect.
+};
+
+- Date so that the members month and day occupy only as many bits as necessary. 
+- This code assumes that the target machine uses words of at least 32 bits.
+- A bit-field of n bits can have 2^n distinct values.
+- Unlike other structure members, bit-fields generally do not occupy an
+  addressable location in memory. 
+  - You cannot apply the address operator (&) or the offsetof macro to a bit-field.
+- In all other respects, however, you can treat bit-fields the same as other structure or
+  union members; use the dot and arrow operators to access them, and perform 
+  arithmetic with them as with int or unsigned int variables. 
+
+
+
+
+]]></content>
+<id>42</id>
+</entry>
+</children>
+<id>8</id>
+</entry>
+<entry>
+<title>Declarations</title>
+<lastmodified>1540525415724</lastmodified>
+<content><![CDATA[- A declaration determines the significance and properties of one or more identifiers.
+]]></content>
+<children>
+<entry>
+<title>types of Declarations </title>
+<lastmodified>1540658357072</lastmodified>
+<content><![CDATA[• Declarations that only declare a structure, union, or enumeration tag, or the
+  members of an enumeration (that is, the enumeration constants)
+• Declarations that declare one or more object or function identifiers
+• typedef declarations, which declare new names for existing types
+• _Static_assert declarations, which instruct the compiler to test an assertion
+  without declaring an identifier (C11)
+
+]]></content>
+<id>49</id>
+</entry>
+<entry>
+<title>Objects, Functions Declarations</title>
+<lastmodified>1540658640735</lastmodified>
+<content><![CDATA[- These declarations contain a declarator list with one or more declarators. 
+- Each declarator declares an identifier for an object or a function.
+
+general syntex: 
+  [storage_class_specifier] type declarator [, declarator [, ...]];
+
+
+
+
+]]></content>
+<children>
+<entry>
+<title>storage_class_specifier</title>
+<lastmodified>1540653380392</lastmodified>
+<content><![CDATA[- A storage class specifer in a declaration modifies the linkage of the identifier (or
+  identifiers) declared, and the storage duration of the corresponding objects. 
+- No more than one of the storage class specifiers extern, static,
+  _Thread_local, auto, or register, or the specifier _Thread_local in 
+  conjunction with extern or static. 
+
+- No more than one storage class specifier may appear in a declaration. 
+- Function identifiers may be accompanied only by the storage class specifier extern or static.
+- Function parameters may take only the storage class specifier register. 
+
+
+The five storage class specifiers have the following meanings:
+ auto
+    Objects declared with the auto specifier have automatic storage duration. This
+    specifier is permissible only in object declarations within a function. In ANSI
+    C, objects declared within a function have automatic storage duration by
+    default, and the auto specifier is archaic.
+
+ register
+    You can use the specifier register when declaring objects with automatic stor‐
+    age duration. The register keyword is a hint to the compiler that the object
+    should be made as quickly accessible as possible—ideally, by storing it in a
+    CPU register. However, the compiler may treat some or all objects declared
+    with register the same as ordinary objects with automatic storage duration.
+    In any case, programs must not use the address operator on objects declared
+    with the register specifier.
+
+ static
+    A function identifier declared with the specifier static has internal linkage. In
+    other words, such an identifier cannot be used in another translation unit to
+    access the function.
+    An object identifier declared with static has either no linkage or internal link‐
+    age, depending on whether the object’s definition is inside a function or outside
+    all functions. Objects declared with static always have static storage duration.
+    Thus, the specifier static allows you to define local objects—that is, objects
+    with block scope—that have static storage duration.
+
+ extern
+    Function and object identifiers declared with the extern specifier have external
+    linkage. You can use them anywhere in the entire program. External objects
+    have static storage duration.
+
+ _Thread_local
+    The specifier _Thread_local declares the given object as thread-local, which
+    means that each thread has its own separate instance of the object. Only objects
+    can be declared as thread-local, not functions. If you declare a thread-local
+    object within a function, the declaration must also have either the extern or
+    the static specifier. In expressions, the identifier of a thread-local object
+    always refers to the local instance of the object belonging to the thread in which
+    the expression is being evaluated. ]]></content>
+<id>57</id>
+</entry>
+<entry>
+<title>type</title>
+<lastmodified>1540654045171</lastmodified>
+<content><![CDATA[Type Qualiers
+------------------
+
+At least a type specifier, possibly with type qualifiers. The type specifier may be
+any of these:
+  • A basic type
+  • The type void
+  • An enumerated, structure, or union type
+  • A name defined by a previous typedef declaration
+
+- In a function declaration, type may also include one of the type specifiers
+  inline or _Noreturn.
+- In an object declaration, type may also contain one or more of the type 
+  qualifiers const, volatile, and restrict. 
+- In C11 implementations that support atomic objects, an object declaration 
+  may declare the object as atomic by using the type qualifier _Atomic, 
+  or by using a type specifier of the form _Atomic(type_name). 
+
+- The C11 keyword _Alignas allows you to influence the alignment of objects
+  you declare. 
+-  A type qualifier list may even contain the same type qualifier
+  several times, or the same qualifier may be applied repeatedly through qualified
+  typedef names. 
+- The compiler ignores such repetitions of any qualifier, treating
+  them as if the qualifier were present only once.
+
+-----------------------------------------------------
+The individual type qualifiers have the following meanings:
+
+  const
+    An object whose type is qualified with const is constant; the program cannot
+    modify it after its definition.
+  
+  volatile
+    An object whose type is qualified with volatile may be modified by other pro‐
+    cesses or events. The volatile keyword instructs the compiler to reread the
+    object’s value each time it is used, even if the program itself has not changed it
+    since the previous access. This is most commonly used in programming for
+    hardware interfaces, where a value can be changed by external events.
+    
+  restrict
+    The restrict qualifier is applicable only to object pointer types. The type
+    qualifier restrict was introduced in C99, and is a hint to the compiler that the
+    object referenced by a given pointer, if it is modified at all, will not be accessed
+    in any other way except using that pointer, whether directly or indirectly. This
+    feature allows the compiler to apply certain optimization techniques that would
+    not be possible without such a restriction. The compiler may ignore the
+    restrict qualifier without affecting the result of the program.
+  
+  _Atomic
+    An object declared with the type qualifier _Atomic is an atomic object. Arrays
+    cannot be atomic. Support for atomic objects is optional: C11 implementations
+    may define the macro __STDC_NO_ATOMICS__ to indicate that programs cannot
+    declare atomic objects. 
+
+-------------------------------------------------------------
+- The compiler may store objects qualified as const but not volatile, in a read-only
+  segment of memory. 
+  It may also happen that the compiler allocates no storage for
+  such an object if the program does not use its address.
+
+- Objects qualified with both const and volatile, such as the object ticks in the fol‐
+  lowing example, cannot be modified by the program itself but may be modified by
+  something else, such as a clock chip’s interrupt handler:
+      extern const volatile int ticks;]]></content>
+<id>58</id>
+</entry>
+<entry>
+<title>linkage vs storage duration </title>
+<lastmodified>1540652662517</lastmodified>
+<content><![CDATA[linkage: is a property of identifiers
+storage duration: is a property of objects
+
+- both influenced in declarations by the same set of keywords,
+  i.e. the storage class specifiers. 
+
+- storage duration of an object can be automatic,
+  static, or allocated, and the linkage of an identifer can be
+  external, internal, or none. 
+
+- linkage of an identifer can be external, internal, or none. 
+
+]]></content>
+<id>59</id>
+</entry>
+<entry>
+<title>declarator</title>
+<lastmodified>1540651564173</lastmodified>
+<content><![CDATA[The declarator list is a comma-separated list containing at least one declarator.
+A declarator names the identifier that is being declared. If the declarator
+defines an object, it may also include an initializer for the identifier. There are
+four different kinds of declarators:
+ - Function declarator
+      The identifier is declared as a function name if it is immediately followed
+      by a left parenthesis (().
+ - Array declarator
+      The identifier is declared as an array name if it is immediately followed by
+      a left bracket ([).
+ - Pointer declarator
+      The identifier is the name of a pointer if it is preceded by an asterisk (*)—
+      possibly with interposed type qualifiers—and if the declarator is neither a
+      function nor an array declarator.
+ - Other
+      Otherwise, the identifier designates an object of the specified type.
+]]></content>
+<children>
+<entry>
+<title>Declarations and De&#129;nitions</title>
+<lastmodified>1540657632659</lastmodified>
+<content><![CDATA[- You can declare an identifier as often as you want, but only one declaration within
+  its scope can be a definition. 
+- Placing the definitions of objects and functions with
+  external linkage in header files is a common way of introducing duplicate 
+  definitions and is therefore not a good idea.
+
+
+- A function declaration is a definition if it contains the function block. Here is
+  an example:
+    int iMax( int a, int b ); // This is a declaration, not a  definition.
+    int iMax( int a, int b ) { // This is the function's definition.
+        return ( a >= b ? a : b ); 
+     }
+
+- An object declaration is a definition if it allocates storage for the object. 
+  - Declarations that include initializers are always definitions.  
+  - all declarations within function blocks are definitions unless they contain the storage
+    class specifier extern. 
+       e.g.
+         int a = 10; // Definition of a.
+         extern double b[]; // Declaration of the array b, which is defined elsewhere in the program.
+         void func() {
+            extern char c;    // Declaration of c, not a definition.
+            static short d;   // Definition of d.
+            float e;          // Definition of e.
+            /* ... */
+         }
+
+  - If you declare an object outside of all functions, without an initializer and
+    without the storage class specifier extern, the declaration is a tentative definition. 
+    e.g.
+       int i, v[]; // Tentative definitions of i, v and j.
+       static int j;
+
+     - A tentative definition of an identifier remains a simple declaration if the 
+       translation unit contains another definition for the same identifier. If not, then the
+       compiler behaves as if the tentative definition had included an initializer with
+       the value zero, making it a definition.
+
+
+
+       
+
+]]></content>
+<id>61</id>
+</entry>
+<entry>
+<title>Complex Declarators</title>
+<lastmodified>1540657982679</lastmodified>
+<content><![CDATA[- The symbols (), [ ], and * in a declarator specify that the identifier has a function,
+  array, or pointer type. 
+- A complex declarator may contain multiple occurrences of any
+  or all of these symbols.
+
+- The basic symbols in a declarator have the following meanings:
+    ()      A function whose return value has the type…
+    [ ]     An array whose elements have the type…
+    *       A pointer to the type…
+
+- In declarators, these symbols have the same priority and associativity as the corre‐
+  sponding operators would have in an expression. 
+   e.g.
+      int *abc[10];            // An array of 10 elements whose type is pointer to int.
+      int (*abc)[10];          // A pointer to a array of 10  elements whose type is int.
+      int (*fPtr)(double x);   // fPtr is a pointer to a function that has  one double parameter and returns int.
+
+- The declarator must include declarations of the function parameters if it is part of
+  the function definition.
+
+-------------------------------------------------------------
+When interpreting a complex declarator, always begin with the identifier. Starting
+from there, repeat the following steps in order until you have interpreted all the
+symbols in the declarator:
+  1. If a left parenthesis (() or bracket ([) appears immediately to the right, then
+     interpret the pair of parentheses or brackets.
+  2. Otherwise, if an asterisk (*) appears to the left, interpret the asterisk.
+
+  e.g. see:: {"page": 183, "book_name":"C in a Nutshell, 2nd Edition","id":39, "isbn":"1491904755"}
+
+]]></content>
+<id>62</id>
+</entry>
+</children>
+<id>60</id>
+</entry>
+</children>
+<id>50</id>
+</entry>
+<entry>
+<title>type names</title>
+<lastmodified>1540658816677</lastmodified>
+<content><![CDATA[  (char *)ptr 
+    type name is char * (read: “char pointer” or “pointer to char”)
+
+ float *[]
+    The type “array of pointers to float.” The number of elements in the array is
+    undetermined.
+
+ float (*)[10]
+    The type “pointer to an array of ten elements whose type is float.”
+
+ double *(double *)
+    The type “function whose only parameter has the type pointer to double, and
+    which also returns a pointer to double.”
+
+ double (*)()
+    The type “pointer to a function whose return value has the type double.” The
+    number and types of the function’s parameters are not specified.
+
+ int *(*(*)[10])(void)
+    The type “pointer to an array of ten elements whose type is pointer to a func‐
+    tion with no parameters which returns a pointer to int.”
+]]></content>
+<id>51</id>
+</entry>
+<entry>
+<title>typedef Declarations</title>
+<lastmodified>1540660492702</lastmodified>
+<content><![CDATA[- A typedef declaration starts with the keyword typedef, followed by the normal
+  syntax of an object or function declaration, except that no storage class or _Alignas
+  specifiers and no initializers are permitted.
+
+- Each declarator in a typedef declaration defines an identifier as a synonym for the
+  specified type. The identifier is then called a typedef name for that type. 
+
+e.g.
+   typedef unsigned int UINT, UINT_FUNC();
+   typedef struct Point { double x, y; } Point_t;
+   typedef float Matrix_t[3][10];
+
+-  UINT is synonymous with unsigned int
+- Point_t is synonymous with the structure type struct Point.
+
+using: 
+  UINT ui = 10, *uiPtr = &ui;
+  UINT_FUNC *funcPtr;
+  Matrix_t *func( float * );]]></content>
+<id>52</id>
+</entry>
+<entry>
+<title>_Static_assert </title>
+<lastmodified>1540525480860</lastmodified>
+<content><![CDATA[- introduced in C11
+- is a special case among declarations. 
+- are an exception: these static assertions do not declare identifiers.
+- It is only an instruction to the compiler to test an assertion, and does not
+  declare an identifier at all. 
+
+syntex:  
+  _Static_assert( constant_expression , string_literal )
+
+- The assertion to be tested, constant_expression, must be a constant expression
+  with an integer type.
+   - If the expression is true (i.e. not 0), the _Static_assert declaration has no effect.
+   - If the evaluation of the expression yields the value 0, however, the compiler generates a
+     error message containing the specified string literal. 
+   - The string literal should contain only characters of the basic source character set, as extended characters are not
+     necessarily displayed.
+      e.g.
+          _Static_assert( sizeof(int) > 2 , "16-bit code not supported");
+
+
+
+
+]]></content>
+<id>53</id>
+</entry>
+<entry>
+<title>Linkage of Identi&#129;ers</title>
+<lastmodified>1540662367456</lastmodified>
+<content><![CDATA[- An identifier that is declared in several translation units, or several times in the
+  same translation unit, may refer to the same object or function in each instance.
+- The extent of an identifier’s identity in and among translation units is determined by the
+  identifier’s linkage. 
+- The term reflects the fact that identifiers in separate source files
+  need to be linked if they are to refer to a common object.
+
+- Identifiers in C have either 
+    - external, 
+    - internal, or 
+    - no linkage. 
+- The linkage is determined by the declaration’s position and 
+  storage class specifier, if any. Only object and function 
+  identifiers can have external or internal linkage.
+
+]]></content>
+<children>
+<entry>
+<title>External Linkage</title>
+<lastmodified>1540662740589</lastmodified>
+<content><![CDATA[- An identifier with external linkage represents the same function or object 
+  throughout the program. 
+- The compiler presents such identifiers to the linker, which resolves
+  them with other occurrences in other translation units and libraries.
+
+- Function and object identifiers declared with the storage class specifier extern have
+  external linkage, 
+  with one exception: if an identifier has already been declared with
+  internal linkage, a second declaration within the scope of the first cannot change the
+  identifier’s linkage to external.
+
+- The compiler treats function declarations without a storage class specifier as if they
+  included the specifier extern. 
+
+- object identifiers that you declare outside all functions and without 
+  a storage class specifier have external linkage.
+
+]]></content>
+<id>63</id>
+</entry>
+<entry>
+<title>Internal Linkage</title>
+<lastmodified>1540663051675</lastmodified>
+<content><![CDATA[- An identifier with internal linkage represents the same object or function within a
+  given translation unit. The identifier is not presented to the linker. 
+
+- As a result, you cannot use the identifier in another translation unit to refer 
+  to the same object or function.
+
+- A function or object identifier has internal linkage if it is declared outside
+  all functions and with the storage class specifier static.
+
+- Identifiers with internal linkage do not conflict with similar identifiers in other
+  translation units. If you declare an identifier with internal linkage in a given 
+  translation unit, you cannot also declare and use an external identifier with the same 
+  spelling in that translation unit.]]></content>
+<id>64</id>
+</entry>
+<entry>
+<title>No Linkage</title>
+<lastmodified>1540663235653</lastmodified>
+<content><![CDATA[- All identifiers that have neither external nor internal linkage have no linkage. 
+- Each declaration of such an identifier therefore introduces a new entity. 
+- Identifiers with no linkage include the following:
+     • Identifiers that are not names of variables or functions, such as label names,
+       structure tags, and typedef names
+     • Function parameters
+     • Object identifiers that are declared within a function and without the storage
+       class specifier extern.
+
+e.g.
+
+int func1( void );              // func1 has external linkage.
+int a;                          // a has external linkage.
+extern int b = 1;               // b has external linkage.
+static int c;                   // c has internal linkage.
+static void func2( int d )      // func2 has internal linkage; d has no linkage.
+{
+  extern int a;                 // This a is the same as that above, with external linkage.
+  int b = 2;                    // This b has no linkage, and hides the  external b declared above.
+  extern int c;                 // This c is the same as that above, and retains internal linkage.
+  static int e;                 // e has no linkage.
+  /* ... */
+}]]></content>
+<id>65</id>
+</entry>
+</children>
+<id>54</id>
+</entry>
+<entry>
+<title>Storage Duration of Objects</title>
+<lastmodified>1540663662335</lastmodified>
+<content><![CDATA[- lifetime: During the execution of the program, each object exists as a location in memory for
+            a certain period, called its lifetime. 
+- There is no way to access an object before or after its lifetime. 
+
+- storage duration: the lifetime of an object is determined by its storage duration.
+- Objects in C have one of four kinds of storage duration: 
+    - static, 
+    - thread, 
+    - automatic, or 
+    - allocated.
+
+- The C standard does not specify how objects must be physically stored in any given
+  system architecture, but typically, objects with static or thread storage duration are
+  located in a data segment of the program, and objects with automatic 
+  storage duration are located on the stack. 
+- Allocated storage is memory that the program obtains at runtime by 
+  calling the malloc(), calloc(), and realloc() functions. 
+
+
+  
+]]></content>
+<children>
+<entry>
+<title>static</title>
+<lastmodified>1540663719191</lastmodified>
+<content><![CDATA[- Objects that are defined outside all functions, or within a function and with the
+  storage class specifier static, have static storage duration. These include all objects
+  whose identifiers have internal or external linkage.
+- All objects with static storage duration are generated and initialized before 
+  execution of the program begins. Their lifetime spans the program’s entire runtime.
+]]></content>
+<id>66</id>
+</entry>
+<entry>
+<title>thread</title>
+<lastmodified>1540663738071</lastmodified>
+<content><![CDATA[Objects defined with the storage class specifier _Thread_local are called threadlocal objects and have thread storage duration. The storage duration of a threadlocal object is the entire runtime of the thread for which it is created. Each thread
+has its own separate instance of a thread-local object, which is initialized when the
+thread starts.]]></content>
+<id>67</id>
+</entry>
+<entry>
+<title>automatic</title>
+<lastmodified>1540663805758</lastmodified>
+<content><![CDATA[Objects defined within a function and with no storage class specifier (or with the
+unnecessary specifier auto) have automatic storage duration. Function parameters
+also have automatic storage duration. Objects with automatic storage duration are
+generally called automatic variables for short.
+
+The lifetime of an automatic object is delimited by the braces ({}) that begin and
+end the block in which the object is defined. Variable-length arrays are an excep‐
+tion: their lifetime begins at the point of declaration, and ends with the identifier’s
+scope—that is, at the end of the block containing the declaration, or when a jump
+occurs to a point before the declaration.
+
+Each time the flow of program execution enters a block, new instances of any auto‐
+matic objects defined in the block are generated (and initialized, if the declaration
+includes an initializer). This fact is important in recursive functions, for example.]]></content>
+<id>68</id>
+</entry>
+</children>
+<id>55</id>
+</entry>
+<entry>
+<title>Initialization</title>
+<lastmodified>1540663830859</lastmodified>
+<children>
+<entry>
+<title>Implicit</title>
+<lastmodified>1540664002516</lastmodified>
+<content><![CDATA[- Objects with automatic storage duration have an undetermined initial value if their
+  definition does not include an initializer. Function parameters, which also have
+  automatic storage duration, are initialized with the argument values when the 
+  function call occurs. 
+- All other objects have static storage duration, and are implicitly 
+  initialized with the default value 0, unless their definition includes an explicit 
+  initializer. Or, to put it more exactly:
+    • Objects with an arithmetic type have the default initial value 0.
+    • The default initial value of pointer objects is a null pointer 
+]]></content>
+<id>69</id>
+</entry>
+<entry>
+<title>Explicit</title>
+<lastmodified>1540664562816</lastmodified>
+<content><![CDATA[- An initializer in an object definition specifies the object’s initial value explicitly. 
+- The initializer is appended to the declarator for the object’s identifier with an equals sign (=). 
+- The initializer can be either a single expression or a list of initializer expressions  enclosed in braces.
+
+e.g.
+  for scaler types:
+    #include <string.h> // Prototypes of string functions.
+     double var = 77, *dPtr = &var;
+     int (*funcPtr)( const char*, const char* ) = strcmp;
+
+  for array, object
+     short a[4] = { 1, 2, 2*2, 2*2*2 };
+     Rectangle_t rect1 = { { -1, 1 }, { 1, -1 } };
+
+]]></content>
+<id>70</id>
+</entry>
+</children>
+<id>56</id>
+</entry>
+</children>
+<id>9</id>
+</entry>
+<entry>
+<title>Dynamic Memory Management</title>
+<lastmodified>1540665775976</lastmodified>
+<content><![CDATA[The standard library provides the following four functions for dynamic memory
+management:
+  malloc(), calloc()
+      Allocate a new block of memory.
+
+  realloc()
+      Resize an allocated memory block.
+
+  free()
+      Release allocated memory
+
+- All of these functions are declared in the header file stdlib.h.
+]]></content>
+<children>
+<entry>
+<title>Allocating</title>
+<lastmodified>1540667414341</lastmodified>
+<content><![CDATA[Allocating Memory Dynamically
+--------------------------------------
+
+void *malloc( size_t size );
+    The malloc() function reserves a contiguous memory block whose size in
+    bytes is at least size. When a program obtains a memory block through
+    malloc(), its contents are undetermined.
+
+void *calloc( size_t count, size_t size );
+    The calloc() function reserves a block of memory whose size in bytes is at
+    least count × size. In other words, the block is large enough to hold an array of
+    count elements, each of which takes up size bytes. Furthermore, calloc() ini‐
+    tializes every byte of the memory with the value 0.
+
+- Both functions return a pointer to void, also called a typeless pointer.
+- The pointer’s value is the address of the first byte in the memory block 
+  allocated, or a null pointer if the memory requested is not available.
+
+- It is often useful to initialize every byte of the allocated memory block to zero,
+  which ensures that not only the members of a structure object have the default value
+  zero but also any padding between the members. In such cases, the calloc() func‐
+  tion is preferable to malloc(), although it may be slower, depending on the imple‐
+  mentation.]]></content>
+<children>
+<entry>
+<title>Characteristics</title>
+<lastmodified>1540667842018</lastmodified>
+<content><![CDATA[- A successful memory allocation call yields a pointer to the beginning of a memory block.
+- “The beginning” means that the pointer’s value is equal to the lowest byte address in the block. 
+- The allocated block is aligned so that any type of object can be
+  stored at that address.
+
+- An allocated memory block stays reserved for your program until you explicitly
+  release it by calling free() or realloc().
+  In other words, the storage duration of the block extends from its allocation 
+  to its release, or to end of the program.
+
+- The arrangement of memory blocks allocated by successive calls to malloc(),
+  calloc(), and/or realloc() is unspecified.
+
+- It is also unspecified whether a request for a block of size zero results in a null
+  pointer or an ordinary pointer value.
+]]></content>
+<id>73</id>
+</entry>
+</children>
+<id>71</id>
+</entry>
+<entry>
+<title>Resizing and Releasing</title>
+<lastmodified>1540668487805</lastmodified>
+<content><![CDATA[The pointer argument that you pass to either of the functions free() and
+realloc()—if it is not a null pointer—must be the starting address of a dynamically
+allocated memory block that has not yet been freed. 
+
+The memory management functions keep internal records of the size of each allocated
+memory block. This is why the functions free() and realloc() require only
+the starting address of the block to be released, and not its size. 
+
+
+]]></content>
+<children>
+<entry>
+<title>free()</title>
+<lastmodified>1540668519629</lastmodified>
+<content><![CDATA[void free( void *ptr );
+  The free() function releases the dynamically allocated memory block that
+  begins at the address in ptr. A null pointer value for the ptr argument is 
+  permitted, and such a call has no effect.
+
+
+
+
+- There is no way to test whether a call to the free() function is successful, because it has no return
+  value.
+
+]]></content>
+<id>74</id>
+</entry>
+<entry>
+<title>realloc()</title>
+<lastmodified>1540668149496</lastmodified>
+<content><![CDATA[void *realloc( void *ptr, size_t size );
+  The realloc() function releases the memory block addressed by ptr and allo‐
+  cates a new block of size bytes, returning its address. The new block may start
+  at the same address as the old one.
+
+  realloc() also preserves the contents of the original memory block—up to the
+  size of whichever block is smaller. If the new block doesn’t begin where the
+  original one did, then realloc() copies the contents to the new memory block.
+  If the new memory block is larger than the original, then the values of the addi‐
+  tional bytes are unspecified.
+
+  It is permissible to pass a null pointer to realloc() as the argument ptr. If you
+  do, then realloc() behaves similarly to malloc(), and reserves a new memory
+  block of the specified size.
+
+  The realloc() function returns a null pointer if it is unable to allocate a mem‐
+  ory block of the size requested. In this case, it does not release the original
+  memory block or alter its contents.]]></content>
+<id>75</id>
+</entry>
+</children>
+<id>72</id>
+</entry>
+</children>
+<id>10</id>
+</entry>
+<entry>
+<title>I/O</title>
+<lastmodified>1540703802968</lastmodified>
+<children>
+<entry>
+<title>File</title>
+<lastmodified>1540723522058</lastmodified>
+<content><![CDATA[- A file represents a sequence of bytes. 
+- fopen(), freopen(), and tmpfile() opens a file, 
+  and return a pointer to a FILE  object for stream associated
+  with the file being opened.
+
+-----------------------------------------------------
+- These functions do not require the file to be opened first. They include the following:
+  • The remove() function deletes a file (or an empty directory). The string 
+    argument is the file’s name. If the file has more than one name, then remove() only
+    deletes the specified name, not the file itself. The data may remain accessible in
+    some other way, but not under the deleted filename.
+  • The rename() function changes the name of a file (or directory). The function’s
+    two string arguments are the old and new names, in that order. 
+
+  The remove() and rename() functions both have the return a int, 
+   - 0 on success, or a 
+   - nonzero value on failure. 
+          ]]></content>
+<children>
+<entry>
+<title>File Position</title>
+<lastmodified>1540723714818</lastmodified>
+<content><![CDATA[- The file position indicator in the object representing the stream
+  determines the position of the next character to be read or written.
+- When you open a file for reading or writing, the file position indicator points to the
+  beginning of the file so that the next character accessed has the position 0. 
+- If you open the file in “append” mode, the file position indicator may point 
+  to the end of the file.
+
+- Random access within the file is achieved by using functions that change 
+  the file position indicator, 
+  - fseek(), 
+  - fsetpos(), and
+  - rewind(), 
+
+]]></content>
+<id>83</id>
+</entry>
+<entry>
+<title>opening a file</title>
+<lastmodified>1540726113561</lastmodified>
+<content><![CDATA[- the standard library provides the function fopen()
+- for special cases freopen() and tmpfile() functions also open files.
+- filename must be < FILENAME_MAX
+- the max number of open files allowed is greater than or equal to the value of the constant FOPEN_MAX.
+
+------------------------------------------------------
+FILE *fopen( const char * restrict filename, const char * restrict mode );
+
+    This function opens the file whose name is specified by the string filename. The
+    filename may contain a directory part, and must not be longer than the maximum
+    length specified by the value of the macro FILENAME_MAX. The second argument,
+    mode, is also a string, and specifies the access mode. 
+    The fopen() function associates the file with a new stream:
+
+------------------------------------------------------
+FILE *freopen( const char * restrictfilename, const char * restrict mode, FILE * restrict stream );
+
+    This function redirects a stream. Like fopen(), freopen() opens the specified file in
+    the specified mode. However, rather than creating a new stream, freopen() asso‐
+    ciates the file with the existing stream specified by the third argument. The file pre‐
+    viously associated with that stream is closed. The most common use of freopen() is
+    to redirect the standard streams, stdin, stdout, and stderr.
+
+--------------------------------------------------------
+FILE *tmpfile( void );
+
+    The tmpfile() function creates a new temporary file whose name is distinct from
+    all other existing files, and opens the file for binary writing and reading (as if the
+    mode string "wb+" were used in an fopen() call). If the program is terminated nor‐
+    mally, the file is automatically deleted.
+
+]]></content>
+<id>84</id>
+</entry>
+<entry>
+<title>Closing a File</title>
+<lastmodified>1540752168362</lastmodified>
+<content><![CDATA[int fclose( FILE *fp );
+
+The function flushes any data still pending in the buffer to the file, closes the file,
+and releases any memory used for the stream’s input and output buffers. The
+fclose() function returns zero on success, or EOF if an error occurs.
+
+- When the program exits, all open files are closed automatically.]]></content>
+<id>85</id>
+</entry>
+</children>
+<id>76</id>
+</entry>
+<entry>
+<title>Buﬀers</title>
+<lastmodified>1540725106855</lastmodified>
+<content><![CDATA[- a stream has a buffer in which it collects characters, which are
+  transferred as a block to or from the file.
+
+- Streams are buffered in one of three ways:
+    - Fully buﬀered: The characters in the buffer are normally transferred only when the buffer is full.
+    - Line-buﬀered:
+        The characters in the buffer are normally transferred only when a newline
+        character is written to the buffer, or when the buffer is full. A stream’s buffer is
+        also written to the file when the program requests input through an unbuffered
+        stream, or when an input request on a line-buffered stream causes characters to
+        be read from the host environment.
+    - Unbuﬀered: Characters are transferred as promptly as possible.
+
+
+- fflush(): You can also explicitly transfer the characters in the stream’s output buffer to the
+    associated file by calling the fflush() function. 
+
+- When you open an ordinary file by calling fopen(), the new stream is fully buffered.
+- After you have opened a file, and before you perform the first input or output operation 
+  on it, you can change the buffering mode using the setbuf() or setvbuf() function.
+
+]]></content>
+<id>77</id>
+</entry>
+<entry>
+<title>The Standard Streams</title>
+<lastmodified>1540725359838</lastmodified>
+<content><![CDATA[- Three standard text streams are available to every C program on starting.
+- These streams do not have to be explicitly opened. 
+
+----------------------------------------------------------
+FILE pointer   Common name               Buﬀering mode
+stdin          Standard input            Line-buﬀered
+stdout         Standard output           Line-buﬀered
+stderr         Standard error output     Unbuﬀered
+----------------------------------------------------------
+
+- stdin is usually associated with the keyboard, and 
+- stdout and stderr with the console display. 
+- These associations can be modified by redirection. Redirection is per‐
+  formed either by the program calling the freopen() function, or by the environ‐
+  ment in which the program is executed.]]></content>
+<id>78</id>
+</entry>
+<entry>
+<title>Reading and Writing</title>
+<lastmodified>1540753285850</lastmodified>
+<content><![CDATA[there are two complete sets of functions for input and output of characters and strings: 
+ - the byte-character I/O (for char) functions and the
+ - wide-character I/O (for wchar_t) functions. 
+
+------------------------------------------------------------
+orientation
+----------------
+- Each stream has an orientation that determines which set of functions is appropriate.
+- Immediately after you open a file, the orientation of the stream associated with it is undetermined. 
+
+- byte-oriented: If the first file access is performed by a byte-character I/O function,
+                 then from that point on the stream is byte-oriented. 
+- wide-oriented:  If the first access is by a wide-character function, then the stream is wide-oriented. 
+
+- The orientation of the standard streams, stdin, stdout, and stderr, is likewise undetermined when the program starts.
+
+- You can call the function fwide() at any time to ascertain a stream’s orientation.
+  Before the first I/O operation, fwide() can also set a new stream’s orientation. To
+  change a stream’s orientation once it has been determined, you must first reopen the
+  stream by calling the freopen() function.
+
+-------------------------------------------------------------
+read/write wide-charaters
+---------------------------
+
+- The wide characters written to a wide-oriented stream are stored as multibyte characters 
+  in the file associated with the stream.
+- The read and write functions implicitly perform the necessary conversion between 
+  wide characters of type wchar_t and the multibyte character encoding. 
+      This conversion may be stateful.
+      i.e., the value of a given byte in the multibyte encoding may depend on control characters
+      that precede it, which alter the shif state or conversion state of the character
+      sequence.
+      For this reason, each wide-oriented stream has an associated object with
+      the type mbstate_t, which stores the current multibyte conversion state. The func‐
+      tions fgetpos() and fsetpos(), which get and set the value of the file position indi‐
+      cator, also save and restore the conversion state for the given file position.
+
+]]></content>
+<id>79</id>
+</entry>
+<entry>
+<title>Unformatted I/O</title>
+<lastmodified>1540784008971</lastmodified>
+<content><![CDATA[- The standard library provides functions to read and write unformatted data in the
+  form of individual characters, strings, or blocks of any given size. 
+- The type wint_t is an integer type capable of representing at least all the values 
+  in the range of wchar_t, and the additional value WEOF. 
+- The macro WEOF has the type wint_t and a value that is distinct from all the character
+  codes in the extended character set.
+- Unlike EOF, the value of WEOF is not necessarily negative.
+
+]]></content>
+<children>
+<entry>
+<title>Reading characters</title>
+<lastmodified>1540784050119</lastmodified>
+<content><![CDATA[Use the following functions to read characters from a file:
+  int fgetc( FILE *fp );
+  int getc( FILE *fp );
+  int getchar( void );
+  wint_t fgetwc( FILE *fp );
+  wint_t getwc( FILE *fp );
+  wint_t getwchar( void );]]></content>
+<id>86</id>
+</entry>
+<entry>
+<title>Putting a character back</title>
+<lastmodified>1540784111954</lastmodified>
+<content><![CDATA[Use one of the following functions to push a character back into the stream from
+whence it came:
+
+  int ungetc( intc, FILE *fp );
+  wint_t ungetwc( wint_t c, FILE *fp );
+
+
+ungetc() and ungetwc() push the last character read, c, back onto the input stream
+referenced by fp. Subsequent read operations then read the characters put back, in
+LIFO (last in, first out) order—that is, the last character put back is the first one to
+be read. You can always put back at least one character, but repeated attempts might
+or might not succeed. The functions return EOF (or WEOF) on failure, or the charac‐
+ter pushed onto the stream on success.]]></content>
+<id>87</id>
+</entry>
+<entry>
+<title>Writing characters</title>
+<lastmodified>1540784135490</lastmodified>
+<content><![CDATA[The following functions allow you to write individual characters to a stream:
+  int fputc( intc, FILE *fp );
+  int putc( int c, FILE *fp);
+  int putchar( int c );
+  wint_t fputwc( wchar_t wc, FILE *fp );
+  wint_t putwc( wchar_t wc, FILE *fp );
+  wint_t putwchar( wchar_t wc );
+
+]]></content>
+<id>88</id>
+</entry>
+<entry>
+<title>Reading strings</title>
+<lastmodified>1540784233993</lastmodified>
+<content><![CDATA[The following functions allow you to read a string from a stream:
+  char *fgets( char *buf, int n, FILE *fp );
+  wchar_t *fgetws( wchar_t *buf, int n, FILE *fp);
+  char *gets( char *buf);                          // Obsolete
+  char *gets_s(char *buf, size_t n);               // C11]]></content>
+<id>89</id>
+</entry>
+<entry>
+<title>Writing strings</title>
+<lastmodified>1540784263777</lastmodified>
+<content><![CDATA[Use the following functions to write a null-terminated string to a stream:
+  int fputs( const char *s, FILE *fp );
+  int puts( const char *s );
+  int fputws( const wchar_t *s, FILE *fp );
+
+]]></content>
+<id>90</id>
+</entry>
+<entry>
+<title>Reading and writing blocks</title>
+<lastmodified>1540784330058</lastmodified>
+<content><![CDATA[size_t fread( void *buffer, size_t size, size_t n, FILE *fp );
+size_t fwrite( const void *buffer, size_t size, size_t n, FILE *fp );
+]]></content>
+<id>91</id>
+</entry>
+</children>
+<id>80</id>
+</entry>
+<entry>
+<title>Formatted I/O</title>
+<lastmodified>1540784470750</lastmodified>
+<children>
+<entry>
+<title>Formatted Output</title>
+<lastmodified>1540784799846</lastmodified>
+<content><![CDATA[int printf( const char * restrict format, ... );
+   Writes to the standard output stream, stdout.
+
+int fprintf( FILE * restrict fp, const char * restrict format, ... );
+   Writes to the output stream specified by fp. The printf() function can be con‐
+   sidered to be a special case of fprintf().
+
+int sprintf( char * restrict buf, const char * restrict format, ... );
+   Writes the formatted output to the char array addressed by buf, and appends a
+   terminating null character.
+
+int snprintf( char * restrict buf, size_t n, const char * restrict format, ... );
+   Like sprintf(), but never writes more than n bytes to the output buffer.
+
+
+------------------------------------------------------------
+subset of the printf() functions takes a pointer to an argu‐
+ment list, rather than accepting a variable number of arguments directly in the func‐
+tion call. The names of these functions begin with a v for “variable argument list”:
+
+int vprintf( const char * restrictformat, va_list argptr );
+int vfprintf( FILE * restrict fp, const char * restrict format, va_list argptr );
+int vsprintf( char * restrict buf, const char * restrict format, va_list argptr );
+int vsnprintf( char * restrict buffer, size_t n, const char * restrict format, va_list argptr );
+
+
+To use the variable argument list functions, you must include stdarg.h in addition to
+stdio.h.
+
+----------------------------------------------------------
+There are counterparts to all of these functions for output to wide-oriented streams.
+The wide-character printf() functions have names containing wprintf instead of
+printf, as in vfwprintf() and swprintf(), for example. There is one exception:
+there is no snwprintf(). Instead, swprintf() corresponds to the function
+snprintf(), with a parameter for the maximum output length.
+
+----------------------------------------------------------
+The C11 standard provides a new “secure” alternative to each of these functions.
+The names of these new functions end in the suffix _s (for example, fprintf_s()).
+The new functions test whether any pointer arguments they receive are null
+pointers.]]></content>
+<id>92</id>
+</entry>
+</children>
+<id>81</id>
+</entry>
+<entry>
+<title>Random File Access</title>
+<lastmodified>1540785853494</lastmodified>
+<content><![CDATA[long ftell( FILE *fp );
+  ftell() returns the file position of the stream specified by fp. For a binary
+  stream, this is the same as the number of characters in the file before this given
+  position—that is, the offset of the current character from the beginning of the
+  file. ftell() returns -1 if an error occurs.
+
+int fgetpos( FILE * restrict fp, fpos_t * restrict ppos );
+  fgetpos() writes the file position indicator for the stream designated by fp to
+  an object of type fpos_t, addressed by ppos. If fp is a wide-oriented stream,
+  then the indicator saved by fgetpos() also includes the stream’s current con‐
+  version state.
+  fgetpos() returns a nonzero value to indicate that an error occurred. A return
+  value of zero indicates success.
+
+]]></content>
+<children>
+<entry>
+<title>Setting the File Access Position</title>
+<lastmodified>1540786517746</lastmodified>
+<content><![CDATA[int fsetpos( FILE *fp, const fpos_t *ppos );
+  Sets both the file position indicator and the conversion state to the values
+  stored in the object referenced by ppos. These values must have been obtained
+  by a call to the fgetpos() function. If successful, fsetpos() returns 0 and
+  clears the stream’s EOF flag. A nonzero return value indicates an error.
+
+int fseek( FILE *fp, long offset, int origin );
+  Sets the file position indicator to a position specified by the value of offset
+  and by a reference point indicated by the origin argument. The offset argu‐
+  ment indicates a position relative to one of three possible reference points,
+  which are identified by macro values. 
+
+----------------------------------------------------------------------------
+Macro name   Traditional value of origin     Oﬀset is relative to
+SEEK_SET     0                               The beginning of the file
+SEEK_CUR     1                               The current file position
+SEEK_END     2                               The end of the file
+----------------------------------------------------------------------------
+
+If successful, fseek() clears the stream’s EOF flag and returns zero. A nonzero
+return value indicates an error. rewind() sets the file position indicator to the
+beginning of the file and clears the stream’s EOF and error flags:
+     void rewind( FILE *fp );
+
+Except for the error flag, the call rewind(fp) is equivalent to:
+    (void)fseek(fp, 0L, SEEK_SET )
+
+
+If the file has been opened for reading and writing, you can perform either a read or
+a write op.
+]]></content>
+<id>93</id>
+</entry>
+</children>
+<id>82</id>
+</entry>
+</children>
+<id>11</id>
+</entry>
+<entry>
+<title>Multithreading</title>
+<lastmodified>1540790379046</lastmodified>
+<content><![CDATA[- C11 supports multithreaded execution, or multiple parallel paths of control flow 
+  within a process, and provides the same degree of concurrency as all modern operating systems.
+- C11 defines an appropriate memory model and supports atomic operations.
+- The macro definitions and the declarations of types and functions to support multi‐
+  threading are declared in the header threads.h. 
+- All of the identifiers that are directly related to threads begin with the prefix thrd_. 
+
+skipped: chapter:14 ->  see:: {"page":239, "book_name":"C in a Nutshell, 2nd Edition","id":39, "isbn":"1491904755"}
+]]></content>
+<id>12</id>
+</entry>
+
+
+<entry>
+<id>94</id>
+<title>aa</title>
+<lastmodified>1541229631698</lastmodified>
+<children/>
+<content><![CDATA[anime]]></content>
+</entry>
+<entry>
+<id>98</id>
+<title>anime</title>
+<lastmodified>1541247965399</lastmodified>
+<children/>
+</entry>
+</entries>
+<maxid>99</maxid>
+</root>

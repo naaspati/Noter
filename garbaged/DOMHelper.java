@@ -1,4 +1,4 @@
-package sam.noter.dao.xml;
+package sam.noter.dao.dom;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,9 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -23,92 +23,97 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javafx.scene.control.TreeItem;
 import sam.config.Session;
 import sam.noter.Utils;
 
 
-class EntryXMLUtils {
+class DOMHelper {
 	private static final String TITLE = "title";
 	private static final String ENTRIES = "entries";
 	private static final String CONTENT = "content";
 	private static final String CHILDREN = "children";
 	private static final String ENTRY = "entry";
 	private static final String LAST_MODIFIED = "lastmodified";
-	
-	static void parse(File path, RootEntryXML maneger) throws Exception {
-		Document doc = 
+	private final Document doc;
+
+	DOMHelper() throws ParserConfigurationException {
+		this.doc = DocumentBuilderFactory.newInstance()
+				.newDocumentBuilder()
+				.newDocument();
+	}
+	DOMHelper(File path, List<?> items) throws Exception {
+		this.doc = 
 				DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
 				.parse(path);
 
 		doc.normalize();
-		maneger.setDocument(doc);
 
 		Optional.of(doc.getElementsByTagName(ENTRIES))
 		.filter(list -> list.getLength() != 0)
 		.map(e -> e.item(0).getChildNodes())
-		.ifPresent(list -> collectChildren(list, maneger.getChildren()));
+		.ifPresent(list -> collectChildren(list, items));
 	}
-	static void save(Document doc, Iterable<?> iterable, File target) throws Exception {
+	void save(@SuppressWarnings("rawtypes") List list, File target) throws Exception {
 		clearNode(doc);
 
 		Element rootElement = doc.createElement(ENTRIES);
 		doc.appendChild(rootElement);
-		
-		for (Object o : iterable) 
-			rootElement.appendChild(((EntryXML) o).getElement(doc));
-		
+
+		for (Object o : list) 
+			rootElement.appendChild(((DOMEntry) o).getElement(this));
+
 		Utils.createBackup(target);
 		write(doc, target);
 	}
 
-	private static final String INDENT; 
-	static {
+	private String indent() {
 		Path p = Utils.APP_DATA.resolve("xml.properties");
 		if(Files.exists(p)) {
 
-			INDENT = Optional.ofNullable(Session.getProperty(EntryXMLUtils.class, "xml.indent"))
+			return Optional.ofNullable(Session.getProperty(DOMHelper.class, "xml.indent"))
 					.map(String::trim)
 					.map(s -> s.equalsIgnoreCase("true") ? "yes" : s)
 					.map(s -> s.equalsIgnoreCase("false") ? "no" : s)
 					.orElse("no");
 		} else {
-			INDENT = null;
-		}
-	}
+			return null;
+		}		
+	}; 
 
-	private static void write(Document doc, File target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
+
+	private void write(Document doc, File target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
 		Transformer transformer = 
 				TransformerFactory.newInstance()
 				.newTransformer();
 
-		if(INDENT != null)
-			transformer.setOutputProperty(OutputKeys.INDENT, INDENT);
+		String indent = indent();
+		if(indent != null)
+			transformer.setOutputProperty(OutputKeys.INDENT, indent);
 
 		StreamResult result = new StreamResult(target);
 		transformer.transform(new DOMSource(doc), result);
 	}
 
-	public static void collectChildren(Element node, List<TreeItem<String>> sink) {
+	public void collectChildren(Element node, List<?> sink) {
 		Node n = getChild(node, CHILDREN);
 		collectChildren(n == null ? null : n.getChildNodes(), sink);
 	}
-	private static void collectChildren(NodeList list, List<TreeItem<String>> sink) {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void collectChildren(NodeList list, List sink) {
 		int size = list == null ? 0 : list.getLength();
 		if(size == 0) return;
-		
+
 		for (int i = 0; i < size; i++) {
 			Node item = list.item(i);
 			if(!ENTRY.equals(item.getNodeName()))
 				continue;
-			sink.add(new EntryXML((Element)item));
+			sink.add(new DOMEntry((Element)item, this));
 		}
 	}
-	public static Node getChild(Element parent, String childName) {
+	public Node getChild(Element parent, String childName) {
 		if(parent == null)
 			return null; 
-
 		NodeList list = parent.getChildNodes();
 
 		for (int i = 0; i < list.getLength(); i++) {
@@ -120,20 +125,20 @@ class EntryXMLUtils {
 		}
 		return null;
 	}
-	public static Node getTitleNode(Element item) {
+	public Node getTitleNode(Element item) {
 		return getChild(item, TITLE);
 	}
-	public static Node getContentNode(Element item) {
+	public Node getContentNode(Element item) {
 		return getChild(item, CONTENT);
 	}
-	public static Node getLastmodifiedNode(Element item) {
+	public Node getLastmodifiedNode(Element item) {
 		return getChild(item, LAST_MODIFIED);
 	}	
-	public static String getTitle(Element item) {
+	public String getTitle(Element item) {
 		Node n = getTitleNode(item);
 		return n == null ? null : n.getTextContent();
 	}
-	public static String getContent(Element item) {
+	public String getContent(Element item) {
 		Node n = getContentNode(item);
 		if(n == null)
 			return null;
@@ -147,23 +152,24 @@ class EntryXMLUtils {
 		}
 		return null;
 	}
-	public static long getLastmodified(Element item) {
+	public long getLastmodified(Element item) {
 		Node n = getLastmodifiedNode(item);
 
 		if(n == null)
 			return 0;
 		return Long.parseLong(n.getTextContent());
 	}
-	public static Element createEntryXML(Document doc, EntryXML entry) {
+	public Element createEntryXML(DOMEntry entry) {
 		Element element = doc.createElement(ENTRY);
 
-		append(TITLE, entry.getTitle(), element, doc);
-		append(LAST_MODIFIED, String.valueOf(entry.getLastModified()), element, doc);
-		append(CONTENT, entry.getContent(), element, doc);
+		append(TITLE, entry.getTitle(), element);
+		append(LAST_MODIFIED, String.valueOf(entry.getLastModified()), element);
+		append(CONTENT, entry.getContent(), element);
+		setChildren(element, entry.getChildren());
 
 		return element;
 	}
-	private static void append(String tag, String value, Element element, Document doc) {
+	private void append(String tag, String value, Element element) {
 		if(value == null)
 			return;
 
@@ -175,17 +181,18 @@ class EntryXMLUtils {
 
 		element.appendChild(el);
 	}
-	public static void setTitle(Element element, String title, Document doc) {
-		updateNode(TITLE, title, element, doc);
+	public void setTitle(Element element, String title) {
+		updateNode(TITLE, title, element);
 	}
-	public static void setContent(Element element, String content, Document doc) {
-		updateNode(CONTENT, content, element, doc);
+	public void setContent(Element element, String content) {
+		updateNode(CONTENT, content, element);
 	}
-	public static void setLastModified(Element element, long lastModified, Document doc) {
-		updateNode(LAST_MODIFIED, String.valueOf(lastModified), element, doc);
+	public void setLastModified(Element element, long lastModified) {
+		updateNode(LAST_MODIFIED, String.valueOf(lastModified), element);
 	}
-	private static void updateNode(String tag, String value, Element element, Document doc) {
+	private void updateNode(String tag, String value, Element element) {
 		Node n = getChild(element, tag);
+		
 		if(n == null && value == null)
 			return;
 		if(value == null) {
@@ -193,7 +200,7 @@ class EntryXMLUtils {
 			return;
 		}
 		if(n == null)
-			append(tag, value, element, doc);
+			append(tag, value, element);
 		else {
 			if(tag == CONTENT) {
 				clearNode(n);
@@ -204,10 +211,11 @@ class EntryXMLUtils {
 		}
 
 	}
-	public static void clearNode(Node n) {
+	
+	public void clearNode(Node n) {
 		while(n.hasChildNodes()) n.removeChild(n.getFirstChild());
 	}
-	public static void setChildren(Element element, Document doc, Stream<Element> children) {
+	public void setChildren(Element element, @SuppressWarnings("rawtypes") List children) {
 		Node n = getChild(element, CHILDREN);
 		if(n == null && children == null)
 			return;
@@ -218,10 +226,10 @@ class EntryXMLUtils {
 		if(n == null) {
 			n = doc.createElement(CHILDREN);
 			element.appendChild(n);
-		}
-		else
+		} else
 			clearNode(n);
 
-		children.forEach(n::appendChild);
+		for (Object s : children) 
+			n.appendChild(((DOMEntry)s).getElement(this));			
 	}
 }

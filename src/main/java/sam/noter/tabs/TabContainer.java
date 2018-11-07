@@ -253,6 +253,9 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	public ReadOnlyObjectProperty<Tab> currentTabProperty() {
 		return currentTab.getReadOnlyProperty();
 	}
+	public Tab getCurrentTab() {
+		return currentTab.get();
+	}
 
 	@Override
 	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newTab) {

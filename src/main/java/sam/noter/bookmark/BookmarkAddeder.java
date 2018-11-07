@@ -6,94 +6,148 @@ import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import sam.config.Session;
+import javafx.stage.StageStyle;
+import sam.fx.popup.FxPopupShop;
 import sam.logging.InitFinalized;
 import sam.myutils.MyUtilsCheck;
-import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
-import static sam.noter.Utils.castEntry;
 
-class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinalized  {
-	private final TextField tf = new TextField();
-	private final TextArea ta = new TextArea();
-	private final StringBuilder sb = new StringBuilder();
-	
+class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<String> {
+	private final TextField titleTf = new TextField();
+	private final ListView<Entry> similar = new ListView<>();
+	private final Label header = new Label();
+	private final Label entryPath = new Label(); 
+	private final TitleSearch search = new TitleSearch();
+	private Tab tab;
+	private final WeakChangeListener<Entry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : n.toTreeString()));
+	private MultipleSelectionModel<TreeItem<String>> selectionModel;
+	private BookmarkType bookMarkType;
+	private Entry item;
+
 	public BookmarkAddeder() {
-		super(AlertType.CONFIRMATION);
+		super(StageStyle.UTILITY);
 		setTitle("Add New Bookmark");
-		initOwner(Session.get(Stage.class));
+		header.setStyle("-fx-padding:10;-fx-font-family:'Consolas';-fx-font-size:1.3em;-fx-background-color:white");
+		header.setWrapText(true);
+		
+		Text t = new Text("Title");
+		t.setTextAlignment(TextAlignment.CENTER);
+		HBox box = new HBox(10, t, titleTf);
+		HBox.setHgrow(titleTf, Priority.ALWAYS);
+		box.setAlignment(Pos.CENTER);
+		titleTf.setMaxWidth(Double.MAX_VALUE);
+		
+		VBox center = new VBox(10, box, new Text("Similar Bookmarks"), similar, entryPath);
+		center.setStyle("-fx-padding:10;-fx-border-width:1 0 0 0;-fx-border-color:gray;-fx-font-family:'Consolas';-fx-font-size:1.1em; ");
+		
+		Button ok = new Button("ADD");
+		Button cancel = new Button("CANCEL");
+		ok.setDefaultButton(true);
+		cancel.setCancelButton(true);
+		ok.setOnAction(this::okAction);
+		cancel.setOnAction(e -> hide());
+		
+		HBox bottom = new HBox(10, ok, cancel);
+		bottom.setPadding(new Insets(0, 10, 10, 10));
+		bottom.setAlignment(Pos.CENTER_RIGHT);
 
-		HBox hb = new HBox(10, new Text("Title "), tf);
-		getDialogPane().setContent(hb);   
-		hb.setMaxWidth(300);
-		HBox.setHgrow(tf, Priority.ALWAYS);
-		hb.setAlignment(Pos.CENTER_LEFT);
-
-		getDialogPane().setExpandableContent(new VBox(10, new Text("Similar Bookmarks"), ta));
-		getDialogPane().setExpanded(true);
-		tf.textProperty().addListener(this);
-
+		similar.setPlaceholder(new Text("NOTHING"));
+		similar.getSelectionModel()
+		.selectedItemProperty()
+		.addListener(similarSelect);
+		
+		setScene(new Scene(new BorderPane(center, header, null, bottom, null)));
+		setWidth(300);
+		setHeight(400);
 		init();  
 	}
+	
+	private Entry result;
+	
+	private void okAction(ActionEvent e) {
+		result = null;
+		
+		String s = titleTf.getText();
+		if(MyUtilsCheck.isEmptyTrimmed(s)){
+			FxPopupShop.showHidePopup("Invalid title", 1500);
+			return;
+		}
 
-	private Tab tab;
-
-	public void addNewBookmark(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
-		this.tab = tab;
-		Entry item = (Entry)selectionModel.getSelectedItem();
-
-		BookmarkType bt = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
-		setHeaderText(header(item, bt));
-
-		Platform.runLater(() -> tf.requestFocus());
-		tf.clear();
-		ta.clear();
-
-		showAndWait()
-		.map(b -> process(b, bt, item, tree))
-		.ifPresent(t -> {
-			selectionModel.clearSelection();
-			selectionModel.select(t);
-		});
-	}
-
-	private TreeItem<String> process(ButtonType b, BookmarkType bt, Entry item, TreeView<String> tree) {
-		if(b != ButtonType.OK) return null;
-
-		String title = tf.getText();
+		String title = titleTf.getText();
 		if(item == null)
-			return castEntry(tree.getRoot()).addChild(title, null);
+			tab.addChild( title);
 		else {
-			switch (bt) {
+			switch (bookMarkType) {
 				case RELATIVE:
-					return castEntry(item.getParent()).addChild(title, item);
+					result =  tab.addChild(title, item.parent(), item);
+					break;
 				case CHILD: 
-					return item.addChild(title, null);
+					result =  tab.addChild(title, item);
+					break;
 				case RELATIVE_TO_PARENT:
-					return castEntry(item.getParent().getParent()).addChild(title, (Entry)item.getParent());
+					result =  tab.addChild(title,item.parent().parent(), item.parent());
+					break;
 			}
 		}
-		return null;
-
+		super.hide();
 	}
-	private String header(Entry item, BookmarkType bt) {
+	
+	@Override
+	public void hide() {
+		super.hide();
+		similar.getItems().clear();
+		titleTf.textProperty().removeListener(this);
+		titleTf.clear();
+		search.stop();
+	}
+	
+	public Entry showDialog(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
+		this.selectionModel = selectionModel;
+		this.item = (Entry)selectionModel.getSelectedItem();
+		this.tab = tab;
+
+		this.bookMarkType = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
+		header.setText(header());
+
+		Platform.runLater(() -> titleTf.requestFocus());
+		titleTf.clear();
+		titleTf.textProperty().addListener(this);
+		
+		search.start(tab);
+		search.setOnChange(() -> Platform.runLater(()-> search.process(similar.getItems())));
+		
+		showAndWait();
+		
+		if(result != null){
+			selectionModel.clearSelection();
+			selectionModel.select(result);
+		}
+		return result;
+	}
+	private String header() {
 		String header = "Add new Bookmark";
 		if(item != null) {
-			switch (bt) {
+			switch (bookMarkType) {
 				case RELATIVE:
 					header += "\nRelative To: "+item.getValue();
 					break;
@@ -107,23 +161,14 @@ class BookmarkAddeder extends Alert implements ChangeListener<String>, InitFinal
 		}
 		return header;
 	}
-
 	@Override
-	public void changed(ObservableValue<? extends String> observable, String oldValue, String n) {
-		if(MyUtilsCheck.isEmpty(n))
-			ta.clear();
-		else {
-			tab.walk()
-			.filter(e -> e.getTitle() != null && e.getTitle().contains(n))
-			.reduce(sb, (sb2, t) -> Utils.treeToString(t, sb2), StringBuilder::append);
-			ta.setText(sb.toString());
-			sb.setLength(0);
-		}
-
+	public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+		search.search(newValue == null ? newValue : newValue.toLowerCase());
 	}
-	
+
 	@Override
 	protected void finalize() throws Throwable {
+		search.completeStop();
 		finalized();
 		super.finalize();
 	}

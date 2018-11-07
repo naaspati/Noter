@@ -46,7 +46,9 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sam.config.Session;
 import sam.fx.helpers.FxFxml;
+import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
+import sam.myutils.MyUtilsCheck;
 import sam.noter.dao.Entry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
@@ -138,11 +140,15 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.initOwner(Session.get(Stage.class));
 		d.showAndWait()
 		.ifPresent(s -> {
-			if(s == null || s.equals(e.getOldValue()))
+			if(MyUtilsCheck.isEmptyTrimmed(s)) {
+				FxPopupShop.showHidePopup("bad title:", 1500);
+				return;
+			}
+			if(s.equals(e.getOldValue()))
 				return;
 
 			Entry ti = (Entry) e.getTreeItem();
-			ti.setTitle(s);
+			currentTab().setTitle(ti, s);
 			editor.updateTitle(ti);
 		});
 	}
@@ -173,7 +179,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private final WeakAndLazy<BookmarkAddeder> adder;
 
 	private void addNewBookmark(BookmarkType bookMarkType) {
-		adder.get().addNewBookmark(bookMarkType, selectionModel, tree, currentTab());
+		adder.get().showDialog(bookMarkType, selectionModel, tree, currentTab());
 	}
 	private void expandBookmarks(List<TreeItem<String>> children, boolean expanded) {
 		if(children.isEmpty())
@@ -231,7 +237,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			history.put(oldValue, new  WeakReference<>(selectionModel.getSelectedItem()));
 
 		selectionModel.clearSelection();
-		Entry root = newValue == null ?  null : newValue.getRoot(); 
+		Entry root = newValue == null ?  null : (Entry)(newValue.getRoot()); 
 		tree.setRoot(root);
 
 		if(root != null){

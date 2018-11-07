@@ -1,9 +1,10 @@
 package sam.noter.bookmark;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -39,7 +40,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	private TreeItem<TreeItem<String>> root; 
 	private final TreeView<TreeItem<String>> view = new TreeView<>();
 	private MultipleSelectionModel<TreeItem<String>> selectionModel;
-	private Tab  currentTab, selectedTab;
+	private Tab  currentTab;
 	private FlowPane tabs = new FlowPane();
 
 	public BookmarkMover(TabContainer tabcontainer) {
@@ -77,13 +78,22 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		init();
 	}
 
-	public void moveBookmarks(Tab  selectedTab, MultipleSelectionModel<TreeItem<String>> selectionModel) {
-		this.currentTab = selectedTab;
+	public void moveBookmarks(MultipleSelectionModel<TreeItem<String>> selectionModel) {
+		this.currentTab = tabcontainer.getCurrentTab();
 		this.selectionModel = selectionModel;
-		tabs.getChildren().clear();
-		tabcontainer.forEach(t -> tabs.getChildren().add(tab(t)));
+		
+		List<Node> list = tabs.getChildren(); 
+		list.clear();
+		list.add(tab(currentTab));
+		
+		tabcontainer.forEach(t -> {
+			if(currentTab != t)
+				list.add(tab(t));
+		});
+		
 		tabs.setVisible(tabs.getChildren().size() != 1);
 		((Hyperlink)tabs.getChildren().get(0)).fire();
+		Platform.runLater(() -> ((Hyperlink)tabs.getChildren().get(0)).fire());
 		showAndWait();
 	}
 
@@ -107,8 +117,8 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	public void handle(ActionEvent e1) {
 		Node node = (Node) e1.getSource();
 		if(node.getUserData()  != null) {
-			selectedTab = (Tab) node.getUserData();
-			root = fillRootItem(selectedTab.getRoot(), selectedTab == currentTab ? selectionModel.getSelectedItems() : Collections.emptyList());
+            Tab selectedTab = (Tab) node.getUserData();
+			root = fillRootItem((Entry)(selectedTab.getRoot()), selectedTab == currentTab ? selectionModel.getSelectedItems() : Collections.emptyList());
 			view.setRoot(root);
 			return;
 		}
@@ -116,24 +126,17 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		Entry item = (Entry)view.getSelectionModel().getSelectedItem().getValue();
 		Entry parent = (Entry) item.getParent(); 
 		int index = parent.indexOf(item);
-		List<TreeItem<String>> list = new ArrayList<>(selectionModel.getSelectedItems());
+		List<Entry> list = selectionModel.getSelectedItems().stream().map(e -> (Entry)e).collect(Collectors.toList());
 		selectionModel.clearSelection();
-		boolean b = selectedTab != currentTab;
-		list.forEach(t -> {
-			Entry e = (Entry)t; 
-			((Entry)e.getParent()).remove(t);
-			if(b) 
-				e.resetRootEntry();
-		});
 
 		if(node == moveAbove)
-			parent.addAll(index-1, list);
+			currentTab.moveChild(list, parent, index-1);
 		else if(node == moveBelow)
-			parent.addAll(index+1, list);
-		else if(node == moveAsFirstChild) 
-			item.addAll(0, list);
-		else if(node == moveAsLastChild) 
-			item.addAll(list);
+			currentTab.moveChild(list, parent, index+1);
+		else if(node == moveAsFirstChild)
+			currentTab.moveChild(list, item, 0);
+		else if(node == moveAsLastChild)
+			currentTab.moveChild(list, item, Integer.MAX_VALUE);
 
 		hide();
 		selectionModel.clearSelection();

@@ -7,10 +7,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import javafx.application.HostServices;
 import javafx.geometry.Orientation;
@@ -33,8 +34,9 @@ import sam.noter.Utils.FileChooserType;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.RootEntryFactory;
+import sam.noter.dao.Walker;
 
-public class Tab extends HBox {
+public class Tab extends HBox implements RootEntry {
 	private final RootEntry root;
 	private final Label title = new Label();
 	private final Button close = new Button("x");
@@ -58,10 +60,10 @@ public class Tab extends HBox {
 		setClass(title, "title");
 		setClass(close, "close");
 		setClass(open, "open");
-		
+
 		open.setOnAction(e -> FileOpenerNE.openFile((File)open.getUserData()));
 		close.setTooltip(new Tooltip("close tab"));
-		
+
 		setOnMouseClicked(e -> {
 			if(e.getButton() == MouseButton.PRIMARY)
 				onSelect.accept(this);
@@ -71,10 +73,10 @@ public class Tab extends HBox {
 	public void setTabTitle(String string) { 
 		title.setText(string.replace(".jbook", ""));
 		title.setTooltip(new Tooltip(string));
-		}
+	}
 	public String getTabTitle() { return title.getText(); }
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
-	
+
 	public void setJbookPath(File path) {
 		setTabTitle(path.getName());
 		root.setJbookPath(path);
@@ -100,7 +102,7 @@ public class Tab extends HBox {
 			open.setUserData(file);
 		}
 	}	
-	
+
 	public ActionResult save(boolean confirmBeforeSaving)  {
 		if(confirmBeforeSaving) {
 			ActionResult ar = confirmSaving("Save As");
@@ -142,7 +144,7 @@ public class Tab extends HBox {
 		}
 		return ActionResult.SUCCESS;
 	}
-	
+
 	private ActionResult confirmSaving(String title) {
 		return
 				FxAlert.alertBuilder(AlertType.CONFIRMATION)
@@ -162,10 +164,10 @@ public class Tab extends HBox {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
-		
+
 		if(Objects.equals(getJbookPath(), file))
 			return;
-		
+
 		try {
 			Files.move(getJbookPath().toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
 			setJbookPath(file);
@@ -173,14 +175,14 @@ public class Tab extends HBox {
 			FxAlert.showErrorDialog("source: "+getJbookPath()+"\ntarget: "+file, "failed to rename", e);
 		}
 	}
-	
+
 	public File getFile(String title, FileChooserType type) {
 		File file = getJbookPath();
 		File expectedDir = file == null ? null : file.getParentFile();
-		
+
 		return Utils.chooseFile(title, expectedDir, this.title.getText()+".jbook", type);
 	}
-	
+
 	public void  open_containing_folder(HostServices hs)  {
 		Optional.of(this)
 		.map(Tab::getJbookPath)
@@ -197,21 +199,36 @@ public class Tab extends HBox {
 			FxAlert.showErrorDialog(getJbookPath(), "failed to reload", e);
 		}
 	}
-	
-	public File getJbookPath() {
-		return root.getJbookPath();
-	}
+
 	protected void notifyModified() {
 		toggleClass(this, "modified", root.isModified());
 	}
-	public Stream<Entry> walk() {
-		return root.walk();
-	}
-	public boolean isModified() {
-		return root.isModified();
-	}
-	
-	public Entry getRoot() {
-		return (Entry)root;
-	}
+
+	public RootEntry getRoot() { return root; }
+
+	@Override public void close() throws Exception { root.close(); }
+	/**
+	 * add child to root
+	 * @param title
+	 */
+	public void addChild(String title) { addChild(title, (Entry)root); }
+
+	@Override public void setTitle(Entry entry, String title) { root.setTitle(entry, title); }
+	@Override public void setContent(Entry entry, String content) { root.setContent(entry, content); }
+	@Override public Entry addChild(String childTitle, Entry parent) { return root.addChild(childTitle, parent); }
+	@Override public Entry addChild(String title, Entry parent, int index) { return root.addChild(title, parent, index); }
+	@Override public Map<Integer, Entry> getEntriesMap() { return root.getEntriesMap(); }
+
+	@Override public void setOnModified(Runnable action) { throw new IllegalAccessError(); }
+	public void walkTree(Walker walker) { ((Entry)root).walkTree(walker); }
+	@Override public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) { return root.moveChild(childrenToMove, newParent, index); }
+	public void walk(Consumer<Entry> consumer) { ((Entry)root).walk(consumer); }
+
+	@Override public File getJbookPath() { return root.getJbookPath(); }
+	@Override public boolean isModified() { return root.isModified(); }
+	@Override public void reload() throws Exception { root.reload(); }
+	@Override public void save(File file) throws Exception { root.save(file); }
+	@Override public void save() throws Exception { root.save(); }
+
+
 }

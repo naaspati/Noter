@@ -2,6 +2,7 @@ package sam.noter.bookmark;
 
 import sam.noter.dao.Entry;
 
+@Deprecated
 class PatrentChildRelation {
 	final Entry parent, child;
 	final int index;
@@ -11,9 +12,9 @@ class PatrentChildRelation {
 		this.index = parent.indexOf(child);
 	}
 	void removeChildFromParent() {
-		parent.remove(child);
+		//FIXME parent.remove(child);
 	}
 	public void addChildToParent() {
-		parent.add(index, child);
+		//FIXME parent.add(index, child);
 	}
 }

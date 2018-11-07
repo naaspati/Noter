@@ -7,18 +7,17 @@ repositories {
 }
 
 dependencies {
-   compile 'args4j:args4j:2.33'
- compile files('myutils.jar')
+  compile files('myutils.jar')
+  compile 'args4j:args4j:2.33'
   compile 'org.json:json:20180130'
+  compile 'org.xerial:sqlite-jdbc:3.7.2'
   
 }
  
-/*
-version = 1.02
+
+version = '1.027'
 sourceCompatibility = JavaVersion.VERSION_1_8 
 targetCompatibility = JavaVersion.VERSION_1_8
-
-*/
  
 mainClassName = 'Main'
 
@@ -26,11 +25,20 @@ mainClassName = 'Main'
 ext.appdir = file("${System.env.SAM_PROGRAMS}\\noter\\app")
 
 run {
+    environment.session_file = /app_data\session.properties/
+    environment['dynamic.menus.file'] = /app_data\menus.json/
+    environment['plugins_dir']=System.env.ECLIPSE_WORKPLACE+/\javafx\Noter-plugins\bin/
+    systemProperties['java.util.logging.config.file'] = file('logging.properties').absolutePath
+    systemProperties['java.io.tmpdir'] = file('java_temp').absolutePath
+    args new File('dummy.jbook').absolutePath
+    
     workingDir appdir.parent
+    
 }
 
-
 task install(type: Copy, dependsOn:installDist) {
+  throw new Exception('install task is disabled')
+  
   def libdir = file(new File(installDist.destinationDir, 'lib')) 
   from libdir
   into appdir
@@ -38,12 +46,29 @@ task install(type: Copy, dependsOn:installDist) {
   doLast {
      new File(appdir, 'run.cmd').text = """
   @echo off
-  setlocal 
+  setlocal
+  
+  ${versionText()}
   
   java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', libdir.list())}\" ${mainClassName} %*
   
   """.stripIndent()
   } 
+}
+
+def versionText() {
+  if(!version || version == 'unspecified') return '';
+  return """
+  SET APP_VERSION=${version}
+  if [%1]==[-v] (
+    echo version: %APP_VERSION%
+    goto:eof
+  )
+  if [%1]==[--version] (
+    echo version: %APP_VERSION%
+    goto:eof
+  )
+  """;    
 }
 
 jar {

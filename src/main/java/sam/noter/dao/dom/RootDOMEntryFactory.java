@@ -1,4 +1,4 @@
-package sam.noter.dao.xml;
+package sam.noter.dao.dom;
 
 import java.io.File;
 
@@ -12,13 +12,13 @@ import sam.noter.dao.RootEntryFactory;
  *
  */
 
-public class RootEntryXMLFactory implements RootEntryFactory {
+public class RootDOMEntryFactory implements RootEntryFactory {
 	@Override
 	public RootEntry create() throws Exception {
-		return new RootEntryXML();
+		return new RootDOMEntry();
 	}
 	@Override
 	public RootEntry load(File file) throws Exception {
-		return new RootEntryXML(file);
+		return new RootDOMEntry(file);
 	}
 }

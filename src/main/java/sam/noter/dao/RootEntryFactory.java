@@ -2,12 +2,12 @@ package sam.noter.dao;
 
 import java.io.File;
 
-import sam.noter.dao.xml.RootEntryXMLFactory;
+import sam.noter.dao.dom.RootDOMEntryFactory;
 
 public interface RootEntryFactory {
 	
 	public static RootEntryFactory getInstance(){
-		return new RootEntryXMLFactory();
+		return new RootDOMEntryFactory();
 	}
 	
 	RootEntry create() throws Exception;

@@ -25,7 +25,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import sam.config.Session;
-import sam.config.SessionPutGet;
+import sam.config.SessionHelper;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -36,7 +36,7 @@ import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
 
-public class Editor extends BorderPane implements SessionPutGet {
+public class Editor extends BorderPane implements SessionHelper {
 
 	@FXML private BorderPane editor;
 	@FXML private Button2 backBtn;
@@ -241,6 +241,7 @@ public class Editor extends BorderPane implements SessionPutGet {
 		combineChildrenBtn.setVisible(!item.getChildren().isEmpty());
 		combineContentBtn.setVisible(!item.getChildren().isEmpty());
 	}
+	@Deprecated //listen Tab changelistenr for title changes
 	public void updateTitle(Entry ti) {
 		unitsContainerWL.ifPresent(u -> u.updateTitle(ti));
 

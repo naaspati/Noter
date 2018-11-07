@@ -14,7 +14,6 @@ import javafx.scene.layout.HBox;
 import sam.fx.helpers.FxUtils;
 import sam.fxml.Button2;
 import sam.myutils.MyUtilsCheck;
-import sam.noter.Utils;
 import sam.noter.dao.Entry;
 
 class UnitEditor extends BorderPane {
@@ -68,7 +67,7 @@ class UnitEditor extends BorderPane {
 		if(item == null)
 			return;
 		
-		title.setTooltip(new Tooltip(Utils.treeToString(item)));
+		title.setTooltip(new Tooltip(item.toTreeString()));
 		title.setText(item.getTitle());
 	}
 	public void setWordWrap(boolean wrap) {

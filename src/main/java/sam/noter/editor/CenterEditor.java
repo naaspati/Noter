@@ -15,6 +15,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
 import sam.noter.dao.Entry;
+import sam.noter.tabs.Tab;
 import sam.reference.ReferenceUtils;
 
 class CenterEditor extends UnitEditor implements ChangeListener<String> {
@@ -30,6 +31,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 		}
 	}
 	private IdentityHashMap<Entry, WeakReference<Save>> cache = new IdentityHashMap<>();
+	protected Tab tab;
 
 	public CenterEditor() {
 		super();
@@ -86,9 +88,13 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 		if(this.item == null) return;
 
 		item.setContentProxy(null);
-		item.setContent(content.getText());
+		setContent(content.getText());
 		cache.put(item, new WeakReference<>(new Save(this)));
 		content.clear();
+	}
+	
+	private void setContent(String text) {
+		this.tab.setContent(item, text);
 	}
 	@Override
 	public void updateTitle() {
@@ -103,11 +109,11 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 	}
 	@Override
 	public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-		item.setContent(newValue);
+		setContent(newValue);
 		content.textProperty().removeListener(this);
 	}
 	public void commit() {
 		if(item != null)
-			item.setContent(content.getText());
+			setContent(content.getText());
 	}
 }

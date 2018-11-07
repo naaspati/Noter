@@ -1,8 +1,8 @@
 package sam.noter.bookmark;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.function.Consumer;
 
 import javafx.beans.binding.When;
@@ -26,6 +26,8 @@ import sam.fxml.Button2;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 
+
+//FIXME use TextSearch with SearchBox 
 public final class SearchBox extends Popup {
 	private final TextField searchF = new TextField();
 	private Tab tab;
@@ -36,7 +38,7 @@ public final class SearchBox extends Popup {
 
 	private int index = 0;
 	private List<Entry> result = new ArrayList<>();
-	private Iterator<Entry> iterator;
+	private ListIterator<Entry> iterator;
 	private final Stage stage;
 	private BookmarksPane bookmarks;
 
@@ -119,7 +121,9 @@ public final class SearchBox extends Popup {
 			iterator = null;
 		}
 		else {
-			iterator = tab.walk().iterator();
+			List<Entry> list = new ArrayList<>();
+			tab.walk(list::add);
+			iterator = list.listIterator();
 			next();
 		}
 	}
