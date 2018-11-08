@@ -16,7 +16,6 @@ import sam.myutils.MyUtilsException;
 import sam.noter.App;
 import sam.noter.dao.db.DB;
 import sam.noter.dao.db.JbookFile;
-import sam.noter.dao.db.JbookfileMeta;
 import sam.string.StringUtils;
 
 public class Main {

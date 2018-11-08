@@ -31,7 +31,7 @@ import sam.myutils.System2;
 import sam.noter.editor.Editor;
 
 public class DyanamiMenus {
-	private final Logger LOGGER = MyLoggerFactory.logger(DyanamiMenus.class.getSimpleName());
+	private final Logger LOGGER = MyLoggerFactory.logger(DyanamiMenus.class);
 	private MenuBar bar;
 	private ClassLoader loader;
 	private Editor editor;

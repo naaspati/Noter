@@ -34,7 +34,7 @@ import sam.noter.dao.EntryField;
 
 @SuppressWarnings("rawtypes")
 class DOMLoader {
-	private static final Logger LOGGER = MyLoggerFactory.logger(DOMLoader.class.getSimpleName());
+	private static final Logger LOGGER = MyLoggerFactory.logger(DOMLoader.class);
 
 
 	private static final String ID = "id";

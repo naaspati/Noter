@@ -92,9 +92,9 @@ public class BoundBooks {
 
 		try {
 			StringWriter2.setText(p, sb);
-			MyLoggerFactory.bySimpleName(getClass()).fine(() -> "modified: "+p);
+			MyLoggerFactory.logger(getClass()).fine(() -> "modified: "+p);
 		} catch (IOException e) {
-			MyLoggerFactory.bySimpleName(getClass()).log(Level.SEVERE, "failed to save: "+p, e);
+			MyLoggerFactory.logger(getClass()).log(Level.SEVERE, "failed to save: "+p, e);
 		}
 	}
 }

@@ -201,7 +201,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 				menuitem("Remove bookmark", this::removeAction, selectedItemNull),
 				menuitem("Undo Removed bookmark", e -> remover().undoRemoveBookmark(currentTab()), undoDeleteSize.isEqualTo(0)),
 				new SeparatorMenuItem(),
-				menuitem("Move bookmark", e -> mover().moveBookmarks(currentTab(), selectionModel), selectedItemNull)
+				menuitem("Move bookmark", e -> mover().moveBookmarks(selectionModel), selectedItemNull)
 				);
 	}
 	@FXML

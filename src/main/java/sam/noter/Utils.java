@@ -32,7 +32,7 @@ import sam.myutils.System2;
 import sam.noter.dao.Entry;
 
 public class Utils {
-	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class.getSimpleName());
+	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class);
 
 	private static final List<Runnable> onStop = new ArrayList<>();
 	public static final Path APP_DATA = Optional.ofNullable(System2.lookup("app_data")).map(Paths::get).orElse(Paths.get("app_data"));

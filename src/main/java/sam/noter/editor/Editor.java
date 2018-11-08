@@ -73,7 +73,7 @@ public class Editor extends BorderPane implements SessionHelper {
 				return null;
 			return parser.apply(s.toUpperCase());
 		} catch (Exception e) {
-			MyLoggerFactory.logger(Editor.class.getName()).warning("bad "+key+" value: "+Session.getProperty(Editor.class, key));
+			MyLoggerFactory.logger(Editor.class);
 		}
 		return null;
 	}

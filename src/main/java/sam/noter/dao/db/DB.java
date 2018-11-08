@@ -1,7 +1,9 @@
 package sam.noter.dao.db;
 
-import static sam.noter.dao.db.JbookfileMeta.*;
+import static sam.noter.dao.db.JbookfileMeta.CREATE_TABLE_SCHEDULED_DELETE_SQL;
 import static sam.noter.dao.db.JbookfileMeta.CREATE_TABLE_SQL;
+import static sam.noter.dao.db.JbookfileMeta.ID;
+import static sam.noter.dao.db.JbookfileMeta.TABLE_NAME;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -14,7 +16,7 @@ import sam.noter.Utils;
 import sam.sql.sqlite.SQLiteDB;
 
 public class DB {
-	private static final Logger LOGGER = MyLoggerFactory.logger(DB.class.getSimpleName());
+	private static final Logger LOGGER = MyLoggerFactory.logger(DB.class);
 	
 	private static volatile DB INSTANCE;
 

@@ -16,7 +16,7 @@ import javafx.scene.control.TreeItem;
 import sam.logging.MyLoggerFactory;
 
 public abstract class Entry extends TreeItem<String> {
-	private static final Logger LOGGER = MyLoggerFactory.logger(Entry.class.getSimpleName());
+	private static final Logger LOGGER = MyLoggerFactory.logger(Entry.class);
 
 	final int id;
 	protected String content;

@@ -26,7 +26,7 @@ import sam.myutils.System2;
 
 
 public class FilesLookup {
-	private final Logger LOGGER = MyLoggerFactory.logger(FilesLookup.class.getSimpleName());
+	private final Logger LOGGER = MyLoggerFactory.logger(FilesLookup.class);
 
 	// List<Pair<String, Path>> allFiles;
 	// String defaultDir;

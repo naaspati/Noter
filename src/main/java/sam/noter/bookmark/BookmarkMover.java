@@ -25,7 +25,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import sam.config.Session;
-import sam.logging.InitFinalized;
+import sam.noter.InitFinalized;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;

@@ -203,7 +203,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 						.map(s -> s.replace('\\', '/'))
 						.collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			} catch (IOException e) {
-				MyLoggerFactory.bySimpleName(getClass()).log(Level.SEVERE,  "failed to save: recents.txt  ", e);   
+				MyLoggerFactory.logger(getClass()).log(Level.SEVERE,  "failed to save: recents.txt  ", e);   
 			}
 			Platform.exit();
 		}

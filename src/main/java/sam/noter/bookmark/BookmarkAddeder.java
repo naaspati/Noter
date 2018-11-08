@@ -27,8 +27,8 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import sam.fx.popup.FxPopupShop;
-import sam.logging.InitFinalized;
 import sam.myutils.MyUtilsCheck;
+import sam.noter.InitFinalized;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 

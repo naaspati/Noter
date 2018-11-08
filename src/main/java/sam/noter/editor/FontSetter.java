@@ -121,7 +121,7 @@ class FontSetter extends Stage {
 	@Override
 	public void showAndWait() {
 		font = null;
-		showAndWait();
+		super.showAndWait();
 	}
 
 	public Font getFont() {
