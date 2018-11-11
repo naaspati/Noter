@@ -3,87 +3,67 @@ package sam.noter.bookmark;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
+import java.util.Collection;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
+import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import sam.fx.helpers.FxCell;
+import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.myutils.MyUtilsCheck;
+import sam.myutils.MyUtilsException;
 import sam.noter.InitFinalized;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 
 class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<String> {
-	private final TextField titleTf = new TextField();
-	private final ListView<Entry> similar = new ListView<>();
-	private final Label header = new Label();
-	private final Label entryPath = new Label(); 
+	
+	@FXML private Label header;
+	@FXML private VBox center;
+	@FXML private TextField titleTf;
+	@FXML private ListView<Entry> similar;
+	@FXML private TextArea entryPath;
+	
 	private final TitleSearch search = new TitleSearch();
+	
 	private Tab tab;
 	private final WeakChangeListener<Entry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : n.toTreeString()));
-	private MultipleSelectionModel<TreeItem<String>> selectionModel;
 	private BookmarkType bookMarkType;
 	private Entry item;
 
 	public BookmarkAddeder() {
 		super(StageStyle.UTILITY);
-		setTitle("Add New Bookmark");
-		header.setStyle("-fx-padding:10;-fx-font-family:'Consolas';-fx-font-size:1.3em;-fx-background-color:white");
-		header.setWrapText(true);
-		
-		Text t = new Text("Title");
-		t.setTextAlignment(TextAlignment.CENTER);
-		HBox box = new HBox(10, t, titleTf);
-		HBox.setHgrow(titleTf, Priority.ALWAYS);
-		box.setAlignment(Pos.CENTER);
-		titleTf.setMaxWidth(Double.MAX_VALUE);
-		
-		VBox center = new VBox(10, box, new Text("Similar Bookmarks"), similar, entryPath);
-		center.setStyle("-fx-padding:10;-fx-border-width:1 0 0 0;-fx-border-color:gray;-fx-font-family:'Consolas';-fx-font-size:1.1em; ");
-		
-		Button ok = new Button("ADD");
-		Button cancel = new Button("CANCEL");
-		ok.setDefaultButton(true);
-		cancel.setCancelButton(true);
-		ok.setOnAction(this::okAction);
-		cancel.setOnAction(e -> hide());
-		
-		HBox bottom = new HBox(10, ok, cancel);
-		bottom.setPadding(new Insets(0, 10, 10, 10));
-		bottom.setAlignment(Pos.CENTER_RIGHT);
+		MyUtilsException.hideError(() -> FxFxml.load(this, true));
 
-		similar.setPlaceholder(new Text("NOTHING"));
+		similar.setCellFactory(FxCell.listCell(Entry::getTitle));
 		similar.getSelectionModel()
 		.selectedItemProperty()
 		.addListener(similarSelect);
 		
-		setScene(new Scene(new BorderPane(center, header, null, bottom, null)));
-		setWidth(300);
-		setHeight(400);
 		init();  
 	}
 	
 	private Entry result;
 	
+	@FXML
+	private void cancelAction(ActionEvent e) {
+		super.hide();
+	}
+	@FXML
 	private void okAction(ActionEvent e) {
 		result = null;
 		
@@ -122,7 +102,6 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	}
 	
 	public Entry showDialog(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
-		this.selectionModel = selectionModel;
 		this.item = (Entry)selectionModel.getSelectedItem();
 		this.tab = tab;
 
@@ -133,7 +112,9 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 		titleTf.clear();
 		titleTf.textProperty().addListener(this);
 		
-		search.start(tab);
+		Collection<Entry> list = tab.getAllEntries();
+		similar.getItems().setAll(list);
+		search.start(list);
 		search.setOnChange(() -> Platform.runLater(()-> search.process(similar.getItems())));
 		
 		showAndWait();

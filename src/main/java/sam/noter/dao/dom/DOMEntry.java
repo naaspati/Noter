@@ -3,6 +3,7 @@ package sam.noter.dao.dom;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
@@ -55,10 +56,18 @@ class DOMEntry extends Entry {
 
 		return content;
 	}
+	
+	private boolean childrenLoaded;
+	
 	@Override
-	protected void loadChildren(@SuppressWarnings("rawtypes") List sink)  {
-		dom.collectChildren(items);
+	public ObservableList<TreeItem<String>> getChildren() {
+		if(!childrenLoaded) {
+			childrenLoaded = true;
+			dom.collectChildren(items);
+		}
+		return unmodifiable;
 	}
+	
 	@Override public void setTitle(String title) { super.setTitle(title); }
 	@Override public void updateLastmodified() { super.updateLastmodified(); }
 	@Override public void setLastModified(long lastModified) { super.setLastModified(lastModified); }

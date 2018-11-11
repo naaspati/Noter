@@ -14,6 +14,7 @@ import sam.noter.bookmark.BookmarksPane
 dynamic component App {
 	Stage {
 		scene : Scene {
+			stylesheets : location "../css/App.css",
 			BorderPane id root {
 				center : SplitPane id splitPane{
 					BookmarksPane id bookmarks,

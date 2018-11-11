@@ -227,6 +227,8 @@ public class Tab extends HBox implements RootEntry {
 	@Override public void reload() throws Exception { root.reload(); }
 	@Override public void save(File file) throws Exception { root.save(file); }
 	@Override public void save() throws Exception { root.save(); }
+	@Override public void addChild(Entry child, Entry parent, int index) { root.addChild(child, parent, index); }
+	@Override public void removeFromParent(Entry child) { root.removeFromParent(child); }
 
 
 }

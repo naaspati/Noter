@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -42,35 +41,43 @@ import sam.noter.dao.RootEntryFactory;
 import sam.reference.WeakAndLazy;
 import sam.string.StringUtils.StringSplitIterator;
 
-public class RootEntryGFactory implements RootEntryFactory {
-	private static volatile RootEntryGFactory INSTANCE;
-	private static final Logger LOGGER = MyLoggerFactory.logger(RootEntryGFactory.class);
+public class RootEntryZFactory implements RootEntryFactory {
+	private static volatile RootEntryZFactory INSTANCE;
+	private static final Logger LOGGER = MyLoggerFactory.logger(RootEntryZFactory.class);
 
-	public static RootEntryGFactory getInstance() throws IOException {
+	public static RootEntryZFactory getInstance() throws IOException {
 		if (INSTANCE != null)
 			return INSTANCE;
 
-		synchronized (RootEntryGFactory.class) {
+		synchronized (RootEntryZFactory.class) {
 			if (INSTANCE != null)
 				return INSTANCE;
 
-			INSTANCE = new RootEntryGFactory();
+			INSTANCE = new RootEntryZFactory();
 			return INSTANCE;
 		}
 	}
-	
+
 	private class PathToCacheDir {
 		private final Map<Path, String> map;
-		private final Path config_file = Utils.APP_DATA.resolve(RootEntryGFactory.class.getName());
-		
+		private final Path config_file = Utils.APP_DATA.resolve(RootEntryZFactory.class.getName());
+
 		public PathToCacheDir() throws IOException {
 			map = Files.notExists(config_file) ? new HashMap<>() : Files.lines(config_file).filter(s -> !MyUtilsCheck.isEmptyTrimmed(s)).collect(Collectors.toMap(s -> Paths.get(s.substring(s.indexOf(' ')+1)), s -> s.substring(0, s.indexOf(' ')), (o, n) -> n));
-			
+
 			if(!map.isEmpty()) {
-				int size = map.size();
-				map.keySet().removeIf(f -> !Files.isRegularFile(f));
-				if(size != map.size()) 
+				ArrayList<Path> remove = new ArrayList<>();
+				map.forEach((f, s) -> {
+					if(!Files.isRegularFile(f)) {
+						FilesUtilsIO.delete(temp_dir.resolve(s).toFile());
+						remove.add(f);
+						LOGGER.fine(() -> "REMOVED CACHED: "+temp_dir.resolve(s));
+					}
+				});
+				if(!remove.isEmpty()) {
+					map.keySet().removeAll(remove);
 					Files.write(config_file, Iterables.map(map.entrySet(), e -> e.getValue()+" "+e.getKey()), StandardOpenOption.TRUNCATE_EXISTING);
+				}
 			}
 		}
 		public void put(CacheDir dir) {
@@ -83,63 +90,61 @@ public class RootEntryGFactory implements RootEntryFactory {
 			}
 		}
 	}
-	private final Path temp_dir = Utils.APP_DATA.resolve("java_temp").resolve(RootEntryGFactory.class.getName());
+	private final Path temp_dir = Utils.APP_DATA.resolve("java_temp").resolve(RootEntryZFactory.class.getName());
 	private final PathToCacheDir pathToCacheDir; 
-	private static final String CONTENT = "content"; 
 
-	private RootEntryGFactory() throws IOException {
+	private RootEntryZFactory() throws IOException {
 		if(Files.notExists(temp_dir)) {
 			Files.createDirectories(temp_dir);
-		//TODO	Files.setAttribute(temp_dir, "dos:hidden", true);
+			//TODO	Files.setAttribute(temp_dir, "dos:hidden", true);
 			LOGGER.fine(() -> "DIR CREATED: "+temp_dir);
 		}
 		pathToCacheDir = new PathToCacheDir();
 	}
 	@Override
 	public RootEntry create() throws Exception {
-		return new RootEntryG(cacheFile(null));
+		return new RootEntryZ(cacheFile(null));
 	}
 	@Override
 	public RootEntry load(File file) throws Exception {
-		return new RootEntryG(cacheFile(file));
+		return new RootEntryZ(cacheFile(file));
 	}
 
 	private CacheDir cacheFile(File file) throws IOException {
 		Path path =  file == null ? null : file.toPath().normalize().toAbsolutePath();
 		String str = pathToCacheDir.map.get(path);
 
-		if(str == null) 
-			return new CacheDir(path, newCacheDir()); 
-		else {
-			Path cacheDir = temp_dir.resolve(str);
-			boolean b = file == null || !file.exists();
+		if(str == null) {
+			CacheDir dir = new CacheDir(path, newCacheDir());
+			if(file != null && file.exists())
+				unzip(file, dir);
+			return dir;
+		} else {
+			Path cacheDirPath = temp_dir.resolve(str);
+			CacheDir cacheDir = new CacheDir(path, cacheDirPath);
+			Path lm = cacheDir.lastModified();
 
-			if(Files.exists(cacheDir)) {
-				Path lastmodified = cacheDir.resolve("lastmodified");
-
-				if(b || Files.notExists(lastmodified) || file.lastModified() != LongSerializer.read(lastmodified)) {
-					LOGGER.fine(() -> "DELETE cacheDir: "+cacheDir);
-					FilesUtilsIO.deleteDir(cacheDir);
-				} else {
-					System.out.println("using cacheDir: "+cacheDir);
-				}	
+			if(Files.exists(lm) && (!file.exists() || file.lastModified() != LongSerializer.read(lm))) {
+				LOGGER.fine(() -> "DELETE cacheDir: "+cacheDirPath);
+				FilesUtilsIO.deleteDir(cacheDirPath);
+				Files.deleteIfExists(cacheDirPath); //needed 
 			}
-
-			CacheDir cachefile = new CacheDir(path, cacheDir);
-
-			if(!b && Files.notExists(cacheDir))
+			
+			if(Files.notExists(lm))
 				unzip(file, cacheDir);
-			else 
-				LOGGER.fine(() -> "CACHE LOADED: "+cachefile);
+			else
+				LOGGER.fine(() -> "CACHE LOADED: "+cacheDir);
 
-			return cachefile;
+			return  cacheDir;
 		}
 	}
 
-	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[BufferSize.DEFAULT_BUFFER_SIZE]);
+	private final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[BufferSize.DEFAULT_BUFFER_SIZE]);
 
-	private static void unzip(File file, Path cacheDir) throws FileNotFoundException, IOException {
-		Files.createDirectories(cacheDir.resolve(CONTENT));
+	private void unzip(File file, CacheDir cacheDir) throws FileNotFoundException, IOException {
+		Path cache = cacheDir.cacheDir;
+		Path content = cacheDir.contentDir;
+		Files.createDirectories(content);
 
 		synchronized (wbuffer) {
 			try(InputStream is = new FileInputStream(file);
@@ -149,7 +154,7 @@ public class RootEntryGFactory implements RootEntryFactory {
 				ZipEntry z = null;
 
 				while((z = zis.getNextEntry()) != null) {
-					try(OutputStream out = Files.newOutputStream(cacheDir.resolve(z.getName()))) {
+					try(OutputStream out = Files.newOutputStream(cache.resolve(z.getName()))) {
 						int n = 0;
 						while((n = zis.read(buffer)) > 0) {
 							out.write(buffer, 0, n);
@@ -159,48 +164,48 @@ public class RootEntryGFactory implements RootEntryFactory {
 			}
 			LOGGER.fine(() -> "UNZIPPED: "+file+" -> "+cacheDir);
 			saveLastModified(file, cacheDir);
+			pathToCacheDir.put(cacheDir);
 		}
 	}
-	private static void saveLastModified(File file, Path cacheDir) throws IOException {
-		LongSerializer.write(file.lastModified(), cacheDir.resolve("lastmodified"));
+	private void saveLastModified(File file, CacheDir cacheDir) throws IOException {
+		LongSerializer.write(file.lastModified(), cacheDir.lastModified());
 	}
-	private static void zip(Path cacheDir, Path target) throws IOException {
+	private void zip(CacheDir cacheDir, Path target) throws IOException {
 		Path temp = Files.createTempFile(target.getFileName().toString(), null);
-		File cache = cacheDir.toFile();
 
 		synchronized (wbuffer) {
 			try(OutputStream os = Files.newOutputStream(temp);
 					ZipOutputStream zos = new ZipOutputStream(os, StandardCharsets.UTF_8)) {
 
-				File file = new File(cache, "index");
-				if(!file.exists())
+				Path index = cacheDir.indexPath();
+				if(Files.notExists(index))
 					return;
 
 				byte[] buffer = wbuffer.get();
 				ZipEntry e = new ZipEntry("index");
 				zos.putNextEntry(e);
-				write(buffer, file, zos);
+				write(buffer, index, zos);
 
-				File content = new File(cache, CONTENT);
-				if(!content.exists()) return;
+				Path content = cacheDir.contentDir;
+				if(Files.notExists(content)) return;
 
-				String[] contents = content.list();
+				String[] contents = content.toFile().list();
 				if(contents == null || contents.length == 0) return;
 				for (String f : contents) {
 					e = new ZipEntry("content/"+f);
 					zos.putNextEntry(e);
 
-					write(buffer, new File(content, f), zos);
+					write(buffer, content.resolve(f), zos);
 				}
 			}
 		}
 		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-		System.out.println("MOVED: "+temp+ "  "+target);
+		LOGGER.info("MOVED: "+temp+ "  "+target);
 		saveLastModified(target.toFile(), cacheDir);
 	}
 
-	private static void write(byte[] buffer, File file, ZipOutputStream zos) throws IOException {
-		try(FileInputStream is = new FileInputStream(file);) {
+	private static void write(byte[] buffer, Path file, ZipOutputStream zos) throws IOException {
+		try(InputStream is = Files.newInputStream(file)) {
 			int n = 0;
 			while((n = is.read(buffer)) > 0)
 				zos.write(buffer, 0, n);
@@ -218,15 +223,15 @@ public class RootEntryGFactory implements RootEntryFactory {
 	private class Temp {
 		int parent_id;
 		int order;
-		EntryG entry;
+		EntryZ entry;
 
-		public Temp(int parent_id, int order, EntryG e) {
+		public Temp(int parent_id, int order, EntryZ e) {
 			this.parent_id = parent_id;
 			this.order = order;
 			this.entry = e;
 		}
 	}
-	
+
 	private static final WeakAndLazy<StringBuilder> logSB = new WeakAndLazy<>(StringBuilder::new);
 
 	class CacheDir {
@@ -243,7 +248,9 @@ public class RootEntryGFactory implements RootEntryFactory {
 			this.currentFile = path;
 			this.cacheDir = cacheDir;
 			this.contentDir = cacheDir.resolve("content");
-			Files.createDirectories(contentDir);
+		}
+		public Path lastModified() {
+			return cacheDir.resolve("lastmodified");
 		}
 		public Path getSourceFile() {
 			return currentFile;
@@ -251,8 +258,9 @@ public class RootEntryGFactory implements RootEntryFactory {
 		public void setSourceFile(Path path) {
 			currentFile = path;
 		}
-		public List<EntryG> loadEntries() throws IOException {
+		public List<EntryZ> loadEntries(RootEntryZ root) throws IOException {
 			Path p = indexPath();
+
 			if(Files.notExists(p)) return new ArrayList<>();
 			HashMap<Integer, Temp> map = new HashMap<>();
 
@@ -267,7 +275,7 @@ public class RootEntryGFactory implements RootEntryFactory {
 						long lastModified = Long.parseLong(iter.next());
 						String title = iter.next();
 
-						Temp  t = new Temp(parent_id, order, new EntryG(this, id, lastModified, title));
+						Temp  t = new Temp(parent_id, order, new EntryZ(root, id, lastModified, title));
 						map.put(id, t);
 						maxId = Math.max(maxId, id);
 						lines.put(id, s);
@@ -276,11 +284,11 @@ public class RootEntryGFactory implements RootEntryFactory {
 					.collect(Collectors.groupingBy(t -> t.parent_id));
 
 			Comparator<Temp> comparator = (e,f) -> Integer.compare(e.order, f.order);
-			ArrayList<EntryG> temp = new ArrayList<>();
+			ArrayList<EntryZ> temp = new ArrayList<>();
 
 			grouped.forEach((parent_id, list) -> {
 				if(parent_id == RootEntry.ROOT_ENTRY_ID) return;
-				
+
 				Temp t = map.get(parent_id);
 				list.sort(comparator);
 				temp.clear();
@@ -295,24 +303,24 @@ public class RootEntryGFactory implements RootEntryFactory {
 		private Path indexPath() {
 			return cacheDir.resolve("index");
 		}
-		private Path contentPath(EntryG e) {
+		private Path contentPath(EntryZ e) {
 			return contentDir.resolve(String.valueOf(e.getId()));
 		}
-		public String getContent(EntryG e) throws IOException {
+		public String getContent(EntryZ e) throws IOException {
 			Path p = contentPath(e);
 			return Files.notExists(p) ? null : StringReader2.getText(p);
 		}
-		public void save(RootEntryG root, File file) throws IOException {
+		public void save(RootEntryZ root, File file) throws IOException {
 			if(!root.isModified()) return;
 			StringBuilder sb = new StringBuilder(sbsize + 200);
 
 			walk(root, sb);
-			StringWriter2.setText(cacheDir.resolve("index"), sb.toString());
-			zip(cacheDir, file.toPath());
+			StringWriter2.setText(indexPath(), sb.toString());
+			zip(this, file.toPath());
 			this.currentFile = file.toPath();
 			pathToCacheDir.put(this);
 		}
-		private void walk(EntryG entry, StringBuilder sb) throws IOException {
+		private void walk(EntryZ entry, StringBuilder sb) throws IOException {
 			@SuppressWarnings("rawtypes")
 			List list = entry.getChildren();
 			if(list.isEmpty()) return;
@@ -323,7 +331,7 @@ public class RootEntryGFactory implements RootEntryFactory {
 			boolean cM = entry.isChildrenModified();
 
 			for (Object ti : list) {
-				EntryG e = (EntryG) ti;
+				EntryZ e = (EntryZ) ti;
 				if(!e.isModified() && !cM) {
 					sb.append(lines.get(e.getId())) ;
 				} else {
@@ -343,38 +351,57 @@ public class RootEntryGFactory implements RootEntryFactory {
 		private String notNull(String content) {
 			return content == null ? "" : content;
 		}
-		private void logModification(EntryG e) {
-			synchronized(logSB) {
-				StringBuilder sb = logSB.get();
-				sb.setLength(0);
-				
-				sb.append(e).append(" [");
-				if(e.isTitleModified())
-					sb.append("TITLE, ");
-				if(e.isContentModified())
-					sb.append("CONTENT, ");
-				if(e.isChildrenModified())
-					sb.append("CHILDREN, ");
-				sb.append(']');
+		private void logModification(EntryZ e) {
+			LOGGER.info(() -> {
+				synchronized(logSB) {	
+					StringBuilder sb = logSB.get();
+					sb.setLength(0);
 
-				String s = sb.toString();
-				if(LOGGER.isLoggable(Level.FINE))
-					LOGGER.fine(s);
-				else
-					System.out.println(s);
-			}
+					sb.append(e).append(" [");
+					if(e.isTitleModified())
+						sb.append("TITLE, ");
+					if(e.isContentModified())
+						sb.append("CONTENT, ");
+					if(e.isChildrenModified())
+						sb.append("CHILDREN, ");
+					sb.append(']');
+					
+					return sb.toString();
+				}
+			});
+		}
+		@Override
+		public String toString() {
+			return "CacheDir [currentFile=" + currentFile + ", cacheDir=" + cacheDir + "]";
+		}
+		public EntryZ newEntry(String title, RootEntryZ root) {
+			return new EntryZ(root, ++maxId, title, true);
+		}
+		public EntryZ newEntry(EntryZ d, RootEntryZ root) {
+			Path src = d.getRoot().getCacheDir().contentPath(d);
+			EntryZ nnew = new EntryZ(root, ++maxId, d.getTitle(), true);
+			nnew.setLastModified(d.getLastModified());
+			
+			if(Files.exists(src)) {
+				try {
+					Files.move(src, contentPath(nnew), StandardCopyOption.REPLACE_EXISTING);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} 
+			return nnew;
 		}
 	}
-	public RootEntryG convert(RootEntry root) throws Exception {
-		RootEntryG t = (RootEntryG) create();
+	public RootEntryZ convert(RootEntry root) throws Exception {
+		RootEntryZ t = (RootEntryZ) create();
 		t.setItems(((Entry)root).getChildren()
-		.stream()
-		.map(this::map).collect(Collectors.toList()));
+				.stream()
+				.map(this::map).collect(Collectors.toList()));
 		t.setModified();
 		return t;
 	}
-	private EntryG map(TreeItem<String> item) {
-		EntryG e = new EntryG(((Entry)item).getId(), (Entry)item);
+	private EntryZ map(TreeItem<String> item) {
+		EntryZ e = new EntryZ(((Entry)item).getId(), (Entry)item);
 		e.setItems(item.getChildren().stream().map(this::map).collect(Collectors.toList()));
 		return e;
 	}

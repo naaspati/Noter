@@ -25,11 +25,12 @@ public class BookmarkRemover {
 		}
 		PatrentChildRelation[] ditems = selectionModel.getSelectedItems().stream()
 				.map(Utils::castEntry)
-				.map(PatrentChildRelation::new)
+				.map(c -> new PatrentChildRelation(tab, c))
 				.toArray(PatrentChildRelation[]::new);
 
 		list.add(ditems);
 		undoDeleteSize.set(list.size());
+		selectionModel.clearSelection();
 
 		for (PatrentChildRelation d : ditems) d.removeChildFromParent();
 	}

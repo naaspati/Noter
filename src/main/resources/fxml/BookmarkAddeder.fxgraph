@@ -1,0 +1,61 @@
+package fxml
+
+import javafx.scene.layout.AnchorPane
+import javafx.application.Platform
+import javafx.beans.value.ChangeListener
+import javafx.beans.value.ObservableValue
+import javafx.beans.value.WeakChangeListener
+import javafx.event.ActionEvent
+import javafx.geometry.Insets
+import javafx.geometry.Pos
+import javafx.scene.Scene
+import javafx.scene.control.Button
+import javafx.scene.control.Label
+import javafx.scene.control.ListView
+import javafx.scene.control.MultipleSelectionModel
+import javafx.scene.control.TextArea
+import javafx.scene.control.TextField
+import javafx.scene.control.TreeItem
+import javafx.scene.control.TreeView
+import javafx.scene.layout.BorderPane
+import javafx.scene.layout.HBox
+import javafx.scene.layout.Priority
+import javafx.scene.layout.VBox
+import javafx.scene.text.Text
+import javafx.scene.text.TextAlignment
+import javafx.stage.Stage
+import javafx.stage.StageStyle
+
+
+dynamic component BookmarkAddeder {
+	Stage {
+		title : "Add New Bookmark",
+		width : 300,
+		height : 400,
+		scene : Scene {
+			stylesheets : location "../css/BookmarkAddeder.css",
+			BorderPane {
+				top : Label id header {wrapText : true, maxWidth : const Double#MAX_VALUE},
+				center : VBox id center{
+					spacing : 10,
+					HBox {
+						spacing : 10,
+						Text {text : "Title", textAlignment : "CENTER"},
+						TextField id titleTf {static hgrow : "ALWAYS", maxWidth : const Double#MAX_VALUE},
+						alignment : "CENTER"
+					},
+					Text {text : "Similar Bookmarks"},
+					ListView id similar {placeholder : Text {text : "NOTHING"}},
+					TextArea id entryPath {editable : false, minHeight : 70, wrapText : true}
+				},
+				bottom : HBox {
+					spacing : 10,
+					Button {text: "ADD", onAction : controllermethod okAction, defaultButton : true},
+					Button {text: "CANCEL", onAction : controllermethod cancelAction, cancelButton : true},
+					alignment : "CENTER_RIGHT",
+					padding : Insets {bottom : 10, left : 10, right : 10, top : 0}
+				} 
+			}
+		}
+	}
+}

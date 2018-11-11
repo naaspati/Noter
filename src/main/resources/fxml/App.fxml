@@ -15,7 +15,7 @@
 <fx:root xmlns:fx="http://javafx.com/fxml" type="Stage">
 
 	<scene>
-		<Scene> 
+		<Scene stylesheets="@../css/App.css"> 
 			<BorderPane fx:id="root"> 
 				<center>
 					<SplitPane fx:id="splitPane"> 

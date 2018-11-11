@@ -25,7 +25,7 @@ public interface RootEntry extends AutoCloseable {
 		if(index < 0)
 			throw new IllegalArgumentException(relativeToChild+" is not a child of "+parent);
 		
-		return addChild(childTitle, parent, index);
+		return addChild(childTitle, parent, index+1);
 	}
 	default Entry addChild(String childTitle, Entry parent) {
 		return addChild(childTitle, parent, Integer.MAX_VALUE);
@@ -41,5 +41,7 @@ public interface RootEntry extends AutoCloseable {
 	 * @return
 	 */
 	List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index);
-	public Collection<Entry> getAllEntries();
+	Collection<Entry> getAllEntries();
+	void addChild(Entry child, Entry parent, int index);
+	void removeFromParent(Entry child);
 }

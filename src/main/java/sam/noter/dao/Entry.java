@@ -27,12 +27,13 @@ public abstract class Entry extends TreeItem<String> {
 
 	protected Supplier<String> contentProxy;
 	protected final ObservableList<TreeItem<String>> items;
-	protected ObservableList<TreeItem<String>> unmodifiable;
+	protected final ObservableList<TreeItem<String>> unmodifiable;
 
 	protected Entry(int id) {
 		super();
 		this.id = id;
 		items = super.getChildren();
+		unmodifiable = FXCollections.unmodifiableObservableList(items); 
 	}
 	protected Entry(int id, String title, String content, long lastModified) {
 		this(id, title);
@@ -40,9 +41,8 @@ public abstract class Entry extends TreeItem<String> {
 		this.lastModified = lastModified;
 	}
 	public Entry(int id, String title) {
-		super(title);
-		this.id = id;
-		items = super.getChildren();
+		this(id);
+		setValue(title);
 	}
 	protected Entry(int id, Entry from) {
 		this(id);
@@ -118,15 +118,9 @@ public abstract class Entry extends TreeItem<String> {
 	protected void notifyParent(ModifiedField field) {
 		parent().childModified(field, this, this);
 	}
-	protected abstract void loadChildren(@SuppressWarnings("rawtypes") List sink);
 
 	@Override
 	public ObservableList<TreeItem<String>> getChildren() {
-		if(unmodifiable == null) {
-			loadChildren(items);
-			unmodifiable = FXCollections.unmodifiableObservableList(items);
-			LOGGER.fine(() -> "CHILDREN LOADED: "+this);
-		}
 		return unmodifiable;
 	}
 	protected void modifiableChildren(Consumer<List<TreeItem<String>>> modify) {
@@ -237,5 +231,4 @@ public abstract class Entry extends TreeItem<String> {
 
 		throw new IllegalStateException("two different entry have same id"+this+", "+obj);
 	}
-
 }

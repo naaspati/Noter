@@ -395,25 +395,23 @@ class DOMLoader {
 	private static WeakAndLazy<StringBuilder> logSB = new WeakAndLazy<>(StringBuilder::new);
 	
 	private void logModification(Entry e) {
-		synchronized(logSB) {
-			StringBuilder sb = logSB.get();
-			sb.setLength(0);
-			
-			sb.append(e).append(" [");
-			if(e.isTitleModified())
-				sb.append("TITLE, ");
-			if(e.isContentModified())
-				sb.append("CONTENT, ");
-			if(e.isChildrenModified())
-				sb.append("CHILDREN, ");
-			sb.append(']');
+		LOGGER.info(() -> {
+			synchronized(logSB) {	
+				StringBuilder sb = logSB.get();
+				sb.setLength(0);
 
-			String s = sb.toString();
-			if(LOGGER.isLoggable(Level.FINE))
-				LOGGER.fine(s);
-			else
-				System.out.println(s);
-		}
+				sb.append(e).append(" [");
+				if(e.isTitleModified())
+					sb.append("TITLE, ");
+				if(e.isContentModified())
+					sb.append("CONTENT, ");
+				if(e.isChildrenModified())
+					sb.append("CHILDREN, ");
+				sb.append(']');
+				
+				return sb.toString();
+			}
+		});
 		
 	}
 	public DOMEntry newEntry(String title) {

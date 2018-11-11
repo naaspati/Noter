@@ -1,8 +1,9 @@
 package sam.noter.bookmark;
 
+import java.util.Collection;
+
 import sam.myutils.MyUtilsCheck;
 import sam.noter.dao.Entry;
-import sam.noter.tabs.Tab;
 import sam.string.TextSearch;
 
 class TitleSearch extends TextSearch<Entry> {
@@ -10,8 +11,8 @@ class TitleSearch extends TextSearch<Entry> {
 	public TitleSearch() {
 		super(w -> w.getTitle().toLowerCase(), 300);
 	}
-	public void start(Tab tab){
-		setAllData(tab.getAllEntries());
+	public void start(Collection<Entry> list){
+		setAllData(list);
 	}
 	@Override
 	public void search(String str) {

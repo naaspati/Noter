@@ -118,7 +118,6 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 		currentTab.addListener(this);
 		root.setTop(getMenubar());
 
-		stage.getScene().getStylesheets().add("css/style.css");
 		loadIcon(stage);
 		showStage(stage);
 		readRecents();

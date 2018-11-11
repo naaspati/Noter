@@ -1,20 +1,23 @@
 package sam.noter.bookmark;
 
 import sam.noter.dao.Entry;
+import sam.noter.tabs.Tab;
 
-@Deprecated
 class PatrentChildRelation {
+	final Tab tab;
 	final Entry parent, child;
-	final int index;
-	PatrentChildRelation(Entry child) {
-		this.parent = (Entry) child.getParent();
+	private int index;
+	
+	PatrentChildRelation(Tab tab, Entry child) {
+		this.parent = child.parent();
 		this.child = child;
-		this.index = parent.indexOf(child);
+		this.tab = tab;
 	}
 	void removeChildFromParent() {
-		//FIXME parent.remove(child);
+		this.index = parent.indexOf(child);
+		tab.removeFromParent(child);
 	}
 	public void addChildToParent() {
-		//FIXME parent.add(index, child);
+		tab.addChild(child, parent, index);
 	}
 }
