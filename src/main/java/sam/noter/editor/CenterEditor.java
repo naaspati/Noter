@@ -94,7 +94,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 	}
 	
 	private void setContent(String text) {
-		this.tab.setContent(item, text);
+		this.item.setContent(text);
 	}
 	@Override
 	public void updateTitle() {

@@ -1,17 +1,18 @@
 package sam.noter.dao.dom;
 
 import java.util.List;
+import java.util.function.Consumer;
 
-import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 import sam.noter.dao.Entry;
+import sam.noter.dao.RootEntry;
 import sam.noter.dao.dom.DOMLoader.DomEntryInit;
 
 class DOMEntry extends Entry {
 	private final DomEntryInit dom;
 	
 	public DOMEntry() {
-		super(-1);
+		super(RootEntry.ROOT_ENTRY_ID);
 		this.dom = null;
 		if(getClass() != RootDOMEntry.class)
 			throw new IllegalAccessError("can on be accessed by "+RootDOMEntry.class);
@@ -27,7 +28,7 @@ class DOMEntry extends Entry {
 		this.lastModified = modified;
 	}
 	public DOMEntry(DomEntryInit dom, String title) {
-		super(dom == null ? -1 : dom.id(), title);
+		super(dom.id(), title);
 		this.dom = dom;
 		this.lastModified = System.currentTimeMillis();
 	}
@@ -58,12 +59,18 @@ class DOMEntry extends Entry {
 	protected void loadChildren(@SuppressWarnings("rawtypes") List sink)  {
 		dom.collectChildren(items);
 	}
-
-	@Override protected boolean setTitle(String title) { return super.setTitle(title); }
-	@Override protected void updateLastmodified() { super.updateLastmodified(); }
-	@Override protected void setLastModified(long lastModified) { super.setLastModified(lastModified); }
-	@Override protected boolean setContent(String content) { return super.setContent(content); }
-	@Override protected ObservableList<TreeItem<String>> getModifiableChildren() { return super.getModifiableChildren(); }
+	@Override public void setTitle(String title) { super.setTitle(title); }
+	@Override public void updateLastmodified() { super.updateLastmodified(); }
+	@Override public void setLastModified(long lastModified) { super.setLastModified(lastModified); }
+	@Override public void setContent(String content) { super.setContent(content); }
+	@Override public void modifiableChildren(Consumer<List<TreeItem<String>>> modify) { super.modifiableChildren(modify); }
+	@SuppressWarnings("rawtypes")
+	@Override protected void addAll(List child, int index) { super.addAll(child, index); }
+	@Override protected void add(Entry child, int index) { super.add(child, index); }
+	@Override protected void clearModified() { super.clearModified(); }
 	
-
+	@Override
+	public boolean isModified() {
+		return dom.isNew() || super.isModified();
+	}
 }

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -29,7 +28,8 @@ import org.xml.sax.SAXException;
 
 import sam.logging.MyLoggerFactory;
 import sam.noter.Utils;
-import sam.noter.dao.EntryField;
+import sam.noter.dao.Entry;
+import sam.reference.WeakAndLazy;
 
 
 @SuppressWarnings("rawtypes")
@@ -301,7 +301,7 @@ class DOMLoader {
 	private Node update(Object s) {
 		DOMEntry d = (DOMEntry)s;
 		if(!d.isModified()) return d.dom().rootNode;
-		log(d);
+		logModification(d);
 
 		DomEntryInit dom = d.dom();
 
@@ -315,13 +315,13 @@ class DOMLoader {
 			updateNode(LAST_MODIFIED, String.valueOf(d.getLastModified()), dom, dom.lastModified);
 			LOGGER.fine(() -> "UPDATE LAST_MODIFIED: "+d);
 		}
-		if(d.isModified(EntryField.TITLE)) {
+		if(d.isTitleModified()) {
 			updateNode(TITLE, d.getTitle(), dom, dom.title);
 			LOGGER.fine(() -> "UPDATE TITLE: "+d);
-		} if(d.isModified(EntryField.CONTENT)){ 
+		} if(d.isContentModified()){ 
 			updateNode(CONTENT, d.getContent(), dom, dom.content);
 			LOGGER.fine(() -> "UPDATE CONTENT: "+d);
-		} if(d.isModified(EntryField.CHILDREN)) {
+		} if(d.isChildrenModified()) {
 			updateChildren(d, d.dom().rootNode, d.dom().children, d.getChildren());
 			LOGGER.fine(() -> "UPDATE CHILDREN: "+d);
 		}
@@ -391,13 +391,30 @@ class DOMLoader {
 
 		return currentChildrenNode;
 	}
-	private void log(DOMEntry d) {
-		if(LOGGER.isLoggable(Level.FINE)) return;
+	
+	private static WeakAndLazy<StringBuilder> logSB = new WeakAndLazy<>(StringBuilder::new);
+	
+	private void logModification(Entry e) {
+		synchronized(logSB) {
+			StringBuilder sb = logSB.get();
+			sb.setLength(0);
+			
+			sb.append(e).append(" [");
+			if(e.isTitleModified())
+				sb.append("TITLE, ");
+			if(e.isContentModified())
+				sb.append("CONTENT, ");
+			if(e.isChildrenModified())
+				sb.append("CHILDREN, ");
+			sb.append(']');
 
-		if(d.dom().isNew())
-			System.out.println(d +" ->  new");
-		else if(d.isModified()) 
-			System.out.println(d+" UPDATED: "+Stream.of(EntryField.values()).filter(d::isModified).reduce(new StringBuilder().append('['), (sb,f) -> sb.append(f).append(", "),  StringBuilder::append).append(']').toString());
+			String s = sb.toString();
+			if(LOGGER.isLoggable(Level.FINE))
+				LOGGER.fine(s);
+			else
+				System.out.println(s);
+		}
+		
 	}
 	public DOMEntry newEntry(String title) {
 		return new DOMEntry(new DomEntryInit(), title);

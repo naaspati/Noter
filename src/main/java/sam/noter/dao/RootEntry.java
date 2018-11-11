@@ -1,10 +1,12 @@
 package sam.noter.dao;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 public interface RootEntry extends AutoCloseable {
+	static final int ROOT_ENTRY_ID = -1;
+	
 	File getJbookPath();
 	void setJbookPath(File path);
 
@@ -15,9 +17,6 @@ public interface RootEntry extends AutoCloseable {
 	default void save() throws Exception {
 		save(getJbookPath());
 	};
-
-	void setTitle(Entry entry, String title);
-	void setContent(Entry entry, String content);
 	
 	void setOnModified(Runnable action);
 	
@@ -42,5 +41,5 @@ public interface RootEntry extends AutoCloseable {
 	 * @return
 	 */
 	List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index);
-	public Map<Integer, Entry> getEntriesMap();
+	public Collection<Entry> getAllEntries();
 }

@@ -148,7 +148,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 				return;
 
 			Entry ti = (Entry) e.getTreeItem();
-			currentTab().setTitle(ti, s);
+			ti.setTitle(s);
 			editor.updateTitle(ti);
 		});
 	}

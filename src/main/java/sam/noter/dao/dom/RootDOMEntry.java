@@ -3,15 +3,11 @@ package sam.noter.dao.dom;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -20,18 +16,16 @@ import org.xml.sax.SAXException;
 
 import sam.myutils.MyUtilsCheck;
 import sam.noter.dao.Entry;
+import sam.noter.dao.ModifiedField;
 import sam.noter.dao.RootEntry;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 class RootDOMEntry extends DOMEntry implements RootEntry {
 
 	protected File jbookPath;
-	protected boolean modified; 
 	protected Runnable onModified;
 	protected DOMLoader dom;
 	protected final TreeMap<Integer, Entry> entryMap = new TreeMap<>();
-	protected final EnumMap<ModificationType, Set<Entry>> modifications = new EnumMap<>(ModificationType.class);
-	protected final Map<Integer, Entry> entryMapunModified = Collections.unmodifiableMap(entryMap);
 
 	public RootDOMEntry() throws ParserConfigurationException {
 		super();
@@ -55,14 +49,11 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 			this.dom = new DOMLoader(this);
 			return;
 		}
-		modified = false;
-		this.dom = new DOMLoader(jbookPath, items, this);
-		resetEntriesMap();
-		notifyModified();
-	}
-	private void resetEntriesMap() {
+		childrenM = false;
 		entryMap.clear();
-		walk(w -> entryMap.put(w.getId(), w));
+		this.dom = new DOMLoader(jbookPath, items, this);
+		notifyModified();
+		childrenM = false;
 	}
 	@Override
 	public void setOnModified(Runnable action) {
@@ -75,7 +66,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 
 	//override default behaviour 
 	@Override protected void loadChildren(List sink) {}
-	@Override public boolean isModified() { return modified; }
+	@Override public boolean isModified() { return childrenM; }
 
 	@Override
 	public void save(File path) throws Exception {
@@ -83,13 +74,16 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 			return;
 
 		dom.save(getChildren(), path);
+		clearModified();
+		entryMap.forEach((i, e) -> cast(e).clearModified());
 		setJbookPath(path);
-		modified = false;
+		childrenM = false;
 		notifyModified();
 	}
 
 	@Override public File getJbookPath() { return jbookPath; }
-	@Override public void setJbookPath(File path) { 
+	@Override 
+	public void setJbookPath(File path) { 
 		jbookPath = path;
 		setValue(jbookPath.getName());
 	}
@@ -116,11 +110,9 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 
 		DOMEntry result = dom.newEntry(d);
 		root.entryMap.remove(d.getId());
-		root.modifications.values()
-		.forEach(set -> set.remove(d));
 
 		if(d.getChildren().isEmpty()) return result;
-		addAll(result, d.getChildren().stream().map(t -> changeRoot(cast(t))).collect(Collectors.toList()), Integer.MAX_VALUE);
+		addAll(result, d.getChildren().stream().map(t -> changeRoot(castNonNull(t))).collect(Collectors.toList()), Integer.MAX_VALUE);
 		return result;
 	}
 	@Override
@@ -141,11 +133,11 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 
 		for (Entry c : childrenToMove) {
 			if(c.parent() != null)
-				cast(c).getRoot().removeFromParent(c);
+				castNonNull(c).getRoot().removeFromParent(c);
 		}
 
 		List<Entry> list = childrenToMove.stream()
-				.map(c -> changeRoot(cast(c)))
+				.map(c -> changeRoot(castNonNull(c)))
 				.collect(Collectors.toList());
 
 		childrenToMove = null;
@@ -153,7 +145,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		return list;
 	}
 	private DOMEntry checkRoot(Entry parent) {
-		DOMEntry d = cast(parent);
+		DOMEntry d = castNonNull(parent);
 		if(parent != this && d.getRoot() != this)
 			throw new IllegalArgumentException("newParent is not part of current root ");
 
@@ -164,79 +156,44 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		return null;
 	}
 	@Override
-	public Map<Integer, Entry> getEntriesMap() {
-		return entryMapunModified;
+	public Collection<Entry> getAllEntries() {
+		return Collections.unmodifiableCollection(entryMap.values());
 	}
-	@Override
-	public void setTitle(Entry entry, String title) {
-		if(castCheckRoot(entry).setTitle(title))
-			modified(ModificationType.TITLE, entry);
-	}
-	private void modified(ModificationType type, Entry entry) {
-		modifications.computeIfAbsent(type, this::treeset).add(entry);
-		modified = true;
-	}
-	@Override
-	public void setContent(Entry entry, String content) {
-		if(castCheckRoot(entry).setContent(content))
-			modified(ModificationType.CONTENT, entry);
-	}
-
-	private static final Comparator<Entry> COMPARATOR = Comparator.comparingInt(e -> e.getId());
-
-	private TreeSet<Entry> treeset(Object ignore){
-		return new TreeSet<>(COMPARATOR); 
-	}
-
-	private boolean removeFromParent(Entry e){
+	private void removeFromParent(Entry e){
 		DOMEntry d = castCheckRoot(e);
 		entryMap.remove(d.getId());
-		return cast(d.parent()).getModifiableChildren().remove(e);
+		castNonNull(d.parent()).modifiableChildren(l -> l.remove(e));
 	}
 
-	//TODO
+	@Override
+	protected void childModified(ModifiedField field, Entry child, Entry modifiedEntry) {
+		childrenM = true;
+		notifyModified();
+	}
 	private void addAll(Entry parent, List child, int index) {
 		DOMEntry p = castCheckRoot(parent);
 		child.forEach(this::castCheckRoot);
-
-		if(index <= 0)
-			p.getModifiableChildren().addAll(0, child);
-		else if(index >= p.size())
-			p.getModifiableChildren().addAll(child);
-		else
-			p.getModifiableChildren().addAll(index, child);
-
-		modified(ModificationType.CHILDREN, p);
-		child.forEach(e -> putEntry(cast(e)));
+		p.addAll(child, index);
+		
+		child.forEach(e -> putEntry(castNonNull(e)));
 	}
 	private void putEntry(DOMEntry e) {
 		entryMap.put(e.getId(), e);
-		if(e.dom().isNew())
-			modified(ModificationType.NEW, e);
 	}
 	private void add(Entry parent, int index, Entry child) {
-		DOMEntry p = castCheckRoot(parent);
-		DOMEntry c = castCheckRoot(child);
-
-		if(index <= 0)
-			p.getModifiableChildren().add(0, c);
-		else if(index >= p.size())
-			p.getModifiableChildren().add(c);
-		else
-			p.getModifiableChildren().add(index, c);
-
-		modified(ModificationType.CHILDREN, p);
-		if(c.dom().isNew()) 
-			modified(ModificationType.NEW, c); 
+		castCheckRoot(parent).add(child, index);
+	}
+	private DOMEntry castNonNull(Object object) {
+		return Objects.requireNonNull(cast(object));
 	}
 	private DOMEntry cast(Object object) {
-		return Objects.requireNonNull((DOMEntry) object);
+		return (DOMEntry) object;
 	}
 	private boolean isThisRoot(Entry c) {
-		return cast(c).getRoot() == this;
+		return castNonNull(c).getRoot() == this;
 	}
 	private DOMEntry castCheckRoot(Object e) {
-		DOMEntry d = cast(e);
+		DOMEntry d = castNonNull(e);
 		if(d.getRoot() != this)
 			throw new IllegalStateException(e+"  is not part of current root");
 

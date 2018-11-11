@@ -7,8 +7,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -213,11 +213,9 @@ public class Tab extends HBox implements RootEntry {
 	 */
 	public void addChild(String title) { addChild(title, (Entry)root); }
 
-	@Override public void setTitle(Entry entry, String title) { root.setTitle(entry, title); }
-	@Override public void setContent(Entry entry, String content) { root.setContent(entry, content); }
 	@Override public Entry addChild(String childTitle, Entry parent) { return root.addChild(childTitle, parent); }
 	@Override public Entry addChild(String title, Entry parent, int index) { return root.addChild(title, parent, index); }
-	@Override public Map<Integer, Entry> getEntriesMap() { return root.getEntriesMap(); }
+	@Override public Collection<Entry> getAllEntries() { return root.getAllEntries(); }
 
 	@Override public void setOnModified(Runnable action) { throw new IllegalAccessError(); }
 	public void walkTree(Walker walker) { ((Entry)root).walkTree(walker); }

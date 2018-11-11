@@ -1,5 +1,7 @@
 package sam.noter.dao;
 
+import static sam.noter.dao.ModifiedField.CONTENT;
+import static sam.noter.dao.ModifiedField.TITLE;
 import static sam.noter.dao.VisitResult.CONTINUE;
 import static sam.noter.dao.VisitResult.SKIP_SIBLINGS;
 import static sam.noter.dao.VisitResult.TERMINATE;
@@ -21,10 +23,11 @@ public abstract class Entry extends TreeItem<String> {
 	final int id;
 	protected String content;
 	protected long lastModified = -1;
+	protected boolean titleM, contentM, childrenM;
 
 	protected Supplier<String> contentProxy;
 	protected final ObservableList<TreeItem<String>> items;
-	private ObservableList<TreeItem<String>> unmodifiable;
+	protected ObservableList<TreeItem<String>> unmodifiable;
 
 	protected Entry(int id) {
 		super();
@@ -41,20 +44,36 @@ public abstract class Entry extends TreeItem<String> {
 		this.id = id;
 		items = super.getChildren();
 	}
+	protected Entry(int id, Entry from) {
+		this(id);
+		this.content = from.getContent();
+		super.setValue(from.getTitle());
+		this.lastModified = from.getLastModified();
+		
+		titleM = true;
+		contentM = true;
+		childrenM = true;
+	}
 	public int getId() {
 		return id;
 	}
 	public void setContentProxy(Supplier<String> contentProxy) {
 		this.contentProxy = contentProxy;
 	}
-
-	protected boolean setTitle(String title) {
-		if(!Objects.equals(title, getTitle())) {
+	protected void clearModified() {
+		titleM = false;
+		contentM = false;
+	}
+	public void setTitle(String title) {
+		if(titleM || notEqual(title, getTitle())) {
+			super.setValue(title);
+			titleM = true;
+			notifyParent(TITLE);
 			LOGGER.fine(() -> "TITLE MODIFIED: "+this);
-			setValue(title);
-			return true;
 		}
-		return false;
+	}
+	protected boolean notEqual(String s1, String s2) {
+		return !Objects.equals(s1, s2);
 	}
 	public long getLastModified() {
 		return lastModified;
@@ -71,13 +90,14 @@ public abstract class Entry extends TreeItem<String> {
 		return content;
 	}
 
-	protected  boolean setContent(String content) {
-		if(!Objects.equals(content, this.content)) {
+	public  void setContent(String content) {
+		if(contentM || notEqual(content, this.content)) {
 			this.content = content;
+			contentM = true;
 			updateLastmodified();
-			return true;
+			notifyParent(CONTENT);
+			LOGGER.fine(() -> "CONTENT MODIFIED: "+this);
 		}
-		return false;
 	}
 
 	/* ###############################################
@@ -85,7 +105,19 @@ public abstract class Entry extends TreeItem<String> {
 	 * ###############################################
 	 */
 
-	
+	/**
+	 * 
+	 * @param field -> name of field which is modified in modifiedEntry  
+	 * @param child -> child of current parent which propogated the change notification 
+	 * @param modifiedEntry
+	 */
+	protected void childModified(ModifiedField field, Entry child, Entry modifiedEntry) {
+		childrenM = true;
+		parent().childModified(field, this, modifiedEntry);
+	}
+	protected void notifyParent(ModifiedField field) {
+		parent().childModified(field, this, this);
+	}
 	protected abstract void loadChildren(@SuppressWarnings("rawtypes") List sink);
 
 	@Override
@@ -97,10 +129,12 @@ public abstract class Entry extends TreeItem<String> {
 		}
 		return unmodifiable;
 	}
-	protected ObservableList<TreeItem<String>> getModifiableChildren() {
-		return items;
+	protected void modifiableChildren(Consumer<List<TreeItem<String>>> modify) {
+		modify.accept(items);
+		childrenM = true;
+		notifyParent(ModifiedField.CHILDREN);
 	}
-	
+
 	/* ###############################################
 	 *                    GENERAL
 	 * ###############################################
@@ -115,14 +149,14 @@ public abstract class Entry extends TreeItem<String> {
 	public boolean isEmpty() {
 		return getChildren().isEmpty();
 	}
-	
+
 	public void walk(Consumer<Entry> consumer) {
 		walkTree(w -> {
 			consumer.accept(w);
 			return VisitResult.CONTINUE;
 		});
 	}
-	
+
 	public void walkTree(Walker walker) {
 		walk0(this, walker);
 	}
@@ -158,4 +192,50 @@ public abstract class Entry extends TreeItem<String> {
 		String s = parent().toTreeString(); 
 		return s == null ? getTitle() : s +" > "+getTitle();
 	}
+	public boolean isModified() {
+		return titleM || contentM || childrenM;
+	}
+	public boolean isTitleModified() {
+		return titleM;
+	}
+	public boolean isContentModified() {
+		return contentM;
+	}
+	public boolean isChildrenModified() {
+		return childrenM;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected void addAll(@SuppressWarnings("rawtypes") List child, int index) {
+		modifiableChildren(list -> {
+			if(index <= 0)
+				list.addAll(0, child);
+			else if(index >= size())
+				list.addAll(child);
+			else
+				list.addAll(index, child);
+		});
+	}
+	protected void add(Entry child, int index) {
+		modifiableChildren(list -> {
+			if(index <= 0)
+				list.add(0, child);
+			else if(index >= size())
+				list.add(child);
+			else
+				list.add(index, child);			
+		});
+	}
+	@Override
+	public int hashCode() {
+		return id;
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if(obj == this) return true;
+		if(obj == null || obj.getClass() != getClass() || this.id != ((Entry)obj).id) return false;
+
+		throw new IllegalStateException("two different entry have same id"+this+", "+obj);
+	}
+
 }

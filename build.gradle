@@ -8,7 +8,7 @@ repositories {
 
 dependencies {
   compile files('myutils.jar')
-  compile 'args4j:args4j:2.33'
+  // compile 'args4j:args4j:2.33'
   compile 'org.json:json:20180130'
   compile 'org.xerial:sqlite-jdbc:3.7.2'
   
@@ -28,16 +28,20 @@ run {
     environment.session_file = /app_data\session.properties/
     environment['dynamic.menus.file'] = /app_data\menus.json/
     environment['plugins_dir']=System.env.ECLIPSE_WORKPLACE+/\javafx\Noter-plugins\bin/
-    systemProperties['java.util.logging.config.file'] = file('logging.properties').absolutePath
+    // systemProperties['java.util.logging.config.file'] = file('logging.properties').absolutePath
     systemProperties['java.io.tmpdir'] = file('java_temp').absolutePath
     args new File('dummy.jbook').absolutePath
     
     workingDir appdir.parent
     
 }
+task deleteJars {
+  delete fileTree(appdir) {
+    include '*.jar'
+  }
+}
 
-task install(type: Copy, dependsOn:installDist) {
-  throw new Exception('install task is disabled')
+task install_0(type: Copy, dependsOn:[installDist, deleteJars]) {
   
   def libdir = file(new File(installDist.destinationDir, 'lib')) 
   from libdir
@@ -75,6 +79,6 @@ jar {
   exclude 'fxml/*.fxgraph'
 }
 
-defaultTasks 'install'
+//defaultTasks 'install'
 
 

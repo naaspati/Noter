@@ -11,7 +11,7 @@ class TitleSearch extends TextSearch<Entry> {
 		super(w -> w.getTitle().toLowerCase(), 300);
 	}
 	public void start(Tab tab){
-		setAllData(tab.getEntriesMap().values());
+		setAllData(tab.getAllEntries());
 	}
 	@Override
 	public void search(String str) {

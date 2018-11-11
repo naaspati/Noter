@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-import org.kohsuke.args4j.CmdLineException;
 
 import sam.config.Session;
 import sam.io.serilizers.StringReader2;
@@ -31,7 +30,7 @@ public class FilesLookup {
 	// List<Pair<String, Path>> allFiles;
 	// String defaultDir;
 
-	public List<File> parse(List<String> args) throws CmdLineException, IOException {
+	public List<File> parse(List<String> args) throws IOException {
 		if(args.isEmpty()) 
 			return Collections.emptyList();
 		
