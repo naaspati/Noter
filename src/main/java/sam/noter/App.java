@@ -232,7 +232,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 							sb.append(e.toTreeString());							
 						}
 					});
-					FxClipboard.copyToClipboard(sb.toString());
+					FxClipboard.setString(sb.toString());
 
 					FxAlert.alertBuilder(AlertType.INFORMATION)
 					.expandableText(sb)
