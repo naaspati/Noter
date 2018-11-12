@@ -111,13 +111,14 @@ public class RootEntryZFactory implements RootEntryFactory {
 	private CacheDir cacheFile(Path file) throws IOException {
 		file =  file == null ? null : file.normalize().toAbsolutePath();
 		String str = pathToCacheDir.get(file);
-		CacheDir d = new CacheDir(file, str == null ? newCacheDir() : temp_dir.resolve(str), pathToCacheDir);
+		CacheDir d = new CacheDir(file, str == null ? newCacheDir(file) : temp_dir.resolve(str), pathToCacheDir);
 		return d;
 	}
-	private Path newCacheDir() throws IOException {
-		Path p = temp_dir.resolve(String.valueOf(System.currentTimeMillis()));
+	private Path newCacheDir(Path file) throws IOException {
+		String s = file == null ? "" : "-"+file.getFileName().toString(); 
+		Path p = temp_dir.resolve(System.currentTimeMillis()+s);
 		while(Files.exists(p))
-			p = temp_dir.resolve(String.valueOf(System.currentTimeMillis()+(int)(Math.random()*100)));
+			p = temp_dir.resolve(System.currentTimeMillis()+(int)(Math.random()*100)+s);
 		Files.createDirectories(p);
 		return p;
 	}

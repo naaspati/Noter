@@ -56,7 +56,7 @@ task install(type: Copy, dependsOn:[installDist, deleteJars]) {
   set dynamic.menus.file=app_data\\menus.json
   set plugins_dir=%eclipse_workplace%\\javafx\\Noter-plugins\\bin
   set backup_dir=app_data\\java_temp
-  rem SET JAVA_OPTS=-Djava.util.logging.config.file=app_data\\logging.properties
+  SET JAVA_OPTS=-Djava.util.logging.config.file=app_data\\logging.properties
 
   cd /d %~dp0..
   

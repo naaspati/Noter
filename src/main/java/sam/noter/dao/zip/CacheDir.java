@@ -135,7 +135,11 @@ class CacheDir implements AutoCloseable {
 	}
 	public String getContent(EntryZ e) throws IOException {
 		Path p = contentPath(e);
-		return Files.notExists(p) ? null : StringReader2.getText(p);
+		if(Files.notExists(p))
+			return null;
+		String  s = StringReader2.getText(p);
+		LOGGER.fine(() -> "CONTENT LOADED: "+e);
+		return s;
 	}
 	public void save(RootEntryZ root, Path file) throws IOException {
 		if(!root.isModified()) return;
@@ -230,8 +234,7 @@ class CacheDir implements AutoCloseable {
 		EntryZ nnew = new EntryZ(root, ++maxId, d.getTitle(), true);
 		nnew.setLastModified(d.getLastModified());
 
-		if(Files.exists(src)) 
-			Util.hide(() -> Files.move(src, contentPath(nnew), StandardCopyOption.REPLACE_EXISTING));
+		move(src, contentPath(nnew));
 		return nnew;
 	}
 
@@ -325,6 +328,7 @@ class CacheDir implements AutoCloseable {
 	private void saveLastModified() throws IOException {
 		if(notExists(currentFile)) return;
 		LongSerializer.write(currentFile.toFile().lastModified(), lastModified());
+		StringWriter2.setText(this.root.resolve("file"), currentFile.toString());
 	}
 	@Override
 	public void close() throws Exception {
