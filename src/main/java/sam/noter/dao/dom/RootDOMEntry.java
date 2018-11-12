@@ -1,8 +1,9 @@
 package sam.noter.dao.dom;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -24,7 +25,7 @@ import sam.noter.dao.RootEntry;
 @SuppressWarnings({"unchecked", "rawtypes"})
 class RootDOMEntry extends DOMEntry implements RootEntry {
 
-	protected File jbookPath;
+	protected Path jbookPath;
 	protected Runnable onModified;
 	protected DOMLoader dom;
 	protected final TreeMap<Integer, Entry> entryMap = new TreeMap<>();
@@ -33,11 +34,11 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		super();
 		this.dom = new DOMLoader(this);
 	}
-	public RootDOMEntry(File jbookPath) throws IOException, ParserConfigurationException, SAXException {
+	public RootDOMEntry(Path jbookPath) throws IOException, ParserConfigurationException, SAXException {
 		super();
 		Objects.requireNonNull(jbookPath, "Path to .jbook cannot be null");
-		if(!jbookPath.exists()) throw new FileNotFoundException("File not found: "+jbookPath);
-		if(jbookPath.isDirectory()) throw new IOException("Not a File:"+jbookPath);
+		if(Files.notExists(jbookPath)) throw new FileNotFoundException("Path not found: "+jbookPath);
+		if(Files.isDirectory(jbookPath)) throw new IOException("Not a Path:"+jbookPath);
 
 		setJbookPath(jbookPath);
 		reload();
@@ -53,7 +54,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		}
 		childrenM = false;
 		entryMap.clear();
-		this.dom = new DOMLoader(jbookPath, items, this);
+		this.dom = new DOMLoader(jbookPath.toFile(), items, this);
 		walk(w -> entryMap.put(w.getId(), w));
 		notifyModified();
 		childrenM = false;
@@ -74,11 +75,11 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	@Override public boolean isModified() { return childrenM; }
 
 	@Override
-	public void save(File path) throws Exception {
+	public void save(Path path) throws Exception {
 		if(!isModified() && jbookPath != null)
 			return;
 
-		dom.save(getChildren(), path);
+		dom.save(getChildren(), path.toFile());
 		clearModified();
 		entryMap.forEach((i, e) -> cast(e).clearModified());
 		setJbookPath(path);
@@ -86,11 +87,11 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		notifyModified();
 	}
 
-	@Override public File getJbookPath() { return jbookPath; }
+	@Override public Path getJbookPath() { return jbookPath; }
 	@Override 
-	public void setJbookPath(File path) { 
+	public void setJbookPath(Path path) { 
 		jbookPath = path;
-		setValue(jbookPath.getName());
+		setValue(jbookPath.getFileName().toString());
 	}
 	@Override public void close() throws Exception {/* does nothing */}
 
@@ -109,22 +110,11 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		if(parent == child)
 			throw new IllegalArgumentException("child and parent are same Entry");
 	}
-	private DOMEntry changeRoot(DOMEntry d) {
-		RootDOMEntry root = d.getRoot(); 
-		if(root == this) return d;
-
-		DOMEntry result = dom.newEntry(d);
-		root.entryMap.remove(d.getId());
-
-		if(d.getChildren().isEmpty()) return result;
-		addAll(result, d.getChildren().stream().map(t -> changeRoot(castNonNull(t))).collect(Collectors.toList()), Integer.MAX_VALUE);
-		return result;
-	}
 	@Override
 	public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) {
 		if(MyUtilsCheck.isEmpty(childrenToMove)) return Collections.emptyList();
 
-		DOMEntry parent = castCheckRoot(newParent);
+		DOMEntry parent = check(newParent);
 
 		if(childrenToMove.stream().allMatch(c -> castNonNull(c).getRoot() == this)) {
 			childrenToMove.stream()
@@ -141,13 +131,40 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 				castNonNull(c).getRoot().removeFromParent(c);
 		}
 
-		List<Entry> list = childrenToMove.stream()
-				.map(c -> changeRoot(castNonNull(c)))
-				.collect(Collectors.toList());
+		List<Entry> list = changeRoot(childrenToMove);
 
 		childrenToMove = null;
 		addAll(newParent, list, index);
 		return list;
+	}
+	@Override
+	RootDOMEntry getRoot() {
+		return this;
+	}
+	private DOMEntry check(Object c) {
+		Objects.requireNonNull(c);
+		DOMEntry d = (DOMEntry)c;
+		if(d.getRoot() != this)
+			throw new IllegalStateException(d+"  is not part of current root");
+		
+		return d;
+	}
+	private List<Entry> changeRoot(List<?> list) {
+		return list.stream()
+		.map(c -> changeRoot(castNonNull(c)))
+		.collect(Collectors.toList());
+	}
+	private DOMEntry changeRoot(DOMEntry d) {
+		RootDOMEntry root = d.getRoot(); 
+		if(root == this) return d;
+
+		DOMEntry result = dom.newEntry(d);
+		root.entryMap.remove(d.getId());
+
+		List list = d.getChildren(); 
+		if(list.isEmpty()) return result;
+		addAll(result, changeRoot(list), Integer.MAX_VALUE);
+		return result;
 	}
 	@Override
 	public String toTreeString() {
@@ -165,8 +182,8 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	@Override protected void notifyParent(ModifiedField field) { }
 	
 	private void addAll(Entry parent, List child, int index) {
-		DOMEntry p = castCheckRoot(parent);
-		child.forEach(this::castCheckRoot);
+		DOMEntry p = check(parent);
+		child.forEach(this::check);
 		p.addAll(child, index);
 		
 		child.forEach(e -> putEntry(castNonNull(e)));
@@ -180,25 +197,19 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	private DOMEntry cast(Object object) {
 		return (DOMEntry) object;
 	}
-	private DOMEntry castCheckRoot(Object e) {
-		DOMEntry d = castNonNull(e);
-		if(d != this && d.getRoot() != this)
-			throw new IllegalStateException(e+"  is not part of current root");
-
-		return d;
-	}
 	@Override
 	public void addChild(Entry child, Entry parent, int index) {
-		DOMEntry c = castCheckRoot(child);
-		DOMEntry p = castCheckRoot(parent);
+		DOMEntry c = check(child);
+		DOMEntry p = check(parent);
+		
 		checkIfSame(parent, child);
 		p.add(c, index);
 	}
 	@Override
 	public void removeFromParent(Entry e) {
-		DOMEntry d = castCheckRoot(e);
+		DOMEntry d = check(e);
 		entryMap.remove(d.getId());
-		castNonNull(d.parent()).modifiableChildren(l -> l.remove(e));
+		cast(d.parent()).modifiableChildren(l -> l.remove(e));
 	}
 }
 

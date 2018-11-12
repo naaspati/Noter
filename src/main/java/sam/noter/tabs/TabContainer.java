@@ -3,6 +3,7 @@ package sam.noter.tabs;
 import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -134,12 +135,12 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		addTab(tab, true);
 	}
 
-	public void addTabs(List<File> files) {
+	public void addTabs(List<Path> files) {
 		if(MyUtilsCheck.isEmpty(files))
 			return;
 
 		int index = tabs.size();
-		for (File file : files) {
+		for (Path file : files) {
 			try {
 				addTab(new Tab(file, onSelect), false);
 			} catch (Exception  e) {
@@ -175,6 +176,11 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		tabs.remove(tab);
 		int index = tabsBox.getChildren().indexOf(tab);
 		tabsBox.getChildren().remove(index);
+		try {
+			tab.close();
+		} catch (Exception e) {
+			FxAlert.showErrorDialog(null, null, e);
+		}
 
 		if(!tab.isActive())
 			return;
@@ -223,7 +229,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		for (Tab tab : tabs)
 			tab.save(false);
 	}
-	public List<File> getJbookPaths() {
+	public List<Path> getJbookPaths() {
 		return tabs.stream().map(Tab::getJbookPath)
 				.filter(Objects::nonNull)
 				.collect(Collectors.toList());
@@ -233,9 +239,9 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		tabs.forEach(action);
 	}
 
-	public void open(List<File> jbookPath, Menu recentsMenu)  {
+	public void open(List<Path> jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
-			File file = Utils.chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
+			Path file = Utils.chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
 
 			if(file == null)
 				return;
@@ -244,7 +250,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		}
 
 		addTabs(jbookPath);
-		List<File> files = jbookPath;
+		List<Path> files = jbookPath;
 
 		recentsMenu.getItems()
 		.removeIf(mi -> files.contains(mi.getUserData()));

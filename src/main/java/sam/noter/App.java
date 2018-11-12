@@ -8,7 +8,6 @@ import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
 import static sam.noter.Utils.APP_DATA;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
@@ -77,7 +76,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 
 	private BooleanBinding currentTabNull;
 
-	private final SimpleObjectProperty<File> currentFile = new SimpleObjectProperty<>();
+	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
 	private WeakReference<SearchBox> weakSearchBox = new WeakReference<SearchBox>(null);
 
@@ -122,7 +121,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 		showStage(stage);
 		readRecents();
 
-		List<File> files  = new FilesLookup().parse(getParameters().getRaw());
+		List<Path> files  = new FilesLookup().parse(getParameters().getRaw());
 		tabsContainer.addTabs(files);
 	}
 
@@ -139,8 +138,8 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 		Files.lines(p)
 		.map(String::trim)
 		.filter(s -> !s.isEmpty())
-		.map(File::new)
-		.filter(File::exists)
+		.map(Paths::get)
+		.filter(Files::exists)
 		.distinct()
 		.map(this::recentsMenuItem)
 		.forEach(recentsMenu.getItems()::add);
@@ -170,7 +169,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 			e.consume();
 		});
 	}
-	private MenuItem recentsMenuItem(File path) {
+	private MenuItem recentsMenuItem(Path path) {
 		MenuItem mi =  menuitem(path.toString(), e -> tabsContainer.open(Collections.singletonList(path), recentsMenu));
 		mi.getStyleClass().add("recent-mi");
 		mi.setUserData(path);
@@ -335,7 +334,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 		currentFile.set(b ? null : newTab.getJbookPath());
 
 		if(oldValue == null) return;
-		File p = oldValue.getJbookPath();
+		Path p = oldValue.getJbookPath();
 		if(p == null)
 			return;
 

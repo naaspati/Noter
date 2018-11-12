@@ -1,28 +1,27 @@
 package sam.noter.dao.zip;
 
-import java.io.File;
+import static sam.myutils.MyUtilsCheck.isNotEmpty;
+
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import sam.myutils.MyUtilsCheck;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.RootEntry;
-import sam.noter.dao.zip.RootEntryZFactory.CacheDir;
 
 class RootEntryZ extends EntryZ implements RootEntry {
 	private CacheDir cacheDir;
 	private Runnable onModified;
-	private HashSet<Entry> entries;
-	private List<Entry> removed;
+	private HashMap<Integer, Entry> entries;
+	private HashMap<Entry, Path> removed;
+	private boolean disableNotify;
 
 	public RootEntryZ(CacheDir cacheDir) throws Exception {
 		super(null, RootEntry.ROOT_ENTRY_ID, "ROOT", false);
@@ -30,16 +29,16 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		reload();
 	}
 
-	@Override public void close() throws Exception {/* DOES  NOTHING */ }
+	@Override public void close() throws Exception {cacheDir.close(); }
 
 	@Override
-	public File getJbookPath() {
-		return cacheDir == null ? null : cacheDir.getSourceFile() == null ? null : cacheDir.getSourceFile().toFile();
+	public Path getJbookPath() {
+		return cacheDir == null ? null : cacheDir.getSourceFile() == null ? null : cacheDir.getSourceFile();
 	}
 	@Override
-	public void setJbookPath(File path) {
+	public void setJbookPath(Path path) {
 		Objects.requireNonNull(path);
-		cacheDir.setSourceFile(path.toPath());
+		cacheDir.setSourceFile(path);
 	}
 
 	@Override
@@ -52,33 +51,40 @@ class RootEntryZ extends EntryZ implements RootEntry {
 
 	@Override
 	public void reload() throws Exception {
-		setItems(cacheDir.loadEntries(this));
+		disableNotify = true;
+		cacheDir.loadEntries(this);
+		disableNotify = false;
+		onModified();
 	}
+	private void put(Entry e) {
+		entries.put(e.getId(), e);
+	}
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public void setItems(List<EntryZ> items) {
+	public void setItems(List items) {
 		this.items.setAll(items);
-		entries = new HashSet<>(entries == null ? 50 : entries.size()+10);
-		walk(entries::add);
+		entries = new HashMap<>(entries == null ? 50 : entries.size()+10);
+		entries.clear();
+		walk(this::put);
 		childrenM = false;
 		onModified();
 	}
 	@Override
-	public void save(File file) throws Exception {
+	public void save(Path file) throws Exception {
 		cacheDir.save(this, file);
-		entries.forEach(e -> cast(e).clearModified());
 		childrenM = false;
+		walk(w -> cast(w).clearModified());
 		onModified();
 	}
 	private EntryZ cast(Entry e) {
 		return (EntryZ)e;
 	}
-
 	@Override
 	public void setOnModified(Runnable onModified) {
 		this.onModified = onModified;
 	}
 	private void onModified() {
-		if(onModified != null) onModified.run();
+		if(!disableNotify && onModified != null) onModified.run();
 	}
 	@Override
 	protected void childModified(ModifiedField field, Entry child, Entry modifiedEntry) {
@@ -89,7 +95,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 
 	@Override
 	public Collection<Entry> getAllEntries() {
-		return Collections.unmodifiableSet(entries);
+		return Collections.unmodifiableCollection(entries.values());
 	}
 
 	@Override
@@ -103,66 +109,66 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) {
 		if(MyUtilsCheck.isEmpty(childrenToMove)) return Collections.emptyList();
 
-		EntryZ parent = castCheckRoot(newParent);
+		EntryZ parent = check(newParent);
 
 		if(childrenToMove.stream().allMatch(c -> castNonNull(c).getRoot() == this)) {
 			childrenToMove.stream()
 			.peek(e -> checkIfSame(parent, e))
 			.collect(Collectors.groupingBy(Entry::parent))
 			.forEach((p, children) -> cast(p).modifiableChildren(l -> l.removeAll(children)));
-			
+
 			parent.addAll(childrenToMove, index);
 			return childrenToMove;
 		}
-		
+
 		childrenToMove.stream()
 		.peek(e -> checkIfSame(parent, e))
 		.collect(Collectors.groupingBy(e -> castNonNull(e).getRoot()))
-		.forEach((root, children) -> root.entries.removeAll(children));
-		
+		.forEach((root, children) -> children.forEach(e -> root.entries.remove(e.getId())));
+
 		childrenToMove.stream()
-		.peek(e -> checkIfSame(parent, e))
 		.collect(Collectors.groupingBy(Entry::parent))
 		.forEach((p, childrn) -> castNonNull(p).modifiableChildren(list -> list.removeAll(childrn)));
 
-		List<Entry> list = childrenToMove.stream()
-				.map(c -> changeRoot(castNonNull(c)))
-				.peek(entries::add)
-				.collect(Collectors.toList());
+		List<Entry> list = changeRoot(childrenToMove);
 
 		childrenToMove = null;
 		cast(newParent).addAll(list, index);
 		return list;
 	}
-	
+
 	private EntryZ changeRoot(EntryZ d) {
 		RootEntryZ root = cast(d).getRoot(); 
 		if(root == this) return d;
 
 		EntryZ result = cacheDir.newEntry(d, this);
-		root.entries.remove(d);
+		root.entries.remove(d.getId());
 
 		if(d.getChildren().isEmpty()) return result;
-		result.modifiableChildren(list -> list.addAll(d.getChildren().stream().map(t -> changeRoot(castNonNull(t))).collect(Collectors.toList())));
+		result.modifiableChildren(list -> list.addAll(changeRoot(d.getChildren())));
 		return result;
 	}
-	
+	private List<Entry> changeRoot(List<?> children) {
+		return children.stream()
+				.map(t -> changeRoot(castNonNull(t)))
+				.peek(this::put)
+				.collect(Collectors.toList());
+	}
+
 	private void checkIfSame(Entry parent, Entry child) {
 		if(parent == child)
 			throw new IllegalArgumentException("child and parent are same Entry");
 	}
-	
+
 	@Override
 	public void addChild(Entry child, Entry parent, int index) {
-		EntryZ c = castCheckRoot(child);
-		EntryZ p = castCheckRoot(parent);
+		EntryZ c = check(child);
+		EntryZ p = check(parent);
 		checkIfSame(p, c);
-		
-		
-		entries.add(c);
-		if(!MyUtilsCheck.isEmpty(removed))
-			removed.remove(child);
-		
+
+		put(c);
+		if(isNotEmpty(removed))
+			Util.hide(() -> cacheDir.restore(c, removed.remove(c)));
 		p.add(c, index);
 	}
 	private EntryZ castNonNull(Object object) {
@@ -171,10 +177,14 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	private EntryZ cast(Object object) {
 		return (EntryZ) object;
 	}
-	
-	private EntryZ castCheckRoot(Object e) {
+
+	@Override
+	public RootEntryZ getRoot() {
+		return this;
+	}
+	private EntryZ check(Object e) {
 		EntryZ d = castNonNull(e);
-		if(d != this && d.getRoot() != this)
+		if(d.getRoot() != this)
 			throw new IllegalStateException(e+"  is not part of current root");
 
 		return d;
@@ -182,20 +192,23 @@ class RootEntryZ extends EntryZ implements RootEntry {
 
 	@Override
 	public void removeFromParent(Entry child) {
-		EntryZ d = castCheckRoot(child);
-		if(removed == null)
-			removed = new ArrayList<>();
-		entries.remove(d);
-		removed.add(d);
+		EntryZ d = check(child);
+		
+		Path removeId = Util.get(() -> cacheDir.remove(d), null);
+		if(removeId != null) {
+			if(removed == null)
+				removed = new HashMap<>();
+			removed.put(d, removeId);
+		}
+		entries.remove(d.getId());
 		castNonNull(d.parent()).modifiableChildren(l -> l.remove(d));
 	}
-
-	 String getContent(EntryZ e) throws IOException {
+	String getContent(EntryZ e) throws IOException {
 		return cacheDir.getContent(e);
 	}
 
 	public CacheDir getCacheDir() {
 		return cacheDir;
 	}
-	
+
 }

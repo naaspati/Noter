@@ -4,6 +4,14 @@ import static sam.myutils.MyUtilsCheck.isEmpty;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -26,6 +34,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import sam.io.fileutils.FilesUtilsIO;
+import sam.io.serilizers.LongSerializer;
 import sam.logging.MyLoggerFactory;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
@@ -35,6 +45,20 @@ import sam.reference.WeakAndLazy;
 @SuppressWarnings("rawtypes")
 class DOMLoader {
 	private static final Logger LOGGER = MyLoggerFactory.logger(DOMLoader.class);
+	private static final Path BACKUP_DIR = Utils.BACKUP_DIR.resolve(DOMLoader.class.getName()+"/"+LocalDate.now());
+	
+	static {
+		BACKUP_DIR.toFile().mkdirs();
+		Path path = BACKUP_DIR.resolveSibling("backup.schedule");
+		try {
+			if(Files.exists(path) && LongSerializer.read(path) >= System.currentTimeMillis()) {
+				LongSerializer.write(System.currentTimeMillis()+Duration.ofDays(7).toMillis(), path);
+				Utils.addOnStop(() -> backupClean());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 
 	private static final String ID = "id";
@@ -141,9 +165,38 @@ class DOMLoader {
 		maxIdNode.setTextContent(String.valueOf(maxId));
 		updateChildren("ROOT", docRootNode, entriesNode, list);
 
-		Utils.createBackup(target);
+		createBackup(target);
 		write(doc, target);
 	}
+	
+
+	public static void createBackup(File file) {
+		if(file == null || !file.exists())
+			return;
+		
+		try {
+			Files.copy(file.toPath(), BACKUP_DIR.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')), StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			LOGGER.log(Level.WARNING, "failed to backup: "+file, e);
+		}
+	}
+
+
+	private static void backupClean() {
+		File backup = BACKUP_DIR.getParent().toFile();
+		if(!backup.exists()) return;
+		
+		LocalDateTime now = LocalDateTime.now();
+		
+		for (String s : backup.list()) {
+			LocalDate date = LocalDate.parse(s);
+			if(Duration.between(date.atStartOfDay(), now).toDays() > 3){
+				FilesUtilsIO.delete(new File(backup, s));
+				LOGGER.info("DELETE backup(s): "+s);
+			}
+		}
+	}
+	
 
 	private void write(Document doc, File target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
 		Transformer transformer = 

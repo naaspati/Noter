@@ -102,7 +102,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			return;
 		cache.remove(item);
 		super.updateTitle();
-		title.setText("Modified: "+time(item.getLastModified()));
+		title.setText("id: "+item.id +", Modified: "+time(item.getLastModified()));
 	}
 	public void consume(Consumer<TextArea> e) {
 		e.accept(content);

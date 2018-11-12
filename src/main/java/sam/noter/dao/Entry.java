@@ -20,7 +20,7 @@ import sam.logging.MyLoggerFactory;
 public abstract class Entry extends TreeItem<String> {
 	private static final Logger LOGGER = MyLoggerFactory.logger(Entry.class);
 
-	final int id;
+	public final int id;
 	protected String content;
 	protected long lastModified = -1;
 	protected boolean titleM, contentM, childrenM;
@@ -49,7 +49,7 @@ public abstract class Entry extends TreeItem<String> {
 		this.content = from.getContent();
 		super.setValue(from.getTitle());
 		this.lastModified = from.getLastModified();
-		
+
 		titleM = true;
 		contentM = true;
 		childrenM = true;
@@ -63,6 +63,7 @@ public abstract class Entry extends TreeItem<String> {
 	protected void clearModified() {
 		titleM = false;
 		contentM = false;
+		childrenM = false;
 	}
 	public void setTitle(String title) {
 		if(titleM || notEqual(title, getTitle())) {
@@ -116,7 +117,9 @@ public abstract class Entry extends TreeItem<String> {
 		parent().childModified(field, this, modifiedEntry);
 	}
 	protected void notifyParent(ModifiedField field) {
-		parent().childModified(field, this, this);
+		Entry p = parent();
+		if(p != null) 
+			p.childModified(field, this, this);
 	}
 
 	@Override
@@ -147,7 +150,7 @@ public abstract class Entry extends TreeItem<String> {
 	public void walk(Consumer<Entry> consumer) {
 		walkTree(w -> {
 			consumer.accept(w);
-			return VisitResult.CONTINUE;
+			return CONTINUE;
 		});
 	}
 

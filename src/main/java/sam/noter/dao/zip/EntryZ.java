@@ -1,5 +1,7 @@
 package sam.noter.dao.zip;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
@@ -10,7 +12,7 @@ import sam.noter.dao.Entry;
 class EntryZ extends Entry {
 	private final RootEntryZ root;
 	private boolean contentLoaded;
-	
+
 	public EntryZ(RootEntryZ dir, int id, long lastModified, String title) {
 		super(id, title, null, lastModified);
 		this.root = dir;
@@ -27,7 +29,7 @@ class EntryZ extends Entry {
 			contentLoaded = true;
 		}
 	}
-	
+
 	public EntryZ(int id, Entry from) {
 		super(id, from);
 		root = null;
@@ -38,11 +40,8 @@ class EntryZ extends Entry {
 	public String getContent() {
 		if(!contentLoaded) {
 			contentLoaded = true;
-			try {
-				content = root.getContent(this);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			if(content == null) 
+				content = Util.get(() -> root.getContent(this), content);
 		}
 		return super.getContent();
 	}
@@ -62,7 +61,29 @@ class EntryZ extends Entry {
 	public void setLastModified(long lastModified) {
 		super.setLastModified(lastModified);
 	}
-	@Override protected void addAll(List child, int index) { super.addAll(child, index); }
+	@Override protected void addAll(@SuppressWarnings("rawtypes") List child, int index) { super.addAll(child, index); }
 	@Override protected void add(Entry child, int index) { super.add(child, index); }
 	@Override protected void modifiableChildren(Consumer<List<TreeItem<String>>> modify) { super.modifiableChildren(modify); }
+
+	public void write(DataOutputStream dos) throws IOException {
+		dos.writeInt(id);
+		dos.writeLong(lastModified);
+		String s = getTitle();
+		dos.writeUTF(s == null ? "" : s);
+		
+		dos.writeInt(items.size());
+		if(items.isEmpty()) return;
+		
+		for (TreeItem<String> t : items)
+			((EntryZ)t).write(dos);
+	}
+	public static EntryZ read(DataInputStream dis, RootEntryZ root) throws IOException {
+		EntryZ e = new EntryZ(root, dis.readInt(), dis.readLong(), dis.readUTF());
+		int size = dis.readInt();
+		if(size != 0)  {
+			for (int i = 0; i < size; i++) 
+				e.items.add(read(dis, root));	
+		}
+		return e;
+	}
 }

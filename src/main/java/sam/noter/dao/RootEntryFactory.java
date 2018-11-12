@@ -1,15 +1,16 @@
 package sam.noter.dao;
 
-import java.io.File;
+import java.nio.file.Path;
 
-import sam.noter.dao.dom.RootDOMEntryFactory;
+import sam.noter.dao.zip.RootEntryZFactory;
 
 public interface RootEntryFactory {
 	
-	public static RootEntryFactory getInstance(){
-		return new RootDOMEntryFactory();
+	public static RootEntryFactory getInstance() throws Exception{
+		return RootEntryZFactory.getInstance();
+		// return new RootDOMEntryFactory();
 	}
 	
 	RootEntry create() throws Exception;
-	RootEntry load(File file) throws Exception;
+	RootEntry load(Path file) throws Exception;
 }

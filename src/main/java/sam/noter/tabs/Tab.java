@@ -6,10 +6,10 @@ import static sam.fx.helpers.FxClassHelper.toggleClass;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -42,10 +42,10 @@ public class Tab extends HBox implements RootEntry {
 	private final Button close = new Button("x");
 	private final Button open = new Button("o");
 
-	public Tab(File path, Consumer<Tab> onSelect) throws Exception {
+	public Tab(Path path, Consumer<Tab> onSelect) throws Exception {
 		root = RootEntryFactory.getInstance().load(path);
 		init(onSelect);
-		setTabTitle(path.getName());
+		setTabTitle(path.getFileName().toString());
 	}
 	public Tab(Consumer<Tab> onSelect) throws Exception {
 		root = RootEntryFactory.getInstance().create();
@@ -77,8 +77,8 @@ public class Tab extends HBox implements RootEntry {
 	public String getTabTitle() { return title.getText(); }
 	public void setOnClose(Consumer<Tab> action) { close.setOnAction(e -> action.accept(Tab.this)); }
 
-	public void setJbookPath(File path) {
-		setTabTitle(path.getName());
+	public void setJbookPath(Path path) {
+		setTabTitle(path.getFileName().toString());
 		root.setJbookPath(path);
 	}
 	public boolean isActive() {
@@ -130,7 +130,7 @@ public class Tab extends HBox implements RootEntry {
 				return ar;
 		}
 
-		File file = getFile("save file", FileChooserType.SAVE);
+		Path file = getFile("save file", FileChooserType.SAVE);
 
 		if(file == null)
 			return ActionResult.CANCEL;
@@ -159,26 +159,28 @@ public class Tab extends HBox implements RootEntry {
 	}
 
 	public void  rename()  {
-		File file = getFile("rename", FileChooserType.SAVE);
-		if(file == null) {
+		Path target = getFile("rename", FileChooserType.SAVE);
+		if(target == null) {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
+		
+		Path source = getJbookPath();
 
-		if(Objects.equals(getJbookPath(), file))
+		if(target.equals(source))
 			return;
 
 		try {
-			Files.move(getJbookPath().toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			setJbookPath(file);
+			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+			setJbookPath(target);
 		} catch (IOException e) {
-			FxAlert.showErrorDialog("source: "+getJbookPath()+"\ntarget: "+file, "failed to rename", e);
+			FxAlert.showErrorDialog("source: "+getJbookPath()+"\ntarget: "+target, "failed to rename", e);
 		}
 	}
 
-	public File getFile(String title, FileChooserType type) {
-		File file = getJbookPath();
-		File expectedDir = file == null ? null : file.getParentFile();
+	public Path getFile(String title, FileChooserType type) {
+		Path file = getJbookPath();
+		Path expectedDir = file == null ? null : file.getParent();
 
 		return Utils.chooseFile(title, expectedDir, this.title.getText()+".jbook", type);
 	}
@@ -186,15 +188,15 @@ public class Tab extends HBox implements RootEntry {
 	public void  open_containing_folder(HostServices hs)  {
 		Optional.of(this)
 		.map(Tab::getJbookPath)
-		.map(File::getParentFile)
-		.filter(File::exists)
-		.ifPresent(p -> hs.showDocument(p.toPath().toUri().toString()));
+		.map(Path::getParent)
+		.filter(Files::exists)
+		.ifPresent(p -> hs.showDocument(p.toUri().toString()));
 	}
 
 	public void  reload_from_disk()  {
 		try {
 			root.reload();
-			FxPopupShop.showHidePopup("realoaded "+getJbookPath().getName(), 1500);
+			FxPopupShop.showHidePopup("realoaded "+getJbookPath().getFileName(), 1500);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(getJbookPath(), "failed to reload", e);
 		}
@@ -222,13 +224,11 @@ public class Tab extends HBox implements RootEntry {
 	@Override public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) { return root.moveChild(childrenToMove, newParent, index); }
 	public void walk(Consumer<Entry> consumer) { ((Entry)root).walk(consumer); }
 
-	@Override public File getJbookPath() { return root.getJbookPath(); }
+	@Override public Path getJbookPath() { return root.getJbookPath(); }
 	@Override public boolean isModified() { return root.isModified(); }
 	@Override public void reload() throws Exception { root.reload(); }
-	@Override public void save(File file) throws Exception { root.save(file); }
+	@Override public void save(Path file) throws Exception { root.save(file); }
 	@Override public void save() throws Exception { root.save(); }
 	@Override public void addChild(Entry child, Entry parent, int index) { root.addChild(child, parent, index); }
 	@Override public void removeFromParent(Entry child) { root.removeFromParent(child); }
-
-
 }

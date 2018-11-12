@@ -14,13 +14,12 @@ dependencies {
 }
  
 
-version = '1.027'
+version = '1.31'
 sourceCompatibility = JavaVersion.VERSION_1_8 
 targetCompatibility = JavaVersion.VERSION_1_8
  
 mainClassName = 'Main'
 
-// ext.appdir = file("${System.env.SAM_PROGRAMS}\\${file('.').name.toLowerCase()}\\app")
 ext.appdir = file("${System.env.SAM_PROGRAMS}\\noter\\app")
 
 run {
@@ -29,7 +28,7 @@ run {
     environment['plugins_dir']=System.env.ECLIPSE_WORKPLACE+/\javafx\Noter-plugins\bin/
     systemProperties['java.util.logging.config.file'] = file('logging.properties').absolutePath
     systemProperties['java.io.tmpdir'] = file('java_temp').absolutePath
-    args new File('dummy.jbook').absolutePath
+    args new File('dummy.zip.jbook').absolutePath
     
     workingDir appdir.parent
     
@@ -40,7 +39,7 @@ task deleteJars {
   }
 }
 
-task install_0(type: Copy, dependsOn:[installDist, deleteJars]) {
+task install(type: Copy, dependsOn:[installDist, deleteJars]) {
   
   def libdir = file(new File(installDist.destinationDir, 'lib')) 
   from libdir
@@ -52,6 +51,14 @@ task install_0(type: Copy, dependsOn:[installDist, deleteJars]) {
   setlocal
   
   ${versionText()}
+  
+  set session_file=app_data\\session.properties
+  set dynamic.menus.file=app_data\\menus.json
+  set plugins_dir=%eclipse_workplace%\\javafx\\Noter-plugins\\bin
+  set backup_dir=app_data\\java_temp
+  rem SET JAVA_OPTS=-Djava.util.logging.config.file=app_data\\logging.properties
+
+  cd /d %~dp0..
   
   java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', libdir.list())}\" ${mainClassName} %*
   
@@ -78,6 +85,6 @@ jar {
   exclude 'fxml/*.fxgraph'
 }
 
-//defaultTasks 'install'
+defaultTasks 'install'
 
 

@@ -1,23 +1,22 @@
 package sam.noter.dao;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 
 public interface RootEntry extends AutoCloseable {
 	static final int ROOT_ENTRY_ID = -1;
 	
-	File getJbookPath();
-	void setJbookPath(File path);
+	Path getJbookPath();
+	void setJbookPath(Path path);
 
 	boolean isModified();
 
 	void reload() throws Exception;
-	void save(File file) throws Exception;
+	void save(Path file) throws Exception;
 	default void save() throws Exception {
 		save(getJbookPath());
 	};
-	
 	void setOnModified(Runnable action);
 	
 	default Entry addChild(String childTitle, Entry parent, Entry relativeToChild) {

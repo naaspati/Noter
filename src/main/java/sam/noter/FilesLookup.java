@@ -27,27 +27,24 @@ import sam.myutils.System2;
 public class FilesLookup {
 	private final Logger LOGGER = MyLoggerFactory.logger(FilesLookup.class);
 
-	// List<Pair<String, Path>> allFiles;
-	// String defaultDir;
-
-	public List<File> parse(List<String> args) throws IOException {
+	public List<Path> parse(List<String> args) throws IOException {
 		if(args.isEmpty()) 
 			return Collections.emptyList();
 		
 		if(args.size() == 1) {
 			File p = find(args.get(0));
 			if(p != null) 
-				return Collections.singletonList(p);
+				return Collections.singletonList(p.toPath());
 		}
 		
-		List<File> files = new ArrayList<>();
+		List<Path> files = new ArrayList<>();
 		
 		for (String s : args) {
 			File f = find(s);
 			if(f == null)
 				LOGGER.severe("file not found for: "+s);
 			else
-				files.add(f);
+				files.add(f.toPath());
 		}
 		return files;
 	}

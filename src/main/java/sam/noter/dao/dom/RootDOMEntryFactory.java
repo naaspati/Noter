@@ -1,6 +1,6 @@
 package sam.noter.dao.dom;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.RootEntryFactory;
@@ -18,7 +18,7 @@ public class RootDOMEntryFactory implements RootEntryFactory {
 		return new RootDOMEntry();
 	}
 	@Override
-	public RootEntry load(File file) throws Exception {
+	public RootEntry load(Path file) throws Exception {
 		return new RootDOMEntry(file);
 	}
 }
