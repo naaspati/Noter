@@ -61,7 +61,7 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	
 	@FXML
 	private void cancelAction(ActionEvent e) {
-		super.hide();
+		hide();
 	}
 	@FXML
 	private void okAction(ActionEvent e) {

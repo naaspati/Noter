@@ -62,7 +62,6 @@ class CacheDir implements AutoCloseable {
 		this.contentDir = cacheDir.resolve("content");
 		this.pathToCacheDir = pathToCacheDir;
 		this.removedDir = this.root.resolve("removed");
-		Files.createDirectories(removedDir);
 		prepareCache();
 
 	}
@@ -157,7 +156,7 @@ class CacheDir implements AutoCloseable {
 	private void saveRoot(RootEntryZ root) throws IOException {
 		IntSerializer.write(maxId, maxId());
 		ObjectWriter.write(index2(), root, RootEntryZ::write);
-		LOGGER.fine(() -> "CREATED: "+maxId());
+		LOGGER.fine(() -> "CREATED: "+maxId()+" (maxId: "+maxId+")");
 		LOGGER.fine(() -> "CREATED: "+index2());
 	}
 
@@ -175,8 +174,10 @@ class CacheDir implements AutoCloseable {
 			Path index = index();
 			if(Files.notExists(index))
 				lines = new HashMap<>();
-			else 
+			else {
 				lines = Files.lines(index).collect(Collectors.toMap(s -> Integer.parseInt(s.substring(0, s.indexOf(' '))), s -> s));
+				LOGGER.fine(() -> "loaded for lines: "+index);
+			}
 		}
 		for (Object ti : list) {
 			EntryZ e = (EntryZ) ti;
@@ -296,16 +297,16 @@ class CacheDir implements AutoCloseable {
 	private void prepareCache() throws FileNotFoundException, IOException {
 		Path lm = lastModified();
 
-		if(anyMatch(MyUtilsCheck::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) {
-			LOGGER.info(() -> "DELETE cacheDir: "+root);
+		if(anyMatch(MyUtilsCheck::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) 
 			_prepareCache();	
-		} else  {
+		 else  
 			LOGGER.info(() -> "CACHE LOADED: "+root);
-		}
 	}
 	private void _prepareCache() throws FileNotFoundException, IOException {
-		if(Files.exists(root))
+		if(Files.exists(root)) {
 			FilesUtilsIO.deleteDir(root);
+			LOGGER.info(() -> "DELETE cacheDir: "+root);
+		}
 
 		Files.createDirectories(contentDir);
 		if(notExists(currentFile)) return;
@@ -325,7 +326,7 @@ class CacheDir implements AutoCloseable {
 					}
 				}
 			}
-			LOGGER.info(() -> "CACHED: "+root);
+			LOGGER.info(() -> "CACHE CREATED: "+this);
 			saveLastModified();
 			pathToCacheDir.put(this);
 		}

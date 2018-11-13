@@ -118,8 +118,7 @@ public class RootEntryZFactory implements RootEntryFactory {
 		String s = file == null ? "" : "-"+file.getFileName().toString(); 
 		Path p = temp_dir.resolve(System.currentTimeMillis()+s);
 		while(Files.exists(p))
-			p = temp_dir.resolve(System.currentTimeMillis()+(int)(Math.random()*100)+s);
-		Files.createDirectories(p);
+			p = temp_dir.resolve(System.currentTimeMillis()+"-"+(int)(Math.random()*100)+s);
 		return p;
 	}
 
