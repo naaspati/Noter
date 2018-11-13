@@ -88,7 +88,7 @@ public class RootEntryZFactory implements RootEntryFactory {
 			return map.get(path.toString());
 		}
 	}
-	private final Path temp_dir = Utils.APP_DATA.resolve("java_temp").resolve(RootEntryZFactory.class.getName());
+	private final Path temp_dir = Utils.BACKUP_DIR.resolve(RootEntryZFactory.class.getName());
 	private final PathToCacheDir pathToCacheDir; 
 
 	private RootEntryZFactory() throws IOException {

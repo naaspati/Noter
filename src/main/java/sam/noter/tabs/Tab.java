@@ -37,7 +37,7 @@ import sam.noter.dao.RootEntryFactory;
 import sam.noter.dao.Walker;
 
 public class Tab extends HBox implements RootEntry {
-	private final RootEntry root;
+	private RootEntry root;
 	private final Label title = new Label();
 	private final Button close = new Button("x");
 	private final Button open = new Button("o");

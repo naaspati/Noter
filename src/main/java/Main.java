@@ -14,6 +14,7 @@ import javax.swing.JOptionPane;
 import javafx.application.Application;
 import sam.myutils.MyUtilsPath;
 import sam.noter.App;
+import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.dom.RootDOMEntryFactory;
@@ -31,6 +32,7 @@ public class Main {
 			System.exit(0);
 		}
 		
+		Utils.init();
 		Application.launch(App.class, args);
 	}
 	

@@ -75,7 +75,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			Platform.runLater(() -> content.selectRange(save.anchor, save.caret));
 		} else {
 			super.setItem(entry);
-			title.setText("Modified: "+time(entry.getLastModified()));	
+			setTitleText();
 		}
 
 		entry.setContentProxy(content::getText);
@@ -102,6 +102,9 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			return;
 		cache.remove(item);
 		super.updateTitle();
+		setTitleText();
+	}
+	private void setTitleText() {
 		title.setText("id: "+item.id +", Modified: "+time(item.getLastModified()));
 	}
 	public void consume(Consumer<TextArea> e) {

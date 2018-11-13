@@ -9,6 +9,7 @@ import static sam.fx.helpers.FxMenu.radioMenuitem;
 import static sam.noter.Utils.APP_DATA;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -237,7 +238,8 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 					.expanded(true)
 					.header("No Content Bookmarks")
 					.showAndWait();
-				}, currentTabNull)
+				}, currentTabNull),
+				menuitem("ProgramName", e -> FxAlert.showMessageDialog("ManagementFactory.getRuntimeMXBean().getName()", ManagementFactory.getRuntimeMXBean().getName()))
 				);
 	}
 	private Menu getEditorMenu() {

@@ -52,15 +52,7 @@ task install(type: Copy, dependsOn:[installDist, deleteJars]) {
   
   ${versionText()}
   
-  set session_file=app_data\\session.properties
-  set dynamic.menus.file=app_data\\menus.json
-  set plugins_dir=%eclipse_workplace%\\javafx\\Noter-plugins\\bin
-  set backup_dir=app_data\\java_temp
-  SET JAVA_OPTS=-Djava.util.logging.config.file=app_data\\logging.properties
-
-  cd /d %~dp0..
-  
-  java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', libdir.list())}\" ${mainClassName} %*
+  java %JVM_OPTS% %JAVA_OPTS% -cp \"%~dp0;%~dp0${String.join(';%~dp0', libdir.list())}\" ${mainClassName} %*
   
   """.stripIndent()
   } 

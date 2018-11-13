@@ -21,6 +21,7 @@ import sam.config.Session;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
+import sam.myutils.MyUtilsException;
 import sam.myutils.System2;
 import sam.noter.dao.Entry;
 
@@ -28,9 +29,22 @@ public class Utils {
 	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class);
 
 	private static final List<Runnable> onStop = new ArrayList<>();
-	public static final Path APP_DATA = Optional.ofNullable(System2.lookup("app_data")).map(Paths::get).orElse(Paths.get("app_data"));
-	public static final Path BACKUP_DIR = Optional.ofNullable(System2.lookup("backup_dir")).map(Paths::get).orElse(APP_DATA.resolve("java_temp"));
+	public static final Path APP_DATA;
+	public static final Path BACKUP_DIR;
+
+	static {
+		APP_DATA = Optional.ofNullable(System2.lookupAny("app_data", "APP_DATA","app.data", "APP.DATA"))
+				.map(Paths::get)
+				.orElseGet(() -> MyUtilsException.noError(() -> Paths.get(ClassLoader.getSystemResource(".").toURI()).resolve("app_data")));
+		
+		BACKUP_DIR = APP_DATA.resolve("backup_dir");
+		String s = System2.lookup("session_file");
+		if(s == null)
+			System.setProperty("session_file", APP_DATA.resolve("session.properties").toString());
+	}
 	
+	
+	public static void init() {/*init static block */}
 
 	private Utils() {}
 
