@@ -90,4 +90,8 @@ class EntryZ extends Entry {
 		}
 		return e;
 	}
+	@Override
+	protected Entry getRoot0() {
+		return getRoot();
+	}
 }

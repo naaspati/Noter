@@ -86,4 +86,8 @@ class DOMEntry extends Entry {
 	public boolean isContentLoaded() {
 		return true;
 	}
+	@Override
+	protected Entry getRoot0() {
+		return getRoot();
+	}
 }

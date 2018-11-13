@@ -206,7 +206,7 @@ public class Tab extends HBox implements RootEntry {
 		toggleClass(this, "modified", root.isModified());
 	}
 
-	public RootEntry getRoot() { return root; }
+	public Entry getRoot() { return (Entry)root; }
 
 	@Override public void close() throws Exception { root.close(); }
 	/**

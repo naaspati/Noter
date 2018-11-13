@@ -88,7 +88,7 @@ public abstract class Entry extends TreeItem<String> {
 	public String getTitle() { return getValue(); }
 	public String getContent() {
 		if(contentProxy != null) return contentProxy.get();
-		return content;
+		return content == null ? "" : content;
 	}
 
 	public  void setContent(String content) {
@@ -188,9 +188,9 @@ public abstract class Entry extends TreeItem<String> {
 	public String toTreeString() {
 		Entry e = parent();
 		if(e == null)
-			return null;
+			return getValue();
 		String s = e.toTreeString(); 
-		return s == null ? getTitle() : s +" > "+getTitle();
+		return s == null ? getValue() : s +" > "+getValue();
 	}
 	public boolean isModified() {
 		return titleM || contentM || childrenM;
@@ -235,8 +235,11 @@ public abstract class Entry extends TreeItem<String> {
 		if(obj == this) return true;
 		if(obj == null || obj.getClass() != getClass() || this.id != ((Entry)obj).id) return false;
 
-		throw new IllegalStateException("two different entry have same id"+this+", "+obj);
+		if(getRoot0() == ((Entry)obj).getRoot0())
+			throw new IllegalStateException("two different entry have same id"+this+", "+obj);
+		return false;
 	}
-
+	
+	protected abstract Entry getRoot0();
 	public abstract boolean isContentLoaded();
 }

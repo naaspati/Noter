@@ -16,6 +16,7 @@ import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.List;
 
+import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -240,17 +241,23 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			oldValue.setSelectedItem((Entry) selectionModel.getSelectedItem());
 
 		selectionModel.clearSelection();
-		Entry root = newValue == null ?  null : (Entry)(newValue.getRoot()); 
-		tree.setRoot(root);
+		Entry root = newValue == null ?  null : newValue.getRoot();
+		tree.setRoot(null);
+		if(root == null) return;
+		
+		Platform.runLater(() -> {
+			tree.setRoot(root);
 
-		if(root != null){
-			Entry item = newValue.getSelectedItem();
+			if(root != null){
+				Entry item = newValue.getSelectedItem();
 
-			if(item != null) 
-				selectionModel.select(item);
-			else if(!root.getChildren().isEmpty()) 
-				selectionModel.select(root.getChildren().get(0));
-		}
+				if(item != null) 
+					selectionModel.select(item);
+				else if(!root.getChildren().isEmpty()) 
+					selectionModel.select(root.getChildren().get(0));
+			}
+		});
+		
 	}
 	public ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty() {
 		return selectionModel.selectedItemProperty();

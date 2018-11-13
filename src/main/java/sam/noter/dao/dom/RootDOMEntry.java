@@ -25,10 +25,11 @@ import sam.noter.dao.RootEntry;
 @SuppressWarnings({"unchecked", "rawtypes"})
 class RootDOMEntry extends DOMEntry implements RootEntry {
 
-	protected Path jbookPath;
-	protected Runnable onModified;
-	protected DOMLoader dom;
-	protected final TreeMap<Integer, Entry> entryMap = new TreeMap<>();
+	private Path jbookPath;
+	private Runnable onModified;
+	private DOMLoader dom;
+	private final TreeMap<Integer, Entry> entryMap = new TreeMap<>();
+	private String rootName;
 
 	public RootDOMEntry() throws ParserConfigurationException {
 		super();
@@ -91,7 +92,8 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	@Override 
 	public void setJbookPath(Path path) { 
 		jbookPath = path;
-		setValue(jbookPath.getFileName().toString());
+		this.rootName = jbookPath.getFileName().toString(); 
+		setValue(rootName);
 	}
 	@Override public void close() throws Exception {/* does nothing */}
 
