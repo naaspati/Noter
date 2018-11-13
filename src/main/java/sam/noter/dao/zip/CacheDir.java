@@ -1,6 +1,6 @@
 package sam.noter.dao.zip;
 
-import static sam.myutils.MyUtilsCheck.anyMatch;
+import static sam.myutils.MyUtilsCheck.*;
 import static sam.myutils.MyUtilsCheck.notExists;
 
 import java.io.FileNotFoundException;
@@ -198,7 +198,12 @@ class CacheDir implements AutoCloseable {
 				if(e.isModified()) {
 					if(e.isContentModified()) {
 						String s = e.getContent();
-						StringWriter2.setText(contentPath(e), s == null ? "" : s);
+						Path p = contentPath(e);
+						if(isEmpty(s)) {
+							if(Files.deleteIfExists(p))
+								LOGGER.fine(() -> "DELETED: "+p);
+						} else
+							StringWriter2.setText(p, s);
 					}
 					logModification(e, sb);
 				}
@@ -271,7 +276,7 @@ class CacheDir implements AutoCloseable {
 			}
 		}
 		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-		LOGGER.info("MOVED: "+temp+ "  "+target);
+		LOGGER.fine("MOVED: "+temp+ "  "+target);
 		this.currentFile = target;
 		saveLastModified();
 	}
@@ -292,10 +297,10 @@ class CacheDir implements AutoCloseable {
 		Path lm = lastModified();
 
 		if(anyMatch(MyUtilsCheck::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) {
-			LOGGER.fine(() -> "DELETE cacheDir: "+root);
+			LOGGER.info(() -> "DELETE cacheDir: "+root);
 			_prepareCache();	
 		} else  {
-			LOGGER.fine(() -> "CACHE LOADED: "+root);
+			LOGGER.info(() -> "CACHE LOADED: "+root);
 		}
 	}
 	private void _prepareCache() throws FileNotFoundException, IOException {
@@ -320,7 +325,7 @@ class CacheDir implements AutoCloseable {
 					}
 				}
 			}
-			LOGGER.fine(() -> "CACHED: "+root);
+			LOGGER.info(() -> "CACHED: "+root);
 			saveLastModified();
 			pathToCacheDir.put(this);
 		}
@@ -338,9 +343,9 @@ class CacheDir implements AutoCloseable {
 		Files.list(removePath)
 		.forEach(p -> move(p, contentDir.resolve(p.getFileName())));
 	}
-	
+
 	private static int counter = 0; 
-	
+
 	public Path remove(EntryZ e) throws IOException {
 		Path dir = removedDir.resolve((counter++)+"-"+e.id);
 		Files.createDirectories(dir);

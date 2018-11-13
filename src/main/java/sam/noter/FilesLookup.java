@@ -66,14 +66,14 @@ public class FilesLookup {
 			f = new File(StringReader2.getText(openCacheDir.resolve( string)));
 			if(f.exists()) {
 				File f2 = f;
-				LOGGER.fine(() -> "loaded from open_cache: "+f2);
+				LOGGER.info(() -> "loaded from open_cache: "+f2);
 				return f;
 			}
 		}
 		
 		f = new File(string);
 		if(f.exists()) {
-			LOGGER.fine(() -> "open as file found: "+string);
+			LOGGER.info(() -> "open as file found: "+string);
 			return f;
 		};
 		
@@ -105,7 +105,7 @@ public class FilesLookup {
 		
 		if(p == null) return null;
 		Path p2 = p;
-		LOGGER.fine(() -> "find from defaultDir walk, "+string+", path: "+p2);
+		LOGGER.info(() -> "find from defaultDir walk, "+string+", path: "+p2);
 		save(string, p);
 		return p.toFile();
 	}
