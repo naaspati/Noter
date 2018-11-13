@@ -29,7 +29,9 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		reload();
 	}
 
-	@Override public void close() throws Exception {cacheDir.close(); }
+	@Override public void close() throws Exception {
+		cacheDir.close(this); 
+	}
 
 	@Override
 	public Path getJbookPath() {
@@ -67,6 +69,8 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		entries.clear();
 		walk(this::put);
 		childrenM = false;
+		int n = cacheDir.getSelectedItem();
+		selecteditem = n < 0 ? null : entries.get(n);
 		onModified();
 	}
 	@Override
@@ -193,7 +197,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	@Override
 	public void removeFromParent(Entry child) {
 		EntryZ d = check(child);
-		
+
 		Path removeId = Util.get(() -> cacheDir.remove(d), null);
 		if(removeId != null) {
 			if(removed == null)
@@ -209,6 +213,17 @@ class RootEntryZ extends EntryZ implements RootEntry {
 
 	public CacheDir getCacheDir() {
 		return cacheDir;
+	}
+
+	private Entry selecteditem;
+
+	@Override
+	public void setSelectedItem(Entry e) {
+		this.selecteditem = e;
+	}
+	@Override
+	public Entry getSelectedItem() {
+		return selecteditem;
 	}
 
 }

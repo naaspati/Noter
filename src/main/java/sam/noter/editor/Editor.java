@@ -1,5 +1,7 @@
 package sam.noter.editor;
 
+import static sam.fx.helpers.FxMenu.menuitem;
+import static sam.fx.helpers.FxMenu.radioMenuitem;
 import static sam.noter.editor.ViewType.CENTER;
 import static sam.noter.editor.ViewType.COMBINED_CHILDREN;
 import static sam.noter.editor.ViewType.COMBINED_TEXT;
@@ -16,10 +18,13 @@ import java.util.function.Function;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
@@ -33,6 +38,7 @@ import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsCheck;
+import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
@@ -52,7 +58,7 @@ public class Editor extends BorderPane implements SessionHelper {
 	private WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
 	private final CenterEditor centerEditor = new CenterEditor();
 
-	private Entry currentItem;
+	private SimpleObjectProperty<Entry> currentItem = new SimpleObjectProperty<>();
 	private final IdentityHashMap<Entry, Stack<ViewType>> history0 = new IdentityHashMap<>();
 
 	private static Font font;
@@ -105,11 +111,15 @@ public class Editor extends BorderPane implements SessionHelper {
 
 	@FXML
 	private void historyBack(Event e) {
-		Stack<ViewType> stack = history(currentItem, false);
+		Stack<ViewType> stack = history(currentItem(), false);
 		if(MyUtilsCheck.isNotEmpty(stack))
 			stack.pop();
 		
-		changed(currentItem, PREVIOUS);
+		changed(currentItem(), PREVIOUS);
+	}
+
+	private Entry currentItem() {
+		return currentItem.get();
 	}
 
 	public void setWordWrap(boolean wrap) {
@@ -196,7 +206,7 @@ public class Editor extends BorderPane implements SessionHelper {
 			default:
 				throw new IllegalArgumentException("unknown view: "+view);
 		}
-		currentItem = item;
+		currentItem.set(item);
 	}
 	private void setCombined_text(Entry item) {
 		CombinedText c = combinedTextWL.get();
@@ -272,5 +282,14 @@ public class Editor extends BorderPane implements SessionHelper {
 			else
 				maintitle.setText(u.first().getItemTitle());
 		}
+	}
+
+	public Menu getEditorMenu() {
+		Menu menu = new Menu("editor", null,
+				menuitem("copy Entry Tree", e -> Utils.copyToClipboard(currentItem().toTreeString()), currentItem.isNull()),
+				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
+				menuitem("Font", e -> setFont())
+				);
+		return menu;
 	}
 }

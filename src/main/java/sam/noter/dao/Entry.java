@@ -67,10 +67,10 @@ public abstract class Entry extends TreeItem<String> {
 	}
 	public void setTitle(String title) {
 		if(titleM || notEqual(title, getTitle())) {
+			LOGGER.fine(() -> "TITLE MODIFIED: "+this);
 			super.setValue(title);
 			titleM = true;
 			notifyParent(TITLE);
-			LOGGER.fine(() -> "TITLE MODIFIED: "+this);
 		}
 	}
 	protected boolean notEqual(String s1, String s2) {

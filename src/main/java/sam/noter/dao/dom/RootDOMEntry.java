@@ -211,5 +211,16 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		entryMap.remove(d.getId());
 		cast(d.parent()).modifiableChildren(l -> l.remove(e));
 	}
+	
+	private Entry selecteditem;
+	
+	@Override
+	public void setSelectedItem(Entry e) {
+		this.selecteditem = e;
+	}
+	@Override
+	public Entry getSelectedItem() {
+		return selecteditem;
+	}
 }
 

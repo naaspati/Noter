@@ -73,7 +73,6 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private final ReadOnlyObjectProperty<Tab> currentTab;
 	private final Editor editor;
 	private final TabContainer tabcontainer;
-	private final HashMap<Tab, WeakReference<TreeItem<String>>> history = new HashMap<>();
 
 	public BookmarksPane(Editor editor, TabContainer tabcontainer) throws IOException {
 		FxFxml.load(this, true);
@@ -119,6 +118,10 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		expandCollpase.disableProperty().bind(currentTabNull);
 
 		currentTab.addListener(this);
+		tabcontainer.addOnTabClosing(tab -> {
+			if(tab == currentTab.get())
+				tab.setSelectedItem((Entry) selectionModel.getSelectedItem());
+		});
 		this.disableProperty().bind(currentTabNull);
 	}
 
@@ -234,19 +237,19 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		}
 
 		if(oldValue != null && tree.getRoot() != null)
-			history.put(oldValue, new  WeakReference<>(selectionModel.getSelectedItem()));
+			oldValue.setSelectedItem((Entry) selectionModel.getSelectedItem());
 
 		selectionModel.clearSelection();
 		Entry root = newValue == null ?  null : (Entry)(newValue.getRoot()); 
 		tree.setRoot(root);
 
 		if(root != null){
-			TreeItem<String> item = ReferenceUtils.get(history.get(newValue));
-			if(item != null) selectionModel.select(item);
-			else {
-				if(!root.getChildren().isEmpty())
-					selectionModel.select(root.getChildren().get(0));
-			}
+			Entry item = newValue.getSelectedItem();
+
+			if(item != null) 
+				selectionModel.select(item);
+			else if(!root.getChildren().isEmpty()) 
+				selectionModel.select(root.getChildren().get(0));
 		}
 	}
 	public ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty() {

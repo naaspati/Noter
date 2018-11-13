@@ -43,4 +43,6 @@ public interface RootEntry extends AutoCloseable {
 	Collection<Entry> getAllEntries();
 	void addChild(Entry child, Entry parent, int index);
 	void removeFromParent(Entry child);
+	void setSelectedItem(Entry e);
+	Entry getSelectedItem();
 }

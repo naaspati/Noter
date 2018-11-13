@@ -5,7 +5,6 @@ import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
-import static sam.fx.helpers.FxMenu.radioMenuitem;
 import static sam.noter.Utils.APP_DATA;
 
 import java.io.IOException;
@@ -41,7 +40,6 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
@@ -215,7 +213,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 				getFileMenu(), 
 				bookmarks.getBookmarkMenu(), 
 				getSearchMenu(), 
-				getEditorMenu(),
+				editor.getEditorMenu(),
 				Optional.ofNullable(sessionGetProperty("debug"))
 				.filter(s -> s.trim().equalsIgnoreCase("true"))
 				.map(s -> getDebugMenu())
@@ -261,13 +259,6 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 				})
 				);
 	}
-	private Menu getEditorMenu() {
-		Menu menu = new Menu("editor", null,
-				radioMenuitem("Text wrap", e -> editor.setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
-				menuitem("Font", e -> editor.setFont())
-				);
-		return menu;
-	}
 	private Menu getSearchMenu() {
 		Menu menu = new Menu("_Search", null, 
 				menuitem("Search", combination(KeyCode.F, SHORTCUT_DOWN), e -> {
@@ -292,6 +283,8 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 
 				}, currentTabNull)
 				);
+		menu.setDisable(true);
+		// TODO
 		return menu;
 	}
 

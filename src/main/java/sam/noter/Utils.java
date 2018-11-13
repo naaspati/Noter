@@ -18,6 +18,8 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import sam.config.Session;
+import sam.fx.clipboard.FxClipboard;
+import sam.fx.popup.FxPopupShop;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
@@ -96,5 +98,10 @@ public class Utils {
 	}
 	public static void stop() {
 		onStop.forEach(Runnable::run);
+	}
+
+	public static void copyToClipboard(String s) {
+		FxClipboard.setString(s);
+		FxPopupShop.showHidePopup(s, 2000);
 	}
 }

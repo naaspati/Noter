@@ -231,4 +231,6 @@ public class Tab extends HBox implements RootEntry {
 	@Override public void save() throws Exception { root.save(); }
 	@Override public void addChild(Entry child, Entry parent, int index) { root.addChild(child, parent, index); }
 	@Override public void removeFromParent(Entry child) { root.removeFromParent(child); }
+	@Override public void setSelectedItem(Entry e) { root.setSelectedItem(e); }
+	@Override public Entry getSelectedItem() { return root.getSelectedItem(); }
 }

@@ -36,13 +36,14 @@ import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsCheck;
+import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.zip.RootEntryZFactory.PathToCacheDir;
 import sam.reference.ReferenceUtils;
 import sam.reference.WeakAndLazy;
 import sam.string.StringUtils.StringSplitIterator;
 
-class CacheDir implements AutoCloseable {
+class CacheDir {
 	private static final Logger LOGGER = MyLoggerFactory.logger(CacheDir.class);
 	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[BufferSize.DEFAULT_BUFFER_SIZE]);
 
@@ -145,7 +146,7 @@ class CacheDir implements AutoCloseable {
 
 		StringBuilder sv2 = new StringBuilder(100);
 		ArrayList<String> list = new ArrayList<>(); 
-		
+
 		Map<Integer, String> lines = ReferenceUtils.get(this.lines);
 		if(lines == null) {
 			Path index = index();
@@ -157,7 +158,7 @@ class CacheDir implements AutoCloseable {
 				LOGGER.fine(() -> "loaded for lines: "+index);
 			}
 		}
-		
+
 		walk(root, list, sv2, lines);
 		Files.write(index(), list, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		saveRoot(root);
@@ -182,7 +183,7 @@ class CacheDir implements AutoCloseable {
 
 		int order = 0;
 		boolean cM = entry.isChildrenModified();
-		
+
 		for (Object ti : list) {
 			EntryZ e = (EntryZ) ti;
 			String line = lines.get(e.id);
@@ -303,7 +304,7 @@ class CacheDir implements AutoCloseable {
 
 		if(anyMatch(MyUtilsCheck::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) 
 			_prepareCache();	
-		 else  
+		else  
 			LOGGER.info(() -> "CACHE LOADED: "+root);
 	}
 	private void _prepareCache() throws FileNotFoundException, IOException {
@@ -340,9 +341,23 @@ class CacheDir implements AutoCloseable {
 		LongSerializer.write(currentFile.toFile().lastModified(), lastModified());
 		StringWriter2.setText(this.root.resolve("file"), currentFile.toString());
 	}
-	@Override
-	public void close() throws Exception {
-		Util.hide(() -> FilesUtilsIO.deleteDir(removedDir));
+	public void close(RootEntryZ ez) {
+		Entry selectedItem = ez.getSelectedItem();
+		
+		Util.hide(() -> {
+			Path p = root.resolve("selecteditem");
+			Files.deleteIfExists(p);
+			if(selectedItem != null)
+				IntSerializer.write(selectedItem.id, p);
+
+			FilesUtilsIO.deleteDir(removedDir);
+		});
+
+	}
+	public int getSelectedItem() {
+		Path p = root.resolve("selecteditem");
+		if(Files.notExists(p)) return -1;
+		return Util.get(() -> IntSerializer.read(p), -1);
 	}
 	public void restore(EntryZ e, Path removePath) throws IOException {
 		Files.list(removePath)
