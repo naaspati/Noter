@@ -115,7 +115,7 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 		Collection<Entry> list = tab.getAllEntries();
 		similar.getItems().setAll(list);
 		search.start(list);
-		search.setOnChange(() -> Platform.runLater(()-> search.process(similar.getItems())));
+		search.setOnChange(() -> Platform.runLater(()-> search.applyFilter(similar.getItems())));
 		
 		showAndWait();
 		
@@ -144,7 +144,7 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	}
 	@Override
 	public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-		search.search(newValue == null ? newValue : newValue.toLowerCase());
+		search.addSearch(newValue);
 	}
 
 	@Override

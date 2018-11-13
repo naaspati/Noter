@@ -186,7 +186,10 @@ public abstract class Entry extends TreeItem<String> {
 		return (Entry)getParent();
 	}
 	public String toTreeString() {
-		String s = parent().toTreeString(); 
+		Entry e = parent();
+		if(e == null)
+			return null;
+		String s = e.toTreeString(); 
 		return s == null ? getTitle() : s +" > "+getTitle();
 	}
 	public boolean isModified() {

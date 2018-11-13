@@ -9,10 +9,12 @@ import static sam.noter.editor.ViewType.PREVIOUS;
 import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -35,6 +37,7 @@ import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
+import sam.thread.DelayedQueueThread;
 
 public class Editor extends BorderPane implements SessionHelper {
 
@@ -132,7 +135,18 @@ public class Editor extends BorderPane implements SessionHelper {
 			centerEditor.consume(e);
 		}
 	}
+	private DelayedQueueThread<Object[]> delay;
 	private void changed(Entry item, ViewType view) {
+		if(delay == null) {
+			delay = new DelayedQueueThread<>(Optional.ofNullable(sessionGetProperty("change.delay")).map(Integer::parseInt).orElse(1000), obj -> Platform.runLater(() -> _changed(obj)));
+			delay.start();
+		}
+		delay.add(new Object[]{item, view});
+	}	
+	private void _changed(Object[] obj) {
+		Entry item = (Entry)obj[0];
+		ViewType view = (ViewType)obj[1];
+		
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);
