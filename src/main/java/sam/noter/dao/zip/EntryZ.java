@@ -35,6 +35,10 @@ class EntryZ extends Entry {
 		root = null;
 		contentLoaded = true;
 	}
+	@Override
+	public boolean isContentLoaded() {
+		return contentLoaded;
+	}
 
 	@Override
 	public String getContent() {

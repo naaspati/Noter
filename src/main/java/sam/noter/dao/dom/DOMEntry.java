@@ -82,4 +82,8 @@ class DOMEntry extends Entry {
 	public boolean isModified() {
 		return dom.isNew() || super.isModified();
 	}
+	@Override
+	public boolean isContentLoaded() {
+		return true;
+	}
 }

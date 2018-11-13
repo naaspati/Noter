@@ -137,16 +137,18 @@ public class Editor extends BorderPane implements SessionHelper {
 	}
 	private DelayedQueueThread<Object[]> delay;
 	private void changed(Entry item, ViewType view) {
+		if(item != null && item.isContentLoaded()) {
+			_changed(item, view);
+			return;
+		}
+		
 		if(delay == null) {
-			delay = new DelayedQueueThread<>(Optional.ofNullable(sessionGetProperty("change.delay")).map(Integer::parseInt).orElse(1000), obj -> Platform.runLater(() -> _changed(obj)));
+			delay = new DelayedQueueThread<>(Optional.ofNullable(sessionGetProperty("change.delay")).map(Integer::parseInt).orElse(1000), obj -> Platform.runLater(() -> _changed((Entry)obj[0], (ViewType)obj[1])));
 			delay.start();
 		}
 		delay.add(new Object[]{item, view});
 	}	
-	private void _changed(Object[] obj) {
-		Entry item = (Entry)obj[0];
-		ViewType view = (ViewType)obj[1];
-		
+	private void _changed(Entry item, ViewType view) {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);

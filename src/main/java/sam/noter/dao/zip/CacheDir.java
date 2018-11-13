@@ -145,7 +145,20 @@ class CacheDir implements AutoCloseable {
 
 		StringBuilder sv2 = new StringBuilder(100);
 		ArrayList<String> list = new ArrayList<>(); 
-		walk(root, list, sv2);
+		
+		Map<Integer, String> lines = ReferenceUtils.get(this.lines);
+		if(lines == null) {
+			Path index = index();
+			if(Files.notExists(index))
+				lines = new HashMap<>();
+			else {
+				lines = Files.lines(index).collect(Collectors.toMap(s -> Integer.parseInt(s.substring(0, s.indexOf(' '))), s -> s));
+				this.lines = new WeakReference<Map<Integer,String>>(lines);
+				LOGGER.fine(() -> "loaded for lines: "+index);
+			}
+		}
+		
+		walk(root, list, sv2, lines);
 		Files.write(index(), list, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		saveRoot(root);
 		zip(file);
@@ -160,7 +173,7 @@ class CacheDir implements AutoCloseable {
 		LOGGER.fine(() -> "CREATED: "+index2());
 	}
 
-	private void walk(EntryZ entry, List<String> sink, StringBuilder sb) throws IOException {
+	private void walk(EntryZ entry, List<String> sink, StringBuilder sb, Map<Integer, String> lines) throws IOException {
 		@SuppressWarnings("rawtypes")
 		List list = entry.getChildren();
 		if(list.isEmpty()) return;
@@ -169,16 +182,7 @@ class CacheDir implements AutoCloseable {
 
 		int order = 0;
 		boolean cM = entry.isChildrenModified();
-		Map<Integer, String> lines = ReferenceUtils.get(this.lines);
-		if(lines == null) {
-			Path index = index();
-			if(Files.notExists(index))
-				lines = new HashMap<>();
-			else {
-				lines = Files.lines(index).collect(Collectors.toMap(s -> Integer.parseInt(s.substring(0, s.indexOf(' '))), s -> s));
-				LOGGER.fine(() -> "loaded for lines: "+index);
-			}
-		}
+		
 		for (Object ti : list) {
 			EntryZ e = (EntryZ) ti;
 			String line = lines.get(e.id);
@@ -209,7 +213,7 @@ class CacheDir implements AutoCloseable {
 					logModification(e, sb);
 				}
 			}
-			walk(e, sink, sb);
+			walk(e, sink, sb, lines);
 		}
 	}
 	private void logModification(EntryZ e, StringBuilder sb) {

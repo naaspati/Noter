@@ -237,4 +237,6 @@ public abstract class Entry extends TreeItem<String> {
 
 		throw new IllegalStateException("two different entry have same id"+this+", "+obj);
 	}
+
+	public abstract boolean isContentLoaded();
 }
