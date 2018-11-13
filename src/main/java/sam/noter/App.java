@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
@@ -57,6 +59,7 @@ import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.logging.MyLoggerFactory;
+import sam.myutils.MyUtilsBytes;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.bookmark.SearchBox;
 import sam.noter.editor.Editor;
@@ -239,7 +242,23 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 					.header("No Content Bookmarks")
 					.showAndWait();
 				}, currentTabNull),
-				menuitem("ProgramName", e -> FxAlert.showMessageDialog("ManagementFactory.getRuntimeMXBean().getName()", ManagementFactory.getRuntimeMXBean().getName()))
+				menuitem("ProgramName", e -> FxAlert.showMessageDialog("ManagementFactory.getRuntimeMXBean().getName()", ManagementFactory.getRuntimeMXBean().getName())),
+				menuitem("Memory usage", e -> {
+					Runtime r = Runtime.getRuntime();
+					StringBuilder sb = new StringBuilder();
+					Function<Long, String> f = l -> MyUtilsBytes.bytesToHumanReadableUnits(l, false);
+					sb.append("Total Memory: ").append(f.apply(r.totalMemory())).append('\n')
+					  .append(" Free Memory: ").append(f.apply(r.freeMemory())).append('\n')
+					  .append("  Max Memory: ").append(f.apply(r.maxMemory())).append('\n')
+					  .append(" used Memory: ").append(f.apply(r.totalMemory() - r.freeMemory())).append('\n')
+					  ;
+					
+					FxAlert.alertBuilder(AlertType.INFORMATION)
+					.content(new TextArea(sb.toString()))
+					.header("Memory Usage")
+					.owner(stage)
+					.show();
+				})
 				);
 	}
 	private Menu getEditorMenu() {

@@ -1,10 +1,7 @@
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -12,6 +9,7 @@ import java.util.Objects;
 import javax.swing.JOptionPane;
 
 import javafx.application.Application;
+import sam.io.fileutils.FilesUtilsIO;
 import sam.myutils.MyUtilsPath;
 import sam.noter.App;
 import sam.noter.Utils;
@@ -21,12 +19,9 @@ import sam.noter.dao.dom.RootDOMEntryFactory;
 import sam.noter.dao.zip.RootEntryZFactory;
 
 public class Main {
-
 	public static void main( String[] args ) throws Exception {
 		try {
-			FileChannel c = FileChannel.open(Paths.get("noter.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-			c.tryLock();
-			c.write(ByteBuffer.wrap(new byte[]{1}));
+			FilesUtilsIO.createFileLock("noter.lock");
 		} catch (IOException e) {
 			JOptionPane.showMessageDialog(null, "Only one instanceof program is allowed", "No Two instance allowed", JOptionPane.ERROR_MESSAGE);
 			System.exit(0);
