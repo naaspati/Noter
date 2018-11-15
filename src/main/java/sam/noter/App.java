@@ -15,6 +15,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -55,9 +58,11 @@ import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
+import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsBytes;
+import sam.myutils.MyUtilsThread;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.bookmark.SearchBox;
 import sam.noter.editor.Editor;
@@ -123,8 +128,66 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 		showStage(stage);
 		readRecents();
 
-		List<Path> files  = new FilesLookup().parse(getParameters().getRaw());
-		tabsContainer.addTabs(files);
+		addTabs(getParameters().getRaw());
+
+		Path openfiles = (Path) System.getProperties().get("noter.open.files");
+
+		Files.createDirectories(APP_DATA.resolve("open_files"));
+		MyUtilsThread.runOnDeamonThread(new DirWatcher(openfiles, StandardWatchEventKinds.ENTRY_CREATE) {
+			@Override
+			protected void onEvent(Path context, WatchEvent<?> we) {
+				try {
+					Path p =  dir.resolve(context);
+					addTabs(Files.readAllLines(p));
+					Files.deleteIfExists(p);
+				} catch (IOException e) {
+					Platform.runLater(() -> FxAlert.showErrorDialog(context, "failed to read", e));
+				}
+			}
+			@Override
+			protected boolean onErrorContinue(Exception e) {
+				e.printStackTrace();
+				return true;
+			}
+			@Override
+			protected void failed(Exception e) {
+				e.printStackTrace();
+			}
+		});
+	}
+
+	private void addTabs(List<String> input) {
+		Platform.runLater(() -> {
+			try {
+				List<Path> files = new FilesLookup().parse(input);
+				if(files.isEmpty()) return;
+				files.replaceAll(f -> f.normalize().toAbsolutePath());
+				List<Path> paths = new ArrayList<>();
+				tabsContainer.forEach(t -> paths.add(t.getJbookPath()));
+				paths.removeIf(t -> t == null);
+				if(!paths.isEmpty()){
+					files.removeIf(paths::contains);
+					if(files.isEmpty())
+						return;
+					files.removeIf(f -> paths.stream().anyMatch(g -> {
+						try {
+							return Files.isSameFile(f, g);
+						} catch (IOException e) {
+							System.out.println(e);
+							return false;
+						}
+					}));
+					if(files.isEmpty())
+						return;
+				}
+
+				tabsContainer.addTabs(files);
+				stage.toFront();
+
+			} catch (IOException e) {
+				FxAlert.showErrorDialog(String.join("\n", input), "failed to read", e);
+			}
+		});
 	}
 
 	private void loadIcon(Stage stage) throws IOException {
@@ -246,11 +309,11 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 					StringBuilder sb = new StringBuilder();
 					Function<Long, String> f = l -> MyUtilsBytes.bytesToHumanReadableUnits(l, false);
 					sb.append("Total Memory: ").append(f.apply(r.totalMemory())).append('\n')
-					  .append(" Free Memory: ").append(f.apply(r.freeMemory())).append('\n')
-					  .append("  Max Memory: ").append(f.apply(r.maxMemory())).append('\n')
-					  .append(" used Memory: ").append(f.apply(r.totalMemory() - r.freeMemory())).append('\n')
-					  ;
-					
+					.append(" Free Memory: ").append(f.apply(r.freeMemory())).append('\n')
+					.append("  Max Memory: ").append(f.apply(r.maxMemory())).append('\n')
+					.append(" used Memory: ").append(f.apply(r.totalMemory() - r.freeMemory())).append('\n')
+					;
+
 					FxAlert.alertBuilder(AlertType.INFORMATION)
 					.content(new TextArea(sb.toString()))
 					.header("Memory Usage")

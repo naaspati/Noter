@@ -35,11 +35,8 @@ public class Utils {
 	public static final Path BACKUP_DIR;
 
 	static {
-		APP_DATA = Optional.ofNullable(System2.lookupAny("app_data", "APP_DATA","app.data", "APP.DATA"))
-				.map(Paths::get)
-				.orElseGet(() -> MyUtilsException.noError(() -> Paths.get(ClassLoader.getSystemResource(".").toURI()).resolve("app_data")));
-		
-		BACKUP_DIR = APP_DATA.resolve("backup_dir");
+		APP_DATA = (Path) System.getProperties().get("noter.app.data");
+		BACKUP_DIR = APP_DATA.resolve("java_temp");
 		String s = System2.lookup("session_file");
 		if(s == null)
 			System.setProperty("session_file", APP_DATA.resolve("session.properties").toString());

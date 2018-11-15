@@ -34,12 +34,14 @@ public class FilesLookup {
 		if(args.size() == 1) {
 			File p = find(args.get(0));
 			if(p != null) 
-				return Collections.singletonList(p.toPath());
+				return new ArrayList<>(Arrays.asList(p.toPath()));
 		}
 		
 		List<Path> files = new ArrayList<>();
 		
 		for (String s : args) {
+			if(s.trim().isEmpty()) continue;
+			
 			File f = find(s);
 			if(f == null)
 				LOGGER.severe("file not found for: "+s);
