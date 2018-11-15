@@ -6,9 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -28,8 +28,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	private Path jbookPath;
 	private Runnable onModified;
 	private DOMLoader dom;
-	private final TreeMap<Integer, Entry> entryMap = new TreeMap<>();
-	private String rootName;
+	private final HashMap<Integer, Entry> entryMap = new HashMap<>();
 
 	public RootDOMEntry() throws ParserConfigurationException {
 		super();
@@ -92,8 +91,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	@Override 
 	public void setJbookPath(Path path) { 
 		jbookPath = path;
-		this.rootName = jbookPath.getFileName().toString(); 
-		setValue(rootName);
+		setValue(jbookPath.getFileName().toString());
 	}
 	@Override public void close() throws Exception {/* does nothing */}
 
@@ -167,10 +165,6 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 		if(list.isEmpty()) return result;
 		addAll(result, changeRoot(list), Integer.MAX_VALUE);
 		return result;
-	}
-	@Override
-	public String toTreeString() {
-		return null;
 	}
 	@Override
 	public Collection<Entry> getAllEntries() {

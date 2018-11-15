@@ -26,6 +26,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import sam.collection.IntSet;
 import sam.io.BufferSize;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.serilizers.IntSerializer;
@@ -46,6 +47,7 @@ import sam.string.StringUtils.StringSplitIterator;
 class CacheDir {
 	private static final Logger LOGGER = MyLoggerFactory.logger(CacheDir.class);
 	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[BufferSize.DEFAULT_BUFFER_SIZE]);
+	private final IntSet newEntries = new IntSet();
 
 	Path startFile;
 	private Path currentFile;
@@ -165,6 +167,7 @@ class CacheDir {
 		zip(file);
 		this.currentFile = file;
 		pathToCacheDir.put(this);
+		newEntries.clear();
 	}
 
 	private void saveRoot(RootEntryZ root) throws IOException {
@@ -218,10 +221,13 @@ class CacheDir {
 		}
 	}
 	private void logModification(EntryZ e, StringBuilder sb) {
-		LOGGER.info(() -> {
+		LOGGER.fine(() -> {
+			if(newEntries.contains(e.id))
+				return "NEW "+e;
+			
 			sb.setLength(0);
 
-			sb.append(e).append(" [");
+			sb.append("UPDATED ").append(e).append(" [");
 			if(e.isTitleModified())
 				sb.append("TITLE, ");
 			if(e.isContentModified())
@@ -238,12 +244,16 @@ class CacheDir {
 		return "CacheDir [currentFile=" + currentFile + ", cacheDir=" + root + "]";
 	}
 	public EntryZ newEntry(String title, RootEntryZ root) {
-		return new EntryZ(root, ++maxId, title, true);
+		EntryZ e = new EntryZ(root, ++maxId, title, true);
+		newEntries.add(e.id);
+		return e;
+	
 	}
 	public EntryZ newEntry(EntryZ d, RootEntryZ root) {
 		Path src = d.getRoot().getCacheDir().contentPath(d);
 		EntryZ nnew = new EntryZ(root, ++maxId, d.getTitle(), true);
 		nnew.setLastModified(d.getLastModified());
+		newEntries.add(nnew.id);
 
 		move(src, contentPath(nnew));
 		return nnew;

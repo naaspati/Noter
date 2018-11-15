@@ -39,9 +39,8 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	@FXML private TextArea entryPath;
 	
 	private final TitleSearch search = new TitleSearch();
-	
 	private Tab tab;
-	private final WeakChangeListener<Entry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : n.toTreeString()));
+	private final WeakChangeListener<Entry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : n.toTreeString(false)));
 	private BookmarkType bookMarkType;
 	private Entry item;
 

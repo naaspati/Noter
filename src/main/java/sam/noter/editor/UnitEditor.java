@@ -46,13 +46,17 @@ class UnitEditor extends BorderPane {
 	public void setItem(Entry e) {
 		this.item = null;
 		title.setText(e.getTitle());
-		content.setText(e.getContent());
+		content.setText(coalesce(e.getContent()));
 	
 		String text = content.getText();
 		long count = MyUtilsCheck.isEmpty(text) ? 0 : text.chars().filter(s -> s == '\n').count();
 		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
 		this.item = e;
 	}
+	private String coalesce(String s) {
+		return s == null ? "" : s;
+	}
+
 	public void updateFont() {
 		title.setFont(Editor.getFont());
 		content.setFont(Editor.getFont());
@@ -67,7 +71,7 @@ class UnitEditor extends BorderPane {
 		if(item == null)
 			return;
 		
-		title.setTooltip(new Tooltip(item.toTreeString()));
+		title.setTooltip(new Tooltip(item.toTreeString(false)));
 		title.setText(item.getTitle());
 	}
 	public void setWordWrap(boolean wrap) {

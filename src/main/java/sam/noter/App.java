@@ -229,7 +229,7 @@ public class App extends Application implements SessionHelper, ChangeListener<Ta
 					getCurrentTab().walk(e -> {
 						if(e.getContent() == null || e.getContent().trim().isEmpty()) {
 							e.setExpanded(true);
-							sb.append(e.toTreeString());							
+							sb.append(e.toTreeString(false));							
 						}
 					});
 					FxClipboard.setString(sb.toString());

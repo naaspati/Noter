@@ -54,11 +54,11 @@ public class Editor extends BorderPane implements SessionHelper {
 	@FXML private Button2 combineChildrenBtn;
 
 	private final Consumer<Entry> onExpanded = t -> changed(t, EXPANDED);
-	private WeakAndLazy<UnitContainer> unitsContainerWL = new WeakAndLazy<>(() -> new UnitContainer(onExpanded));
-	private WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
+	private final WeakAndLazy<UnitContainer> unitsContainerWL = new WeakAndLazy<>(() -> new UnitContainer(onExpanded));
+	private final WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
 	private final CenterEditor centerEditor = new CenterEditor();
 
-	private SimpleObjectProperty<Entry> currentItem = new SimpleObjectProperty<>();
+	private final SimpleObjectProperty<Entry> currentItem = new SimpleObjectProperty<>();
 	private final IdentityHashMap<Entry, Stack<ViewType>> history0 = new IdentityHashMap<>();
 
 	private static Font font;
@@ -134,16 +134,13 @@ public class Editor extends BorderPane implements SessionHelper {
 		centerEditor.updateFont();
 		unitsContainerWL.ifPresent(UnitContainer::updateFont);
 		combinedTextWL.ifPresent(t -> t.setFont(font));
-
 	}
 
 	public void consume(Consumer<TextArea> e) {
 		if(getCenter() != centerEditor)
 			FxPopupShop.showHidePopup("no text selected", 1500);
-		else {
-
+		else
 			centerEditor.consume(e);
-		}
 	}
 	private DelayedQueueThread<Object> delay;
 	private static final Object SKIP_CHANGE = new Object();
@@ -152,23 +149,23 @@ public class Editor extends BorderPane implements SessionHelper {
 		if(item != null && item.isContentLoaded()) {
 			if(delay != null)
 				delay.add(SKIP_CHANGE);
-			_changed(item, view);
+			actual_changed(item, view);
 			return;
 		}
 		if(delay == null) {
-			delay = new DelayedQueueThread<>(Optional.ofNullable(sessionGetProperty("change.delay")).map(Integer::parseInt).orElse(1000), this::_change_2);
+			delay = new DelayedQueueThread<>(Optional.ofNullable(sessionGetProperty("change.delay")).map(Integer::parseInt).orElse(1000), this::delayedChange);
 			delay.start();
 		}
 		delay.add(new Object[]{item, view});
 	}	
-	private void _change_2(Object obj) {
+	private void delayedChange(Object obj) {
 		if(obj == SKIP_CHANGE)
 			return;
 		Object[] oo = (Object[])obj;
-		Platform.runLater(() -> _changed((Entry)oo[0], (ViewType)oo[1]));
+		Platform.runLater(() -> actual_changed((Entry)oo[0], (ViewType)oo[1]));
 	}
 
-	private void _changed(Entry item, ViewType view) {
+	private void actual_changed(Entry item, ViewType view) {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);
@@ -180,7 +177,7 @@ public class Editor extends BorderPane implements SessionHelper {
 			combineChildrenBtn.setVisible(false);
 			combineContentBtn.setVisible(false);
 			
-			currentItem = null;
+			currentItem.set(null);
 			return;
 		}
 
@@ -296,7 +293,7 @@ public class Editor extends BorderPane implements SessionHelper {
 
 	public Menu getEditorMenu() {
 		Menu menu = new Menu("editor", null,
-				menuitem("copy Entry Tree", e -> Utils.copyToClipboard(currentItem().toTreeString()), currentItem.isNull()),
+				menuitem("copy Entry Tree", e -> Utils.copyToClipboard(currentItem().toTreeString(true)), currentItem.isNull()),
 				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
 				menuitem("Font", e -> setFont())
 				);

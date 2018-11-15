@@ -24,9 +24,11 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	private boolean disableNotify;
 
 	public RootEntryZ(CacheDir cacheDir) throws Exception {
-		super(null, RootEntry.ROOT_ENTRY_ID, "ROOT", false);
+		super(null, ROOT_ENTRY_ID, "ROOT", false);
 		this.cacheDir = cacheDir;
 		reload();
+		if(cacheDir.getSourceFile() != null)
+			setValue(cacheDir.getSourceFile().getFileName().toString());
 	}
 
 	@Override public void close() throws Exception {
@@ -41,6 +43,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	public void setJbookPath(Path path) {
 		Objects.requireNonNull(path);
 		cacheDir.setSourceFile(path);
+		setValue(path.getFileName().toString());
 	}
 
 	@Override

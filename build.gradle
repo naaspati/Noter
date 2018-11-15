@@ -14,7 +14,7 @@ dependencies {
 }
  
 
-version = '1.31'
+version = '1.32'
 sourceCompatibility = JavaVersion.VERSION_1_8 
 targetCompatibility = JavaVersion.VERSION_1_8
  
@@ -23,6 +23,7 @@ mainClassName = 'Main'
 ext.appdir = file("${System.env.SAM_PROGRAMS}\\noter\\app")
 
 run {
+   environment.app_data = /app_data/
     environment.session_file = /app_data\session.properties/
     environment['dynamic.menus.file'] = /app_data\menus.json/
     environment['plugins_dir']=System.env.ECLIPSE_WORKPLACE+/\javafx\Noter-plugins\bin/

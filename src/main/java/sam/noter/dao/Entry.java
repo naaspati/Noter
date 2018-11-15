@@ -185,11 +185,11 @@ public abstract class Entry extends TreeItem<String> {
 	public Entry parent() {
 		return (Entry)getParent();
 	}
-	public String toTreeString() {
+	public String toTreeString(boolean includeRootName) {
 		Entry e = parent();
 		if(e == null)
-			return getValue();
-		String s = e.toTreeString(); 
+			return includeRootName ? getValue() : null;
+		String s = e.toTreeString(includeRootName); 
 		return s == null ? getValue() : s +" > "+getValue();
 	}
 	public boolean isModified() {
