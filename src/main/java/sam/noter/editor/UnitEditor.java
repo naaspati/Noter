@@ -11,6 +11,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import sam.fx.helpers.FxHBox;
 import sam.fx.helpers.FxUtils;
 import sam.fxml.Button2;
 import sam.myutils.MyUtilsCheck;
@@ -36,7 +37,7 @@ class UnitEditor extends BorderPane {
 
 		Button2 expandButton = new Button2("edit", "Expand_20px.png", e -> onExpanded.accept(this.item));
 
-		HBox titleContainer = new HBox(title, FxUtils.longPaneHbox(), expandButton);
+		HBox titleContainer = new HBox(title, FxHBox.maxPane(), expandButton);
 		titleContainer.setPadding(new Insets(5, 10, 5, 10));
 
 		addClass(titleContainer, "title-box");
