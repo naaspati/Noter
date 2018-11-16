@@ -20,7 +20,6 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	private CacheDir cacheDir;
 	private Runnable onModified;
 	private HashMap<Integer, Entry> entries;
-	private HashMap<Entry, Path> removed;
 	private boolean disableNotify;
 
 	public RootEntryZ(CacheDir cacheDir) throws Exception {
@@ -174,8 +173,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		checkIfSame(p, c);
 
 		put(c);
-		if(isNotEmpty(removed))
-			Util.hide(() -> cacheDir.restore(c, removed.remove(c)));
+		Util.hide(() -> cacheDir.restore(c));
 		p.add(c, index);
 	}
 	private EntryZ castNonNull(Object object) {
@@ -201,12 +199,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	public void removeFromParent(Entry child) {
 		EntryZ d = check(child);
 
-		Path removeId = Util.get(() -> cacheDir.remove(d), null);
-		if(removeId != null) {
-			if(removed == null)
-				removed = new HashMap<>();
-			removed.put(d, removeId);
-		}
+		Util.hide(() -> cacheDir.remove(d));
 		entries.remove(d.getId());
 		castNonNull(d.parent()).modifiableChildren(l -> l.remove(d));
 	}

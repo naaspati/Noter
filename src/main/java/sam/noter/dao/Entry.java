@@ -227,11 +227,11 @@ public abstract class Entry extends TreeItem<String> {
 		});
 	}
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		return id;
 	}
 	@Override
-	public boolean equals(Object obj) {
+	public final boolean equals(Object obj) {
 		if(obj == this) return true;
 		if(obj == null || obj.getClass() != getClass() || this.id != ((Entry)obj).id) return false;
 

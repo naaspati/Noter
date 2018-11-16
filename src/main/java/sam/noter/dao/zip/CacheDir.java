@@ -1,6 +1,6 @@
 package sam.noter.dao.zip;
 
-import static sam.myutils.MyUtilsCheck.anyMatch;
+import static sam.myutils.MyUtilsCheck.*;
 import static sam.myutils.MyUtilsCheck.isEmpty;
 import static sam.myutils.MyUtilsCheck.notExists;
 
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -58,6 +59,7 @@ class CacheDir {
 	private WeakReference<Map<Integer, String>> lines;
 	private Path removedDir;
 	private final PathToCacheDir pathToCacheDir; 
+	
 
 	public CacheDir(Path path, Path cacheDir, PathToCacheDir pathToCacheDir) throws IOException {
 		this.startFile = path;
@@ -370,19 +372,27 @@ class CacheDir {
 		if(Files.notExists(p)) return -1;
 		return Util.get(() -> IntSerializer.read(p), -1);
 	}
-	public void restore(EntryZ e, Path removePath) throws IOException {
-		Files.list(removePath)
-		.forEach(p -> move(p, contentDir.resolve(p.getFileName())));
-	}
+	private static int counter = 0;
+	private HashMap<EntryZ, Path> removedMap;
 
-	private static int counter = 0; 
-
-	public Path remove(EntryZ e) throws IOException {
+	public void remove(EntryZ e) throws IOException {
+		Objects.requireNonNull(e);
 		Path dir = removedDir.resolve((counter++)+"-"+e.id);
 		Files.createDirectories(dir);
 		e.walk(d -> move(contentPath((EntryZ)d), dir.resolve(String.valueOf(d.id))));
 		move(contentPath(e), dir.resolve(String.valueOf(e.id)));
-		return dir;
+		if(removedMap == null)
+			removedMap = new HashMap<>();
+		removedMap.put(e, dir);
+	}
+	public void restore(EntryZ e) throws IOException {
+		if(isEmpty(removedMap))
+			return;
+		Path dir  = removedMap.remove(e);
+		if(notExists(dir)) return;
+		
+		Files.list(dir)
+		.forEach(p -> move(p, contentDir.resolve(p.getFileName())));
 	}
 	private void move(Path src, Path target) {
 		if(Files.notExists(src)) return;
