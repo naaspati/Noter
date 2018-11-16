@@ -1,5 +1,8 @@
 package sam.noter;
 
+import static sam.extra.EnvKeys.DYNAMIC_MENUS_FILE;
+import static sam.extra.EnvKeys.PLUGIN_DIR;
+
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.URL;
@@ -29,7 +32,6 @@ import sam.fx.alert.FxAlert;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
 import sam.noter.editor.Editor;
-
 public class DyanamiMenus {
 	private final Logger LOGGER = MyLoggerFactory.logger(DyanamiMenus.class);
 	private MenuBar bar;
@@ -39,19 +41,19 @@ public class DyanamiMenus {
 	public void load(MenuBar bar, Editor editor) throws JSONException, IOException {
 		this.bar = bar;
 		this.editor = editor;
-		String s = System2.lookup("dynamic.menus.file");
+		String s = System2.lookup(DYNAMIC_MENUS_FILE);
 		if(s == null) {
-			LOGGER.warning("dynamic.menus.file variable not set");
+			LOGGER.warning(DYNAMIC_MENUS_FILE+" variable not set");
 			return;
 		}
 
 		Path p = Paths.get(s);
 		if(Files.notExists(p)) {
-			LOGGER.severe("dynamic.menus.file not found: "+s);
+			LOGGER.severe(DYNAMIC_MENUS_FILE+" not found: "+s);
 			return;
 		}
 		
-		Path p2 = Optional.ofNullable(System2.lookup("plugins_dir")).map(Paths::get).orElseGet(p::getParent);
+		Path p2 = Optional.ofNullable(System2.lookup(PLUGIN_DIR)).map(Paths::get).orElseGet(p::getParent);
 		if(Files.notExists(p2)) {
 			LOGGER.severe("plugin_dir not found: "+p2);
 			return;

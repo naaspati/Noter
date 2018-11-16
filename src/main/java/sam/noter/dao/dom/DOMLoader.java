@@ -1,6 +1,8 @@
 package sam.noter.dao.dom;
 
 import static sam.myutils.MyUtilsCheck.isEmpty;
+import static sam.noter.Utils.TEMP_DIR;
+import static sam.noter.Utils.addOnStop;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,15 +39,12 @@ import org.xml.sax.SAXException;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.serilizers.LongSerializer;
 import sam.logging.MyLoggerFactory;
-import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.reference.WeakAndLazy;
-
-
 @SuppressWarnings("rawtypes")
 class DOMLoader {
 	private static final Logger LOGGER = MyLoggerFactory.logger(DOMLoader.class);
-	private static final Path BACKUP_DIR = Utils.BACKUP_DIR.resolve(DOMLoader.class.getName()+"/"+LocalDate.now());
+	private static final Path BACKUP_DIR = TEMP_DIR.resolve(DOMLoader.class.getName()+"/"+LocalDate.now());
 	
 	static {
 		BACKUP_DIR.toFile().mkdirs();
@@ -53,7 +52,7 @@ class DOMLoader {
 		try {
 			if(Files.exists(path) && LongSerializer.read(path) >= System.currentTimeMillis()) {
 				LongSerializer.write(System.currentTimeMillis()+Duration.ofDays(7).toMillis(), path);
-				Utils.addOnStop(() -> backupClean());
+				addOnStop(() -> backupClean());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

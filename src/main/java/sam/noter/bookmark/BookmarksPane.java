@@ -12,8 +12,6 @@ import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.util.HashMap;
 import java.util.List;
 
 import javafx.application.Platform;
@@ -45,7 +43,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import sam.config.Session;
+import sam.config.SessionFactory;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -54,7 +52,6 @@ import sam.noter.dao.Entry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
-import sam.reference.ReferenceUtils;
 import sam.reference.WeakAndLazy;
 public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 
@@ -141,7 +138,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.setHeaderText("Rename Bookmark");
 		d.setTitle("Rename");
 		d.initModality(Modality.APPLICATION_MODAL);
-		d.initOwner(Session.get(Stage.class));
+		d.initOwner(SessionFactory.sharedSession().get(Stage.class));
 		d.showAndWait()
 		.ifPresent(s -> {
 			if(MyUtilsCheck.isEmptyTrimmed(s)) {

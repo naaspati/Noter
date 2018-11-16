@@ -8,7 +8,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,13 +16,13 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import sam.config.Session;
+import sam.config.SessionFactory;
+import sam.extra.EnvKeys;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsException;
 import sam.myutils.System2;
 import sam.noter.dao.Entry;
 
@@ -31,18 +30,14 @@ public class Utils {
 	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class);
 
 	private static final List<Runnable> onStop = new ArrayList<>();
-	public static final Path APP_DATA;
-	public static final Path BACKUP_DIR;
+	public static final Path APP_DATA = EnvKeys.APP_DATA;
+	public static final Path TEMP_DIR = APP_DATA.resolve("java_temp");
 
 	static {
-		APP_DATA = (Path) System.getProperties().get("noter.app.data");
-		BACKUP_DIR = APP_DATA.resolve("java_temp");
 		String s = System2.lookup("session_file");
 		if(s == null)
 			System.setProperty("session_file", APP_DATA.resolve("session.properties").toString());
 	}
-	
-	
 	public static void init() {/*init static block */}
 
 	private Utils() {}
@@ -57,10 +52,10 @@ public class Utils {
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
-		Window parent = Session.get(Stage.class);
+		Window parent = SessionFactory.sharedSession().get(Stage.class);
 
 		if(expectedDir == null || !Files.isDirectory(expectedDir)){
-			final Path p = Utils.APP_DATA.resolve("last-visited-folder.txt");
+			final Path p = APP_DATA.resolve("last-visited-folder.txt");
 			try {
 				expectedDir = Files.exists(p) ? Paths.get(StringReader2.getText(p)) : null;
 			} catch (IOException e) {
@@ -78,7 +73,7 @@ public class Utils {
 		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
 
 		if(file != null) {
-			final Path p = Utils.APP_DATA.resolve("last-visited-folder.txt");
+			final Path p = APP_DATA.resolve("last-visited-folder.txt");
 			try {
 				StringWriter2.setText(p, file.getParent().toString().replace('\\', '/'));
 			} catch (IOException e) {}

@@ -12,7 +12,6 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.fx.helpers.FxHBox;
-import sam.fx.helpers.FxUtils;
 import sam.fxml.Button2;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.dao.Entry;

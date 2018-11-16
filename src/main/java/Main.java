@@ -1,3 +1,7 @@
+import static sam.extra.EnvKeys.APP_DATA;
+import static sam.extra.EnvKeys.OPEN_CMD_DIR;
+import static sam.extra.EnvKeys.OPEN_CMD_ENABLE;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,46 +11,33 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 import javax.swing.JOptionPane;
 
 import javafx.application.Application;
 import sam.io.fileutils.FilesUtilsIO;
-import sam.myutils.MyUtilsException;
 import sam.myutils.MyUtilsPath;
-import sam.myutils.System2;
 import sam.noter.App;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.dom.RootDOMEntryFactory;
 import sam.noter.dao.zip.RootEntryZFactory;
-
 public class Main {
 	public static void main( String[] args ) throws Exception {
-		
-		Path appdata = Optional.ofNullable(System2.lookupAny("app_data", "APP_DATA","app.data", "APP.DATA"))
-				.map(Paths::get)
-				.orElseGet(() -> MyUtilsException.noError(() -> Paths.get(ClassLoader.getSystemResource(".").toURI()).resolve("app_data")));
-		
-		Path openfiles = appdata.resolve("open_files"); 
-		
 		try {
-			FilesUtilsIO.createFileLock("noter.lock");
+			FilesUtilsIO.createFileLock(APP_DATA.resolve("noter.lock"));
 		} catch (IOException e) {
-			if(args.length == 0) {
+			if(args.length == 0 || !OPEN_CMD_ENABLE) {
 				JOptionPane.showMessageDialog(null, "Only one instanceof program is allowed", "No Two instance allowed", JOptionPane.ERROR_MESSAGE);
 				System.exit(0);
 			}
-			Files.write(openfiles.resolve(String.valueOf(System.currentTimeMillis())), Arrays.asList(args), StandardOpenOption.CREATE);
+			Files.createDirectories(OPEN_CMD_DIR);
+			Files.write(OPEN_CMD_DIR.resolve(String.valueOf(System.currentTimeMillis())), Arrays.asList(args), StandardOpenOption.CREATE);
 			return;
 		}
 		
-		System.getProperties().put("noter.app.data", appdata);
-		System.getProperties().put("noter.open.files", openfiles);
-		Files.createDirectories(openfiles);
-
+		Files.createDirectories(OPEN_CMD_DIR);
 		Utils.init();
 		Application.launch(App.class, args);
 	}

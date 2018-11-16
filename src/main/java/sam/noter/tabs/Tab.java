@@ -2,6 +2,7 @@ package sam.noter.tabs;
 
 import static sam.fx.helpers.FxClassHelper.setClass;
 import static sam.fx.helpers.FxClassHelper.toggleClass;
+import static sam.noter.Utils.chooseFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +30,6 @@ import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.noter.ActionResult;
-import sam.noter.Utils;
 import sam.noter.Utils.FileChooserType;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
@@ -182,7 +182,7 @@ public class Tab extends HBox implements RootEntry {
 		Path file = getJbookPath();
 		Path expectedDir = file == null ? null : file.getParent();
 
-		return Utils.chooseFile(title, expectedDir, this.title.getText()+".jbook", type);
+		return chooseFile(title, expectedDir, this.title.getText()+".jbook", type);
 	}
 
 	public void  open_containing_folder(HostServices hs)  {

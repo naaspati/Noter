@@ -1,5 +1,8 @@
 package sam.noter;
 
+import static sam.extra.EnvKeys.DEFAULT_SAVE_DIR;
+import static sam.noter.Utils.APP_DATA;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -16,13 +19,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-
-import sam.config.Session;
+import sam.config.SessionFactory;
+import sam.extra.EnvKeys;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
-
 
 public class FilesLookup {
 	private final Logger LOGGER = MyLoggerFactory.logger(FilesLookup.class);
@@ -53,7 +55,7 @@ public class FilesLookup {
 
 	private Map<String, Path> files;
 	private String[] opencache ;
-	private final Path openCacheDir = Utils.APP_DATA.resolve("open_cache");
+	private final Path openCacheDir = APP_DATA.resolve("open_cache");
 	
 	private File find(final String string) throws UnsupportedEncodingException, IOException {
 		File f = null;
@@ -119,9 +121,9 @@ public class FilesLookup {
 	private Path dd;
 	private Path defaultDir() {
 		if(dd != null) return dd;
-		String s = System2.lookup("default.save.dir");
+		String s = System2.lookup(DEFAULT_SAVE_DIR);
 		if(s == null)
-			s = Optional.ofNullable(Session.getProperty(getClass(), "default.save.dir")).orElse(System.getenv("USERPROFILE"));
+			s = Optional.ofNullable(SessionFactory.sharedSession().getProperty(EnvKeys.DEFAULT_SAVE_DIR)).orElse(System.getenv("USERPROFILE"));
 		return dd = Paths.get(s);
 	}
 

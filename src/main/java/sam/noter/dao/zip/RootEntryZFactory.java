@@ -1,5 +1,7 @@
 package sam.noter.dao.zip;
 
+import static sam.noter.Utils.TEMP_DIR;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,11 +20,9 @@ import sam.collection.Iterables;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
-import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.RootEntryFactory;
-
 public class RootEntryZFactory implements RootEntryFactory {
 	private static volatile RootEntryZFactory INSTANCE;
 	private static final Logger LOGGER = MyLoggerFactory.logger(RootEntryZFactory.class);
@@ -88,7 +88,7 @@ public class RootEntryZFactory implements RootEntryFactory {
 			return map.get(path.toString());
 		}
 	}
-	private final Path temp_dir = Utils.BACKUP_DIR.resolve(RootEntryZFactory.class.getName());
+	private final Path temp_dir = TEMP_DIR.resolve(RootEntryZFactory.class.getName());
 	private final PathToCacheDir pathToCacheDir; 
 
 	private RootEntryZFactory() throws IOException {

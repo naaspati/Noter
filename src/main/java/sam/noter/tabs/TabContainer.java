@@ -1,6 +1,7 @@
 package sam.noter.tabs;
 
 import static sam.fx.helpers.FxClassHelper.addClass;
+import static sam.noter.Utils.chooseFile;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -35,7 +36,6 @@ import sam.fx.alert.FxAlert;
 import sam.myutils.MyUtilsCheck;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
-import sam.noter.Utils;
 import sam.noter.Utils.FileChooserType;
 
 public class TabContainer extends BorderPane implements ChangeListener<Tab> {
@@ -241,7 +241,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	public void open(List<Path> jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
-			Path file = Utils.chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
+			Path file = chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
 
 			if(file == null)
 				return;

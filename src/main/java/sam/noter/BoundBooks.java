@@ -1,5 +1,7 @@
 package sam.noter;
 
+import static sam.noter.Utils.APP_DATA;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,16 +11,18 @@ import java.util.logging.Level;
 
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import sam.config.Session;
+import sam.config.SessionFactory;
+import sam.config.SessionFactory.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
 import sam.noter.tabs.Tab;
-
 public class BoundBooks {
 	private final HashMap<String, String> boundBooks = new HashMap<>();
+	private static final Session SESSION = SessionFactory.getSession(BoundBooks.class);
+
 	private boolean modified;
 
 	public BoundBooks() throws IOException {
@@ -32,7 +36,7 @@ public class BoundBooks {
 		});
 	}
 	private Path getPath() {
-		return Utils.APP_DATA.resolve("boundBooks.txt");
+		return APP_DATA.resolve("boundBooks.txt");
 	}
 	public File openBook(Tab tab) {
 		String s = get(tab);
@@ -59,14 +63,14 @@ public class BoundBooks {
 			file = new File(s).getParentFile();
 			fc.setInitialFileName(file.getName());
 		} else {
-			s = Session.getProperty(getClass(), "recent_dir");
+			s = SESSION.getProperty("recent_dir");
 			file = s == null ? null : new File(s);
 		}
 
 		if(file != null && file.exists()) 
 			fc.setInitialDirectory(file);
 
-		file = fc.showOpenDialog(Session.get(Stage.class));
+		file = fc.showOpenDialog(SESSION.get(Stage.class));
 		if(tab.getTabTitle() != null)
 			fc.setTitle("Book for: "+tab.getTabTitle());
 
@@ -74,7 +78,7 @@ public class BoundBooks {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 		else {
 			boundBooks.put(tab.getJbookPath().toString(), file.toString());
-			Session.put(getClass(), "recent_dir", file.getParent());
+			SESSION.put("recent_dir", file.getParent());
 			FileOpenerNE.openFile(file);
 			modified = true;
 			tab.setBoundBook(file);

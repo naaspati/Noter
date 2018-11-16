@@ -24,7 +24,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import sam.config.Session;
+import sam.config.SessionFactory;
 import sam.noter.InitFinalized;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
@@ -46,7 +46,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	public BookmarkMover(TabContainer tabcontainer) {
 		super(StageStyle.UNIFIED);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(Session.get(Stage.class));
+		initOwner(SessionFactory.sharedSession().get(Stage.class));
 		this.tabcontainer = tabcontainer;
 
 		moveAbove.setOnAction(this);

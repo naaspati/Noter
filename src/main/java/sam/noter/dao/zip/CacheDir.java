@@ -1,6 +1,7 @@
 package sam.noter.dao.zip;
 
-import static sam.myutils.MyUtilsCheck.*;
+import static sam.myutils.MyUtilsCheck.anyMatch;
+import static sam.myutils.MyUtilsCheck.isEmpty;
 import static sam.myutils.MyUtilsCheck.notExists;
 
 import java.io.FileNotFoundException;

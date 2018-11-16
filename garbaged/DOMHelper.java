@@ -63,12 +63,12 @@ class DOMHelper {
 		for (Object o : list) 
 			rootElement.appendChild(((DOMEntry) o).getElement(this));
 
-		Utils.createBackup(target);
+		createBackup(target);
 		write(doc, target);
 	}
 
 	private String indent() {
-		Path p = Utils.APP_DATA.resolve("xml.properties");
+		Path p = APP_DATA.resolve("xml.properties");
 		if(Files.exists(p)) {
 
 			return Optional.ofNullable(Session.getProperty(DOMHelper.class, "xml.indent"))

@@ -31,8 +31,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import sam.config.Session;
-import sam.config.SessionHelper;
+import sam.config.SessionFactory;
+import sam.config.SessionFactory.Session;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -45,7 +45,8 @@ import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
 import sam.thread.DelayedQueueThread;
 
-public class Editor extends BorderPane implements SessionHelper {
+public class Editor extends BorderPane {
+	private static final Session SESSION = SessionFactory.getSession(Editor.class);
 
 	@FXML private BorderPane editor;
 	@FXML private Button2 backBtn;
@@ -68,7 +69,7 @@ public class Editor extends BorderPane implements SessionHelper {
 	}
 	static {
 		// Font.font(family, weight, posture, size)
-		String family = Session.getProperty(Editor.class, "font.family");
+		String family = SESSION.getProperty("font.family");
 		FontWeight weight = parse("font.weight", FontWeight::valueOf);
 		FontPosture posture = parse("font.posture", FontPosture::valueOf);
 		Float size = parse("font.size", Float::parseFloat);
@@ -77,7 +78,7 @@ public class Editor extends BorderPane implements SessionHelper {
 	}
 	private static <R> R parse(String key, Function<String, R> parser) {
 		try {
-			String s = Session.getProperty(Editor.class, key);
+			String s = SESSION.getProperty(key);
 			if(s == null)
 				return null;
 			return parser.apply(s.toUpperCase());
@@ -128,7 +129,7 @@ public class Editor extends BorderPane implements SessionHelper {
 		combinedTextWL.ifPresent(u -> u.setWrapText(wrap));
 	}
 	public void setFont() {
-		Font font = new FontSetter().getFont();
+		Font font = new FontSetter(SESSION).getFont();
 		if(font == null) return;
 
 		centerEditor.updateFont();
@@ -153,7 +154,7 @@ public class Editor extends BorderPane implements SessionHelper {
 			return;
 		}
 		if(delay == null) {
-			delay = new DelayedQueueThread<>(Optional.ofNullable(sessionGetProperty("change.delay")).map(Integer::parseInt).orElse(1000), this::delayedChange);
+			delay = new DelayedQueueThread<>(Optional.ofNullable(SESSION.getProperty("change.delay")).map(Integer::parseInt).orElse(1000), this::delayedChange);
 			delay.start();
 		}
 		delay.add(new Object[]{item, view});
@@ -294,8 +295,8 @@ public class Editor extends BorderPane implements SessionHelper {
 	public Menu getEditorMenu() {
 		Menu menu = new Menu("editor", null,
 				menuitem("copy Entry Tree", e -> Utils.copyToClipboard(currentItem().toTreeString(true)), currentItem.isNull()),
-				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected())),
-				menuitem("Font", e -> setFont())
+				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected()))
+				//TODO menuitem("Font", e -> setFont())
 				);
 		return menu;
 	}
