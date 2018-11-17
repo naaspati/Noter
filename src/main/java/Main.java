@@ -15,6 +15,7 @@ import java.util.Objects;
 import javax.swing.JOptionPane;
 
 import javafx.application.Application;
+import sam.config.LoadConfig;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.myutils.MyUtilsPath;
 import sam.noter.App;
@@ -25,6 +26,8 @@ import sam.noter.dao.dom.RootDOMEntryFactory;
 import sam.noter.dao.zip.RootEntryZFactory;
 public class Main {
 	public static void main( String[] args ) throws Exception {
+		LoadConfig.load();
+		
 		try {
 			FilesUtilsIO.createFileLock(APP_DATA.resolve("noter.lock"));
 		} catch (IOException e) {
