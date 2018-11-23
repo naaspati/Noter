@@ -24,7 +24,7 @@ import sam.extra.EnvKeys;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.myutils.System2;
 
 public class FilesLookup {
@@ -72,7 +72,7 @@ public class FilesLookup {
 
 		if(files == null) {
 			Path dd = defaultDir();
-			if(MyUtilsCheck.notExists(dd)) {
+			if(Checker.notExists(dd)) {
 				files = Collections.emptyMap();
 				LOGGER.severe("default dir, not found: "+dd);
 			} else {

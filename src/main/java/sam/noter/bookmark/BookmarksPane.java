@@ -47,7 +47,7 @@ import sam.config.SessionFactory;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
@@ -141,7 +141,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.initOwner(SessionFactory.sharedSession().get(Stage.class));
 		d.showAndWait()
 		.ifPresent(s -> {
-			if(MyUtilsCheck.isEmptyTrimmed(s)) {
+			if(Checker.isEmptyTrimmed(s)) {
 				FxPopupShop.showHidePopup("bad title:", 1500);
 				return;
 			}

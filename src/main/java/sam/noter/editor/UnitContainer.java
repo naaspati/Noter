@@ -12,17 +12,17 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.VBox;
 import sam.noter.dao.Entry;
-import sam.reference.WeakList;
+import sam.reference.WeakQueue;
 
 class UnitContainer extends ScrollPane {
 	private final VBox root = new VBox(15);
-	private final WeakList<UnitEditor> unitEditors;
+	private final WeakQueue<UnitEditor> unitEditors;
 	private boolean wrapText;
 	private Entry item;
 	private final ObservableList<Node> list;
 	
 	public UnitContainer(Consumer<Entry> onExpanded) {
-		unitEditors  = new WeakList<>(() -> new UnitEditor(onExpanded));
+		unitEditors  = new WeakQueue<>(() -> new UnitEditor(onExpanded));
 		
 		setContent(root);
 		list = root.getChildren();

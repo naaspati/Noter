@@ -17,7 +17,7 @@ import org.xml.sax.SAXException;
 
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.RootEntry;
@@ -97,7 +97,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 
 	@Override
 	public Entry addChild(String title, Entry parent,  int index) {
-		if(MyUtilsCheck.isEmptyTrimmed(title))
+		if(Checker.isEmptyTrimmed(title))
 			throw new IllegalArgumentException("bad title: "+title);
 
 		Entry e = dom.newEntry(title);
@@ -112,7 +112,7 @@ class RootDOMEntry extends DOMEntry implements RootEntry {
 	}
 	@Override
 	public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) {
-		if(MyUtilsCheck.isEmpty(childrenToMove)) return Collections.emptyList();
+		if(Checker.isEmpty(childrenToMove)) return Collections.emptyList();
 
 		DOMEntry parent = check(newParent);
 

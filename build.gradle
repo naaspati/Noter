@@ -23,10 +23,6 @@ mainClassName = 'Main'
 ext.appdir = file("${System.env.SAM_PROGRAMS}\\noter\\app")
 
 run {
-   environment.app_data = /app_data/
-    environment.session_file = /app_data\session.properties/
-    environment['dynamic.menus.file'] = /app_data\menus.json/
-    environment['plugins_dir']=System.env.ECLIPSE_WORKPLACE+/\javafx\Noter-plugins\bin/
     systemProperties['java.util.logging.config.file'] = file('logging.properties').absolutePath
     systemProperties['java.io.tmpdir'] = file('java_temp').absolutePath
     args new File('dummy.zip.jbook').absolutePath

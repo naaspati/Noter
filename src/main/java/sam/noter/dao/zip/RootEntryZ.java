@@ -1,7 +1,5 @@
 package sam.noter.dao.zip;
 
-import static sam.myutils.MyUtilsCheck.isNotEmpty;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -11,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.RootEntry;
@@ -113,7 +111,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 
 	@Override
 	public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) {
-		if(MyUtilsCheck.isEmpty(childrenToMove)) return Collections.emptyList();
+		if(Checker.isEmpty(childrenToMove)) return Collections.emptyList();
 
 		EntryZ parent = check(newParent);
 

@@ -1,8 +1,8 @@
 package sam.noter.dao.zip;
 
-import static sam.myutils.MyUtilsCheck.*;
-import static sam.myutils.MyUtilsCheck.isEmpty;
-import static sam.myutils.MyUtilsCheck.notExists;
+import static sam.myutils.Checker.anyMatch;
+import static sam.myutils.Checker.isEmpty;
+import static sam.myutils.Checker.notExists;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,7 +29,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import sam.collection.IntSet;
-import sam.io.BufferSize;
+import sam.io.IOConstants;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.serilizers.IntSerializer;
 import sam.io.serilizers.LongSerializer;
@@ -38,7 +38,7 @@ import sam.io.serilizers.ObjectWriter;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.zip.RootEntryZFactory.PathToCacheDir;
@@ -48,7 +48,7 @@ import sam.string.StringUtils.StringSplitIterator;
 
 class CacheDir {
 	private static final Logger LOGGER = MyLoggerFactory.logger(CacheDir.class);
-	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[BufferSize.DEFAULT_BUFFER_SIZE]);
+	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[IOConstants.defaultBufferSize()]);
 	private final IntSet newEntries = new IntSet();
 
 	Path startFile;
@@ -315,7 +315,7 @@ class CacheDir {
 	private void prepareCache() throws FileNotFoundException, IOException {
 		Path lm = lastModified();
 
-		if(anyMatch(MyUtilsCheck::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) 
+		if(anyMatch(Checker::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) 
 			_prepareCache();	
 		else  
 			LOGGER.info(() -> "CACHE LOADED: "+root);

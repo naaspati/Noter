@@ -37,7 +37,7 @@ import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
@@ -113,7 +113,7 @@ public class Editor extends BorderPane {
 	@FXML
 	private void historyBack(Event e) {
 		Stack<ViewType> stack = history(currentItem(), false);
-		if(MyUtilsCheck.isNotEmpty(stack))
+		if(Checker.isNotEmpty(stack))
 			stack.pop();
 		
 		changed(currentItem(), PREVIOUS);
@@ -186,7 +186,7 @@ public class Editor extends BorderPane {
 		
 		if(view == PREVIOUS) {
 			Stack<ViewType> stack = history(item,false);
-			if(MyUtilsCheck.isEmpty(stack))
+			if(Checker.isEmpty(stack))
 				view = CENTER;
 			else 
 				view = stack.pop();

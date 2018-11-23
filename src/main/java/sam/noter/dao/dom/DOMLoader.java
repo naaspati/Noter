@@ -1,6 +1,6 @@
 package sam.noter.dao.dom;
 
-import static sam.myutils.MyUtilsCheck.isEmpty;
+import static sam.myutils.Checker.isEmpty;
 import static sam.noter.Utils.TEMP_DIR;
 import static sam.noter.Utils.addOnStop;
 

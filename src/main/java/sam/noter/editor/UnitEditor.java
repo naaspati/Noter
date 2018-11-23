@@ -13,7 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.fx.helpers.FxHBox;
 import sam.fxml.Button2;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 
 class UnitEditor extends BorderPane {
@@ -49,7 +49,7 @@ class UnitEditor extends BorderPane {
 		content.setText(coalesce(e.getContent()));
 	
 		String text = content.getText();
-		long count = MyUtilsCheck.isEmpty(text) ? 0 : text.chars().filter(s -> s == '\n').count();
+		long count = Checker.isEmpty(text) ? 0 : text.chars().filter(s -> s == '\n').count();
 		content.setPrefRowCount(count  < 5 ? 5 : (count > 40 ? 40 : (int)count));
 		this.item = e;
 	}

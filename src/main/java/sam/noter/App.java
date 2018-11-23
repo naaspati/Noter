@@ -71,8 +71,9 @@ import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.MyUtilsBytes;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.myutils.MyUtilsThread;
+import sam.nopkg.Junk;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.bookmark.SearchBox;
 import sam.noter.editor.Editor;
@@ -179,7 +180,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		
 		String s = dialog.showAndWait()
 		.orElse(null);
-		if(MyUtilsCheck.isEmptyTrimmed(s)) {
+		if(Checker.isEmptyTrimmed(s)) {
 			FxPopupShop.showHidePopup("Cancelled", 1500);
 			return;
 		}
@@ -346,17 +347,8 @@ public class App extends Application implements ChangeListener<Tab> {
 				}, currentTabNull),
 				menuitem("ProgramName", e -> FxAlert.showMessageDialog("ManagementFactory.getRuntimeMXBean().getName()", ManagementFactory.getRuntimeMXBean().getName())),
 				menuitem("Memory usage", e -> {
-					Runtime r = Runtime.getRuntime();
-					StringBuilder sb = new StringBuilder();
-					Function<Long, String> f = l -> MyUtilsBytes.bytesToHumanReadableUnits(l, false);
-					sb.append("Total Memory: ").append(f.apply(r.totalMemory())).append('\n')
-					.append(" Free Memory: ").append(f.apply(r.freeMemory())).append('\n')
-					.append("  Max Memory: ").append(f.apply(r.maxMemory())).append('\n')
-					.append(" used Memory: ").append(f.apply(r.totalMemory() - r.freeMemory())).append('\n')
-					;
-
 					FxAlert.alertBuilder(AlertType.INFORMATION)
-					.content(new TextArea(sb.toString()))
+					.content(new TextArea(Junk.memoryUsage()))
 					.header("Memory Usage")
 					.owner(stage)
 					.show();

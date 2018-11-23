@@ -19,12 +19,14 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import sam.config.SessionFactory;
 import sam.fx.helpers.FxCell;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.myutils.MyUtilsException;
 import sam.noter.InitFinalized;
 import sam.noter.dao.Entry;
@@ -46,6 +48,8 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 
 	public BookmarkAddeder() {
 		super(StageStyle.UTILITY);
+		initModality(Modality.APPLICATION_MODAL);
+		initOwner(SessionFactory.sharedSession().get(Stage.class));
 		MyUtilsException.hideError(() -> FxFxml.load(this, true));
 
 		similar.setCellFactory(FxCell.listCell(Entry::getTitle));
@@ -67,7 +71,7 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 		result = null;
 		
 		String s = titleTf.getText();
-		if(MyUtilsCheck.isEmptyTrimmed(s)){
+		if(Checker.isEmptyTrimmed(s)){
 			FxPopupShop.showHidePopup("Invalid title", 1500);
 			return;
 		}

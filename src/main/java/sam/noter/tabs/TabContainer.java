@@ -33,7 +33,7 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.fx.alert.FxAlert;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
 import sam.noter.Utils.FileChooserType;
@@ -136,7 +136,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	}
 
 	public void addTabs(List<Path> files) {
-		if(MyUtilsCheck.isEmpty(files))
+		if(Checker.isEmpty(files))
 			return;
 
 		int index = tabs.size();
