@@ -1,7 +1,7 @@
 package sam.noter;
 
-import static sam.extra.EnvKeys.DYNAMIC_MENUS_FILE;
-import static sam.extra.EnvKeys.PLUGIN_DIR;
+import static sam.noter.EnvKeys.DYNAMIC_MENUS_FILE;
+import static sam.noter.EnvKeys.PLUGIN_DIR;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;

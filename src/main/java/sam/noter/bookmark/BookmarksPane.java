@@ -43,7 +43,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import sam.config.SessionFactory;
+import sam.config.Session;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -138,7 +138,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.setHeaderText("Rename Bookmark");
 		d.setTitle("Rename");
 		d.initModality(Modality.APPLICATION_MODAL);
-		d.initOwner(SessionFactory.sharedSession().get(Stage.class));
+		d.initOwner(Session.sharedSession().get(Stage.class));
 		d.showAndWait()
 		.ifPresent(s -> {
 			if(Checker.isEmptyTrimmed(s)) {

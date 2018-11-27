@@ -42,14 +42,16 @@ public class Tab extends HBox implements RootEntry {
 	private final Button close = new Button("x");
 	private final Button open = new Button("o");
 
-	public Tab(Path path, Consumer<Tab> onSelect) throws Exception {
-		root = RootEntryFactory.getInstance().load(path);
-		init(onSelect);
-		setTabTitle(path.getFileName().toString());
+	public static Tab load(Path path, Consumer<Tab> onSelect) throws Exception {
+		return new Tab(RootEntryFactory.getInstance().load(path), onSelect);
 	}
-	public Tab(Consumer<Tab> onSelect) throws Exception {
-		root = RootEntryFactory.getInstance().create();
+	public static Tab create(Path path, Consumer<Tab> onSelect) throws Exception {
+		return new Tab(RootEntryFactory.getInstance().create(path), onSelect);
+	}
+	private Tab(RootEntry root, Consumer<Tab> onSelect) throws Exception {
+		this.root = root;
 		init(onSelect);
+		setTabTitle(root.getJbookPath().getFileName().toString());
 	}
 	private void init(Consumer<Tab> onSelect) {
 		setSpacing(5);
@@ -164,7 +166,7 @@ public class Tab extends HBox implements RootEntry {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
-		
+
 		Path source = getJbookPath();
 
 		if(target.equals(source))

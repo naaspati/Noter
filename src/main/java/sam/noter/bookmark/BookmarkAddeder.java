@@ -22,7 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import sam.config.SessionFactory;
+import sam.config.Session;
 import sam.fx.helpers.FxCell;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
@@ -49,7 +49,7 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	public BookmarkAddeder() {
 		super(StageStyle.UTILITY);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(SessionFactory.sharedSession().get(Stage.class));
+		initOwner(Session.sharedSession().get(Stage.class));
 		MyUtilsException.hideError(() -> FxFxml.load(this, true));
 
 		similar.setCellFactory(FxCell.listCell(Entry::getTitle));

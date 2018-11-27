@@ -11,6 +11,6 @@ public interface RootEntryFactory {
 		// return new RootDOMEntryFactory();
 	}
 	
-	RootEntry create() throws Exception;
+	RootEntry create(Path file) throws Exception;
 	RootEntry load(Path file) throws Exception;
 }

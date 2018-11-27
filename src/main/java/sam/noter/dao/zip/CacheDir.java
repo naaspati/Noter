@@ -271,7 +271,17 @@ class CacheDir {
 			this.order = order;
 		}
 	}
+	
 	private void zip(Path target) throws IOException {
+		Path temp = _zip(target);
+		
+		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+		LOGGER.fine("MOVED: "+temp+ "  "+target);
+		this.currentFile = target;
+		saveLastModified();
+	} 
+	
+	private Path _zip(Path target) throws IOException {
 		Path temp = Files.createTempFile(target.getFileName().toString(), null);
 
 		synchronized (wbuffer) {
@@ -280,24 +290,21 @@ class CacheDir {
 
 				Path index = index();
 				if(Files.notExists(index))
-					return;
+					return temp;
 
 				byte[] buffer = wbuffer.get();
 				write("index", buffer, index, zos);
 
 				Path content = contentDir;
-				if(Files.notExists(content)) return;
+				if(Files.notExists(content)) return temp;
 
 				String[] contents = content.toFile().list();
-				if(contents == null || contents.length == 0) return;
+				if(contents == null || contents.length == 0) return temp;
 				for (String f : contents)
 					write("content/"+f, buffer, content.resolve(f), zos);
 			}
 		}
-		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-		LOGGER.fine("MOVED: "+temp+ "  "+target);
-		this.currentFile = target;
-		saveLastModified();
+		return temp;
 	}
 
 	private static void write(String name, byte[] buffer, Path file, ZipOutputStream zos) throws IOException {

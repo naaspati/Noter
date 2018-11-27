@@ -1,6 +1,6 @@
-import static sam.extra.EnvKeys.APP_DATA;
-import static sam.extra.EnvKeys.OPEN_CMD_DIR;
-import static sam.extra.EnvKeys.OPEN_CMD_ENABLE;
+import static sam.noter.EnvKeys.APP_DATA;
+import static sam.noter.EnvKeys.OPEN_CMD_DIR;
+import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -102,9 +102,11 @@ public class Main {
 		RootEntryZFactory factory2 = RootEntryZFactory.getInstance();
 
 		RootEntry root = factory.load(xml);
-		RootEntry root2 = factory2.convert(root);
+		/**
+		 * RootEntry root2 = factory2.convert(root);
 
 		root2.save(zip);
+		 */
 		System.out.println("DONE");
 	}
 }

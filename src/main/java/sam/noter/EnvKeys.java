@@ -1,4 +1,4 @@
-package sam.extra;
+package sam.noter;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

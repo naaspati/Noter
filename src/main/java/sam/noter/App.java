@@ -8,10 +8,10 @@ import static javafx.scene.input.KeyCode.W;
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.extra.EnvKeys.OPEN_CMD_DIR;
-import static sam.extra.EnvKeys.OPEN_CMD_ENABLE;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
+import static sam.noter.EnvKeys.OPEN_CMD_DIR;
+import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
 import static sam.noter.Utils.APP_DATA;
 
 import java.io.IOException;
@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -61,8 +60,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import sam.config.SessionFactory;
-import sam.config.SessionFactory.Session;
+import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxFxml;
@@ -70,7 +68,6 @@ import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
 import sam.logging.MyLoggerFactory;
-import sam.myutils.MyUtilsBytes;
 import sam.myutils.Checker;
 import sam.myutils.MyUtilsThread;
 import sam.nopkg.Junk;
@@ -84,7 +81,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
 	}
 
-	private static final Session SESSION = SessionFactory.getSession(App.class);
+	private static final Session SESSION = Session.getSession(App.class);
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
 
@@ -112,7 +109,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
-		SessionFactory.sharedSession().put(Stage.class, stage);
+		Session.sharedSession().put(Stage.class, stage);
 
 		boundBooks = new BoundBooks();
 

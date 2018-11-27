@@ -16,8 +16,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import sam.config.SessionFactory;
-import sam.extra.EnvKeys;
+import sam.config.Session;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.io.serilizers.StringReader2;
@@ -45,14 +44,13 @@ public class Utils {
 	public enum FileChooserType {
 		OPEN, SAVE
 	}
-
 	public static Path chooseFile(String title, Path expectedDir, String expectedFilename, FileChooserType type) {
 		Objects.requireNonNull(type);
 
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
-		Window parent = SessionFactory.sharedSession().get(Stage.class);
+		Window parent = Session.sharedSession().get(Stage.class);
 
 		if(expectedDir == null || !Files.isDirectory(expectedDir)){
 			final Path p = APP_DATA.resolve("last-visited-folder.txt");

@@ -13,14 +13,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
-import javafx.scene.control.TreeItem;
 import sam.collection.Iterables;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
-import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
 import sam.noter.dao.RootEntryFactory;
 public class RootEntryZFactory implements RootEntryFactory {
@@ -100,8 +97,8 @@ public class RootEntryZFactory implements RootEntryFactory {
 		pathToCacheDir = new PathToCacheDir();
 	}
 	@Override
-	public RootEntry create() throws Exception {
-		return new RootEntryZ(cacheFile(null));
+	public RootEntry create(Path path) throws Exception {
+		return new RootEntryZ(cacheFile(path));
 	}
 	@Override
 	public RootEntry load(Path file) throws Exception {
@@ -109,20 +106,21 @@ public class RootEntryZFactory implements RootEntryFactory {
 	}
 
 	private CacheDir cacheFile(Path file) throws IOException {
-		file =  file == null ? null : file.normalize().toAbsolutePath();
+		file =  file.normalize().toAbsolutePath();
 		String str = pathToCacheDir.get(file);
 		CacheDir d = new CacheDir(file, str == null ? newCacheDir(file) : temp_dir.resolve(str), pathToCacheDir);
 		return d;
 	}
 	private Path newCacheDir(Path file) throws IOException {
-		String s = file == null ? "" : "-"+file.getFileName().toString(); 
+		String s = "-"+file.getFileName().toString(); 
 		Path p = temp_dir.resolve(System.currentTimeMillis()+s);
 		while(Files.exists(p))
 			p = temp_dir.resolve(System.currentTimeMillis()+"-"+(int)(Math.random()*100)+s);
 		return p;
 	}
 
-	public RootEntryZ convert(RootEntry root) throws Exception {
+	/*
+	 * TODO public RootEntryZ convert(RootEntry root) throws Exception {
 		RootEntryZ t = (RootEntryZ) create();
 		t.setItems(((Entry)root).getChildren()
 				.stream()
@@ -130,9 +128,11 @@ public class RootEntryZFactory implements RootEntryFactory {
 		t.setModified();
 		return t;
 	}
-	private EntryZ map(TreeItem<String> item) {
+	 * private EntryZ map(TreeItem<String> item) {
 		EntryZ e = new EntryZ(((Entry)item).getId(), (Entry)item);
 		e.setItems(item.getChildren().stream().map(this::map).collect(Collectors.toList()));
 		return e;
 	}
+	 */
+	
 }

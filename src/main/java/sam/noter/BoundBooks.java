@@ -11,8 +11,7 @@ import java.util.logging.Level;
 
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import sam.config.SessionFactory;
-import sam.config.SessionFactory.Session;
+import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
@@ -21,7 +20,7 @@ import sam.logging.MyLoggerFactory;
 import sam.noter.tabs.Tab;
 public class BoundBooks {
 	private final HashMap<String, String> boundBooks = new HashMap<>();
-	private static final Session SESSION = SessionFactory.getSession(BoundBooks.class);
+	private static final Session SESSION = Session.getSession(BoundBooks.class);
 
 	private boolean modified;
 

@@ -14,8 +14,8 @@ import sam.noter.dao.RootEntryFactory;
 
 public class RootDOMEntryFactory implements RootEntryFactory {
 	@Override
-	public RootEntry create() throws Exception {
-		return new RootDOMEntry();
+	public RootEntry create(Path path) throws Exception {
+		return new RootDOMEntry(path);
 	}
 	@Override
 	public RootEntry load(Path file) throws Exception {

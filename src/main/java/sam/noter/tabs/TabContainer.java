@@ -33,9 +33,11 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.fx.alert.FxAlert;
+import sam.fx.popup.FxPopupShop;
 import sam.myutils.Checker;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
+import sam.noter.Utils;
 import sam.noter.Utils.FileChooserType;
 
 public class TabContainer extends BorderPane implements ChangeListener<Tab> {
@@ -114,25 +116,30 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	public void addBlankTab() {
 		Tab tab;
 		try {
-			tab = new Tab(onSelect);
+			
+			Pattern pattern = Pattern.compile("New (\\d+)");
+			
+			int n = tabs.stream()
+			.map(Tab::getTabTitle)
+			.map(pattern::matcher)
+			.filter(Matcher::find)
+			.map(m -> m.group(1))
+			.mapToInt(Integer::parseInt)
+			.max()
+			.orElse(0);
+			
+			String s = "New "+(n+1);
+			Path  p = Utils.chooseFile("create new file", null, s, FileChooserType.SAVE);
+			if(p == null) {
+				FxPopupShop.showHidePopup("cancelled", 1500);
+				return;
+			}
+			tab = Tab.create(p, onSelect);
+			addTab(tab, true);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(null, "failed to create Tab", e);
 			return;
 		}
-		
-		Pattern pattern = Pattern.compile("New (\\d+)");
-		
-		int n = tabs.stream()
-		.map(Tab::getTabTitle)
-		.map(pattern::matcher)
-		.filter(Matcher::find)
-		.map(m -> m.group(1))
-		.mapToInt(Integer::parseInt)
-		.max()
-		.orElse(0);
-
-		tab.setTabTitle("New "+(n+1));
-		addTab(tab, true);
 	}
 
 	public void addTabs(List<Path> files) {
@@ -142,7 +149,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		int index = tabs.size();
 		for (Path file : files) {
 			try {
-				addTab(new Tab(file, onSelect), false);
+				addTab(Tab.load(file, onSelect), false);
 			} catch (Exception  e) {
 				FxAlert.showErrorDialog(files, "failed to open file", e);
 			}

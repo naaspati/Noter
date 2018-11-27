@@ -17,7 +17,7 @@ import sam.noter.dao.RootEntry;
 class RootEntryZ extends EntryZ implements RootEntry {
 	private CacheDir cacheDir;
 	private Runnable onModified;
-	private HashMap<Integer, Entry> entries;
+	private HashMap<Integer, Entry> entries = new HashMap<>();
 	private boolean disableNotify;
 
 	public RootEntryZ(CacheDir cacheDir) throws Exception {
@@ -65,7 +65,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	@Override
 	public void setItems(List items) {
 		this.items.setAll(items);
-		entries = new HashMap<>(entries == null ? 50 : entries.size()+10);
+		entries = new HashMap<>(Checker.isEmpty(entries) ? 50 : entries.size()+10);
 		entries.clear();
 		walk(this::put);
 		childrenM = false;

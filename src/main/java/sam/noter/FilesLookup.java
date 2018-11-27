@@ -1,6 +1,7 @@
 package sam.noter;
 
-import static sam.extra.EnvKeys.*;
+import static sam.noter.EnvKeys.DEFAULT_SAVE_DIR;
+import static sam.noter.EnvKeys.ENABLE_FILE_LOOKUP_OPEN_CACHE;
 import static sam.noter.Utils.APP_DATA;
 
 import java.io.File;
@@ -19,8 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-import sam.config.SessionFactory;
-import sam.extra.EnvKeys;
+import sam.config.Session;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
@@ -130,7 +130,7 @@ public class FilesLookup {
 	private Path defaultDir() {
 		String s = System2.lookup(DEFAULT_SAVE_DIR);
 		if(s == null)
-			return Optional.ofNullable(SessionFactory.sharedSession().getProperty(EnvKeys.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
+			return Optional.ofNullable(Session.sharedSession().getProperty(EnvKeys.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
 		else 
 			return Paths.get(s);
 	}

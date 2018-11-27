@@ -24,8 +24,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
-import sam.config.SessionFactory;
-import sam.config.SessionFactory.Session;
+import sam.config.Session;
 
 class FontSetter extends Stage {
 	private Font font;
@@ -35,7 +34,7 @@ class FontSetter extends Stage {
 		super(StageStyle.UTILITY);
 		this.session = session;
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(SessionFactory.sharedSession().get(Stage.class));
+		initOwner(Session.sharedSession().get(Stage.class));
 		setTitle("Select Font");
 
 		GridPane root = new GridPane();

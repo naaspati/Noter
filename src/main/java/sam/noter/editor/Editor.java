@@ -31,8 +31,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import sam.config.SessionFactory;
-import sam.config.SessionFactory.Session;
+import sam.config.Session;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -46,7 +45,7 @@ import sam.reference.WeakAndLazy;
 import sam.thread.DelayedQueueThread;
 
 public class Editor extends BorderPane {
-	private static final Session SESSION = SessionFactory.getSession(Editor.class);
+	private static final Session SESSION = Session.getSession(Editor.class);
 
 	@FXML private BorderPane editor;
 	@FXML private Button2 backBtn;
