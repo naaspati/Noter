@@ -25,6 +25,7 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -44,9 +45,12 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -54,6 +58,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.TreeItem;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
@@ -64,6 +69,7 @@ import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxFxml;
+import sam.fx.helpers.FxMenu;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
@@ -73,6 +79,7 @@ import sam.myutils.MyUtilsThread;
 import sam.nopkg.Junk;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.bookmark.SearchBox;
+import sam.noter.dao.Entry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
@@ -315,7 +322,7 @@ public class App extends Application implements ChangeListener<Tab> {
 				getFileMenu(), 
 				bookmarks.getBookmarkMenu(), 
 				getSearchMenu(), 
-				editor.getEditorMenu(),
+				editorMenu(),
 				Optional.ofNullable(SESSION.getProperty("debug"))
 				.filter(s -> s.trim().equalsIgnoreCase("true"))
 				.map(s -> getDebugMenu())
@@ -324,6 +331,63 @@ public class App extends Application implements ChangeListener<Tab> {
 		new DyanamiMenus().load(bar, editor);
 		return bar;
 	}
+	private Menu editorMenu() {
+		Menu menu = editor.getEditorMenu();
+		menu.getItems().add(FxMenu.menuitem("combine everything", this::combineEverything, currentTabNull));
+		return menu;
+	}
+	
+	private void combineEverything(ActionEvent e) {
+		Tab tab = currentTab.get();
+		StringBuilder sb = new StringBuilder(5000);
+		separator = new char[0];
+		walk(tab.getRoot().getChildren(), sb, "");
+		separator = null;
+		
+		Scene previous = stage.getScene();
+		Hyperlink link = new Hyperlink("<< BACK");
+		link.setOnAction(e1 -> {
+			stage.hide();
+			stage.setScene(previous);
+			stage.show();
+		});
+		TextArea ta = new TextArea(sb.toString());
+		ta.setFont(Editor.getFont());
+		ta.setEditable(false);
+		
+		stage.hide();
+		stage.setScene(new Scene(new BorderPane(ta, link, null, null, null)));
+		stage.show();
+	}
+	private char[] separator;
+	private char[] separator(int size) {
+		if(separator.length >= size)
+			return separator;
+		
+		separator = new char[size+10];
+		Arrays.fill(separator, '#');
+		
+		return separator;
+	}
+	private void walk(List<TreeItem<String>> children, StringBuilder sb, String parent) {
+		for (TreeItem<String> t : children) {
+			Entry e = (Entry)t;
+			String tag = parent.concat(e.getTitle());
+			int n = sb.length();
+			sb.append('|').append(separator(tag.length()+3), 0, tag.length()+3).append('|').append('\n');
+			int n2 = sb.length();
+			sb.append('|').append(' ').append(tag).append(' ').append(' ').append('|').append('\n')
+			.append(sb, n, n2);
+			
+			sb.append(e.getContent());
+			sb.append('\n').append('\n');
+			
+			List<TreeItem<String>> list = t.getChildren();
+			if(!list.isEmpty())
+				walk(list, sb, tag.concat(" > "));
+		}
+	}
+
 	private Menu getDebugMenu() {
 		return new Menu("debug", null,
 				menuitem("no content bookmarks", e_e -> {

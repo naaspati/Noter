@@ -67,7 +67,6 @@ public class Main {
 		System.out.println("DONE");
 	} 
 
-	@SuppressWarnings("unused")
 	private static void check(Path xml, Path zip) throws Exception {
 		RootDOMEntryFactory domF = new RootDOMEntryFactory();
 		RootEntryZFactory zF = RootEntryZFactory.getInstance();
