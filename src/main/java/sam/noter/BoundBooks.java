@@ -37,25 +37,14 @@ public class BoundBooks {
 	private Path getPath() {
 		return APP_DATA.resolve("boundBooks.txt");
 	}
-	public File openBook(Tab tab) {
-		String s = get(tab);
-		if(s == null) return null;
-		File p = new File(s);
-		if(!p.exists())
-			FxAlert.showErrorDialog(s, "Book File not found", null);
-		else 
-			FileOpenerNE.openFile(p);
-		return p;
-	}
-
-	private String get(Tab tab) {
+	public String getBoundBookPath(Tab tab) {
 		if(tab.getJbookPath() == null)
 			return null;
 		return boundBooks.get(tab.getJbookPath().toString());
 	}
 	public void bindBook(Tab tab) {
 		FileChooser fc = new FileChooser();
-		String s = get(tab);
+		String s = getBoundBookPath(tab);
 		File file;
 
 		if(s != null) {

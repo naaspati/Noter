@@ -34,6 +34,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
+import sam.io.fileutils.FileOpenerNE;
 import sam.myutils.Checker;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
@@ -163,10 +164,21 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		tabsBox.getChildren().add(tab);
 		tab.setOnClose(this::closeTab);
 		tab.setContextMenu(closeTabsContextMenu);
-		File file = boundBooks.openBook(tab);
+		File file = openBook(tab);
 		tab.setBoundBook(file);
 		if(setCurrent)
 			currentTab.set(tab);
+	}
+	public File openBook(Tab tab) {
+		String s = boundBooks.getBoundBookPath(tab);
+		if(s == null) return null;
+		File p = new File(s);
+		
+		if(!p.exists())
+			FxAlert.showErrorDialog(s, "Book File not found", null);
+		else if(FxAlert.showConfirmDialog(s, "Open Bound Book\n"+tab.getTabTitle()+"\n"+p.getName()))
+			FileOpenerNE.openFile(p);
+		return p;
 	}
 	public void closeTab(Tab tab) {
 		if(tab == null)

@@ -47,6 +47,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
@@ -54,6 +55,7 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
@@ -61,7 +63,12 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeItem;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -150,7 +157,7 @@ public class App extends Application implements ChangeListener<Tab> {
 	private void watcher() throws IOException {
 		if(!OPEN_CMD_ENABLE)
 			return;
-		
+
 		MyLoggerFactory.logger(getClass()).fine(() -> "INIT: OPEN_CMD_DIR watcher");
 		Files.createDirectories(OPEN_CMD_DIR);
 		MyUtilsThread.runOnDeamonThread(new DirWatcher(OPEN_CMD_DIR, StandardWatchEventKinds.ENTRY_CREATE) {
@@ -181,16 +188,16 @@ public class App extends Application implements ChangeListener<Tab> {
 		dialog.initOwner(stage);
 		dialog.setHeaderText("Enter CMD");
 		dialog.setContentText("CMD");
-		
+
 		String s = dialog.showAndWait()
-		.orElse(null);
+				.orElse(null);
 		if(Checker.isEmptyTrimmed(s)) {
 			FxPopupShop.showHidePopup("Cancelled", 1500);
 			return;
 		}
-		
+
 		List<String> list = new ArrayList<>();
-		
+
 		if(s.indexOf('"') >= 0) {
 			Pattern pattern = Pattern.compile("\"(.+?)\"");
 			Matcher m = pattern.matcher(s);
@@ -336,14 +343,14 @@ public class App extends Application implements ChangeListener<Tab> {
 		menu.getItems().add(FxMenu.menuitem("combine everything", this::combineEverything, currentTabNull));
 		return menu;
 	}
-	
+
 	private void combineEverything(ActionEvent e) {
 		Tab tab = currentTab.get();
 		StringBuilder sb = new StringBuilder(5000);
 		separator = new char[0];
 		walk(tab.getRoot().getChildren(), sb, "");
 		separator = null;
-		
+
 		Scene previous = stage.getScene();
 		Hyperlink link = new Hyperlink("<< BACK");
 		link.setOnAction(e1 -> {
@@ -351,22 +358,24 @@ public class App extends Application implements ChangeListener<Tab> {
 			stage.setScene(previous);
 			stage.show();
 		});
-		TextArea ta = new TextArea(sb.toString());
+		Text ta = new Text(sb.toString());
 		ta.setFont(Editor.getFont());
-		ta.setEditable(false);
+		ScrollPane sp = new ScrollPane(ta);
+		sp.setPadding(new Insets(0, 0, 0, 5));
+		sp.setStyle("-fx-background:white");
 		
 		stage.hide();
-		stage.setScene(new Scene(new BorderPane(ta, link, null, null, null)));
+		stage.setScene(new Scene(new BorderPane(sp, link, null, null, null), Color.WHITE));
 		stage.show();
 	}
 	private char[] separator;
 	private char[] separator(int size) {
 		if(separator.length >= size)
 			return separator;
-		
+
 		separator = new char[size+10];
 		Arrays.fill(separator, '#');
-		
+
 		return separator;
 	}
 	private void walk(List<TreeItem<String>> children, StringBuilder sb, String parent) {
@@ -378,10 +387,10 @@ public class App extends Application implements ChangeListener<Tab> {
 			int n2 = sb.length();
 			sb.append('|').append(' ').append(tag).append(' ').append(' ').append('|').append('\n')
 			.append(sb, n, n2);
-			
+
 			sb.append(e.getContent());
 			sb.append('\n').append('\n');
-			
+
 			List<TreeItem<String>> list = t.getChildren();
 			if(!list.isEmpty())
 				walk(list, sb, tag.concat(" > "));
@@ -478,10 +487,10 @@ public class App extends Application implements ChangeListener<Tab> {
 				new SeparatorMenuItem(),
 				menuitem("E_xit", combination(F4, ALT_DOWN), e -> exit())
 				);
-		
+
 		if(!OPEN_CMD_ENABLE)
 			menu.getItems().add(2,  menuitem("Open By Cmd", combination(O, SHORTCUT_DOWN, SHIFT_DOWN), e -> openByCmd(), searchActive));
-		
+
 		closeSpecific.disableProperty().bind(tabsContainer.tabsCountProperty().lessThan(2).or(searchActive));
 		return menu;
 	}
