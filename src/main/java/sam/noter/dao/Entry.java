@@ -86,6 +86,16 @@ public abstract class Entry extends TreeItem<String> {
 		this.lastModified = lastModified;
 	}
 	public String getTitle() { return getValue(); }
+	
+	/**
+	 * specialMethod used by App.combineEverything.walk
+	 * return content without keeping the reference
+	 * @param cacheContent
+	 * @return
+	 */
+	public String getContentWithoutCaching() {
+		throw new IllegalAccessError("not implemeted");
+	}
 	public String getContent() {
 		if(contentProxy != null) return contentProxy.get();
 		return content == null ? "" : content;

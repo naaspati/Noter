@@ -204,7 +204,6 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	String getContent(EntryZ e) throws IOException {
 		return cacheDir.getContent(e);
 	}
-
 	public CacheDir getCacheDir() {
 		return cacheDir;
 	}

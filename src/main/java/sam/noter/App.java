@@ -48,6 +48,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
@@ -63,11 +64,10 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeItem;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
@@ -75,7 +75,9 @@ import javafx.stage.Stage;
 import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
+import sam.fx.helpers.FxBindings;
 import sam.fx.helpers.FxFxml;
+import sam.fx.helpers.FxHBox;
 import sam.fx.helpers.FxMenu;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.DirWatcher;
@@ -344,6 +346,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		return menu;
 	}
 
+	//TODO
 	private void combineEverything(ActionEvent e) {
 		Tab tab = currentTab.get();
 		StringBuilder sb = new StringBuilder(5000);
@@ -353,20 +356,38 @@ public class App extends Application implements ChangeListener<Tab> {
 
 		Scene previous = stage.getScene();
 		Hyperlink link = new Hyperlink("<< BACK");
+		
 		link.setOnAction(e1 -> {
 			stage.hide();
 			stage.setScene(previous);
 			stage.show();
 		});
+		
 		Text ta = new Text(sb.toString());
-		ta.setFont(Editor.getFont());
 		ScrollPane sp = new ScrollPane(ta);
 		sp.setPadding(new Insets(0, 0, 0, 5));
 		sp.setStyle("-fx-background:white");
 		
+		int lines = 0;
+		for (int i = 0; i < sb.length(); i++) {
+			if(sb.charAt(i) == '\n')
+				lines++;
+		}
+		Text t = new Text();
+		t.textProperty().bind(FxBindings.map(sp.vvalueProperty(), s -> String.valueOf((int)(s.doubleValue()*100))));
+		HBox box = new HBox(10,link, FxHBox.maxPane(), new Text("lines: "+lines+", chars: "+sb.length()+", scroll:"), t, new Text());
+		box.setAlignment(Pos.CENTER_RIGHT);
+		box.setStyle("-fx-font-size:0.8em;");
+		
+		BorderPane root = new BorderPane(sp, box, null, null, null);
+		Font f = Editor.getFont();
+		root.setStyle(String.format("-fx-font-size:%s;-fx-font-family:%s;-fx-font-style:normal;", f.getSize(), f.getFamily(), f.getStyle()));
+		
 		stage.hide();
-		stage.setScene(new Scene(new BorderPane(sp, link, null, null, null), Color.WHITE));
+		stage.setScene(new Scene(root, Color.WHITE));
 		stage.show();
+		
+		Platform.runLater(System::gc);
 	}
 	private char[] separator;
 	private char[] separator(int size) {
@@ -388,7 +409,7 @@ public class App extends Application implements ChangeListener<Tab> {
 			sb.append('|').append(' ').append(tag).append(' ').append(' ').append('|').append('\n')
 			.append(sb, n, n2);
 
-			sb.append(e.getContent());
+			sb.append(e.getContentWithoutCaching());
 			sb.append('\n').append('\n');
 
 			List<TreeItem<String>> list = t.getChildren();
@@ -442,8 +463,7 @@ public class App extends Application implements ChangeListener<Tab> {
 							tabsContainer.setEffect(null);
 							searchActive.set(false);
 						});
-					}
-					else { 
+					} else { 
 						sb.start(getCurrentTab());
 					}
 

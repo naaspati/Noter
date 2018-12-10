@@ -49,6 +49,12 @@ class EntryZ extends Entry {
 		}
 		return super.getContent();
 	}
+	@Override
+	public String getContentWithoutCaching() {
+		if(contentLoaded || content != null || contentProxy != null)
+			return super.getContent();
+		return Util.get(() -> root.getContent(this), "");
+	}
 
 	public void setItems(List<EntryZ> items) {
 		this.items.setAll(items);
