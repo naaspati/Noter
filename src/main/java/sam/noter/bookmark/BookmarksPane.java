@@ -138,7 +138,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		d.setHeaderText("Rename Bookmark");
 		d.setTitle("Rename");
 		d.initModality(Modality.APPLICATION_MODAL);
-		d.initOwner(Session.sharedSession().get(Stage.class));
+		d.initOwner(Session.global().get(Stage.class));
 		d.showAndWait()
 		.ifPresent(s -> {
 			if(Checker.isEmptyTrimmed(s)) {

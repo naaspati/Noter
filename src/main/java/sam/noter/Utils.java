@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -44,26 +43,32 @@ public class Utils {
 	public enum FileChooserType {
 		OPEN, SAVE
 	}
-	public static Path chooseFile(String title, Path expectedDir, String expectedFilename, FileChooserType type) {
+	private static final Path last_visited_save = APP_DATA.resolve("last-visited-folder.txt");
+	private static File last_visited;
+	
+	public static File chooseFile(String title, File expectedDir, String expectedFilename, FileChooserType type) {
 		Objects.requireNonNull(type);
 
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle(title);
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
-		Window parent = Session.sharedSession().get(Stage.class);
+		Window parent = Session.global().get(Stage.class);
 
-		if(expectedDir == null || !Files.isDirectory(expectedDir)){
-			final Path p = APP_DATA.resolve("last-visited-folder.txt");
-			try {
-				expectedDir = Files.exists(p) ? Paths.get(StringReader2.getText(p)) : null;
-			} catch (IOException e) {
-				LOGGER.log(Level.WARNING, "failed to read: "+p, e);
-				expectedDir = null;
+		if(expectedDir == null || !expectedDir.isDirectory()){
+			if(last_visited != null)
+				expectedDir = last_visited;
+			else {
+				try {
+					expectedDir = Files.exists(last_visited_save) ? new File(StringReader2.getText(last_visited_save)) : null;
+				} catch (IOException e) {
+					LOGGER.log(Level.WARNING, "failed to read: "+last_visited_save, e);
+					expectedDir = null;
+				}
 			}
 		}
 
-		if(expectedDir != null && Files.isDirectory(expectedDir))
-			chooser.setInitialDirectory(expectedDir.toFile());
+		if(expectedDir != null && expectedDir.isDirectory())
+			chooser.setInitialDirectory(expectedDir);
 
 		if(expectedFilename != null)
 			chooser.setInitialFileName(expectedFilename);
@@ -71,14 +76,12 @@ public class Utils {
 		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
 
 		if(file != null) {
-			final Path p = APP_DATA.resolve("last-visited-folder.txt");
 			try {
-				StringWriter2.setText(p, file.getParent().toString().replace('\\', '/'));
+				last_visited = file.getParentFile();
+				StringWriter2.setText(last_visited_save, last_visited.toString().replace('\\', '/'));
 			} catch (IOException e) {}
-			return file.toPath();
 		}
-
-		return null;
+		return file;
 	}
 	public static Entry castEntry(TreeItem<String> parent) {
 		return (Entry)parent;

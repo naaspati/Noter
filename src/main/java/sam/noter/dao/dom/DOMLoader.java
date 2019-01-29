@@ -50,8 +50,8 @@ class DOMLoader {
 		BACKUP_DIR.toFile().mkdirs();
 		Path path = BACKUP_DIR.resolveSibling("backup.schedule");
 		try {
-			if(Files.exists(path) && LongSerializer.read(path) >= System.currentTimeMillis()) {
-				LongSerializer.write(System.currentTimeMillis()+Duration.ofDays(7).toMillis(), path);
+			if(Files.exists(path) && new LongSerializer().read(path) >= System.currentTimeMillis()) {
+				new LongSerializer().write(System.currentTimeMillis()+Duration.ofDays(7).toMillis(), path);
 				addOnStop(() -> backupClean());
 			}
 		} catch (Exception e) {

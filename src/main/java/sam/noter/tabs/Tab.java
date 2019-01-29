@@ -132,12 +132,13 @@ public class Tab extends HBox implements RootEntry {
 				return ar;
 		}
 
-		Path file = getFile("save file", FileChooserType.SAVE);
+		File path = getFile("save file", FileChooserType.SAVE);
 
-		if(file == null)
+		if(path == null)
 			return ActionResult.CANCEL;
 
 		try {
+			Path file = path.toPath();
 			root.save(file);
 			setJbookPath(file);
 		} catch (Exception e) {
@@ -161,13 +162,14 @@ public class Tab extends HBox implements RootEntry {
 	}
 
 	public void  rename()  {
-		Path target = getFile("rename", FileChooserType.SAVE);
-		if(target == null) {
+		File file = getFile("rename", FileChooserType.SAVE);
+		if(file == null) {
 			FxPopupShop.showHidePopup("cancelled", 1500);
 			return;
 		}
-
-		Path source = getJbookPath();
+		
+		final Path target = file.toPath();
+		final Path source = getJbookPath();
 
 		if(target.equals(source))
 			return;
@@ -180,9 +182,9 @@ public class Tab extends HBox implements RootEntry {
 		}
 	}
 
-	public Path getFile(String title, FileChooserType type) {
+	public File getFile(String title, FileChooserType type) {
 		Path file = getJbookPath();
-		Path expectedDir = file == null ? null : file.getParent();
+		File expectedDir = file == null ? null : file.getParent().toFile();
 
 		return chooseFile(title, expectedDir, this.title.getText()+".jbook", type);
 	}

@@ -34,7 +34,7 @@ class FontSetter extends Stage {
 		super(StageStyle.UTILITY);
 		this.session = session;
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(Session.sharedSession().get(Stage.class));
+		initOwner(Session.global().get(Stage.class));
 		setTitle("Select Font");
 
 		GridPane root = new GridPane();

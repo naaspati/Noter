@@ -130,12 +130,12 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 			.orElse(0);
 			
 			String s = "New "+(n+1);
-			Path  p = Utils.chooseFile("create new file", null, s, FileChooserType.SAVE);
+			File p = Utils.chooseFile("create new file", null, s, FileChooserType.SAVE);
 			if(p == null) {
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
 			}
-			tab = Tab.create(p, onSelect);
+			tab = Tab.create(p.toPath(), onSelect);
 			addTab(tab, true);
 		} catch (Exception e) {
 			FxAlert.showErrorDialog(null, "failed to create Tab", e);
@@ -260,12 +260,12 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	public void open(List<Path> jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
-			Path file = chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
+			File file = chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
 
 			if(file == null)
 				return;
 
-			jbookPath = Collections.singletonList(file);
+			jbookPath = Collections.singletonList(file.toPath());
 		}
 
 		addTabs(jbookPath);

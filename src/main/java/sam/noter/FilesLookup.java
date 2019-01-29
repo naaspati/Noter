@@ -130,7 +130,7 @@ public class FilesLookup {
 	private Path defaultDir() {
 		String s = System2.lookup(DEFAULT_SAVE_DIR);
 		if(s == null)
-			return Optional.ofNullable(Session.sharedSession().getProperty(EnvKeys.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
+			return Optional.ofNullable(Session.global().getProperty(EnvKeys.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
 		else 
 			return Paths.get(s);
 	}

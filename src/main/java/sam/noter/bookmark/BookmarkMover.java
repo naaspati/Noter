@@ -46,7 +46,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	public BookmarkMover(TabContainer tabcontainer) {
 		super(StageStyle.UNIFIED);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(Session.sharedSession().get(Stage.class));
+		initOwner(Session.global().get(Stage.class));
 		this.tabcontainer = tabcontainer;
 
 		moveAbove.setOnAction(this);

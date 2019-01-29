@@ -49,7 +49,7 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	public BookmarkAddeder() {
 		super(StageStyle.UTILITY);
 		initModality(Modality.APPLICATION_MODAL);
-		initOwner(Session.sharedSession().get(Stage.class));
+		initOwner(Session.global().get(Stage.class));
 		MyUtilsException.hideError(() -> FxFxml.load(this, true));
 
 		similar.setCellFactory(FxCell.listCell(Entry::getTitle));

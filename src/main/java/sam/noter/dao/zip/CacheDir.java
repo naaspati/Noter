@@ -87,7 +87,7 @@ class CacheDir {
 		if(Files.exists(index)) {
 			Path p = index;
 			LOGGER.fine(() -> "index loaded: "+p);
-			maxId = IntSerializer.read(maxId()); 
+			maxId = new IntSerializer().read(maxId()); 
 			root.setItems(ObjectReader.read(index, dis -> EntryZ.read(dis, root)).getChildren());
 			return;
 		}
@@ -174,7 +174,7 @@ class CacheDir {
 	}
 
 	private void saveRoot(RootEntryZ root) throws IOException {
-		IntSerializer.write(maxId, maxId());
+		new IntSerializer().write(maxId, maxId());
 		ObjectWriter.write(index2(), root, RootEntryZ::write);
 		LOGGER.fine(() -> "CREATED: "+maxId()+" (maxId: "+maxId+")");
 		LOGGER.fine(() -> "CREATED: "+index2());
@@ -322,7 +322,7 @@ class CacheDir {
 	private void prepareCache() throws FileNotFoundException, IOException {
 		Path lm = lastModified();
 
-		if(anyMatch(Checker::notExists, currentFile, lm) || currentFile.toFile().lastModified() != LongSerializer.read(lm)) 
+		if(anyMatch(Checker::notExists, currentFile, lm) || currentFile.toFile().lastModified() != new LongSerializer().read(lm)) 
 			_prepareCache();	
 		else  
 			LOGGER.info(() -> "CACHE LOADED: "+root);
@@ -358,7 +358,7 @@ class CacheDir {
 	}
 	private void saveLastModified() throws IOException {
 		if(notExists(currentFile)) return;
-		LongSerializer.write(currentFile.toFile().lastModified(), lastModified());
+		new LongSerializer().write(currentFile.toFile().lastModified(), lastModified());
 		StringWriter2.setText(this.root.resolve("file"), currentFile.toString());
 	}
 	public void close(RootEntryZ ez) {
@@ -368,7 +368,7 @@ class CacheDir {
 			Path p = root.resolve("selecteditem");
 			Files.deleteIfExists(p);
 			if(selectedItem != null)
-				IntSerializer.write(selectedItem.id, p);
+				new IntSerializer().write(selectedItem.id, p);
 
 			FilesUtilsIO.deleteDir(removedDir);
 		});
@@ -377,7 +377,7 @@ class CacheDir {
 	public int getSelectedItem() {
 		Path p = root.resolve("selecteditem");
 		if(Files.notExists(p)) return -1;
-		return Util.get(() -> IntSerializer.read(p), -1);
+		return Util.get(() -> new IntSerializer().read(p), -1);
 	}
 	private static int counter = 0;
 	private HashMap<EntryZ, Path> removedMap;

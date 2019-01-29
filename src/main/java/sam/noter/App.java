@@ -14,6 +14,7 @@ import static sam.noter.EnvKeys.OPEN_CMD_DIR;
 import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
 import static sam.noter.Utils.APP_DATA;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
@@ -52,6 +53,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -82,10 +84,12 @@ import sam.fx.helpers.FxMenu;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
+import sam.io.serilizers.StringWriter2;
 import sam.logging.MyLoggerFactory;
 import sam.myutils.Checker;
-import sam.myutils.MyUtilsThread;
+import sam.thread.MyUtilsThread;
 import sam.nopkg.Junk;
+import sam.noter.Utils.FileChooserType;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.bookmark.SearchBox;
 import sam.noter.dao.Entry;
@@ -125,7 +129,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
-		Session.sharedSession().put(Stage.class, stage);
+		Session.global().put(Stage.class, stage);
 
 		boundBooks = new BoundBooks();
 
@@ -352,7 +356,6 @@ public class App extends Application implements ChangeListener<Tab> {
 		StringBuilder sb = new StringBuilder(5000);
 		separator = new char[0];
 		walk(tab.getRoot().getChildren(), sb, "");
-		separator = null;
 
 		Scene previous = stage.getScene();
 		Hyperlink link = new Hyperlink("<< BACK");
@@ -373,20 +376,34 @@ public class App extends Application implements ChangeListener<Tab> {
 			if(sb.charAt(i) == '\n')
 				lines++;
 		}
+		Button save = new Button("save");
+		save.setOnAction(e1 -> {
+			File file = Utils.chooseFile("save in text", null, tab.getTabTitle().concat(".txt"), FileChooserType.SAVE);
+			if(file == null) {
+				FxPopupShop.showHidePopup("cancelled", 1500);
+				return;
+			} 
+			try {
+				StringWriter2.setText(file.toPath(), ta.getText());
+			} catch (IOException e2) {
+				FxAlert.showErrorDialog(file, "failed to save", e2);
+			}
+		});
 		Text t = new Text();
 		t.textProperty().bind(FxBindings.map(sp.vvalueProperty(), s -> String.valueOf((int)(s.doubleValue()*100))));
-		HBox box = new HBox(10,link, FxHBox.maxPane(), new Text("lines: "+lines+", chars: "+sb.length()+", scroll:"), t, new Text());
+		HBox box = new HBox(10,link, FxHBox.maxPane(), save, new Text("lines: "+lines+", chars: "+sb.length()+", scroll:"), t, new Text());
 		box.setAlignment(Pos.CENTER_RIGHT);
 		box.setStyle("-fx-font-size:0.8em;");
 		
 		BorderPane root = new BorderPane(sp, box, null, null, null);
 		Font f = Editor.getFont();
 		root.setStyle(String.format("-fx-font-size:%s;-fx-font-family:%s;-fx-font-style:normal;", f.getSize(), f.getFamily(), f.getStyle()));
-		
+
+		separator = null;
+		sb = null;
 		stage.hide();
 		stage.setScene(new Scene(root, Color.WHITE));
 		stage.show();
-		
 		Platform.runLater(System::gc);
 	}
 	private char[] separator;
