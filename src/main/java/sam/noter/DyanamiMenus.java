@@ -1,17 +1,13 @@
 package sam.noter;
 
 import static sam.noter.EnvKeys.DYNAMIC_MENUS_FILE;
-import static sam.noter.EnvKeys.PLUGIN_DIR;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,7 +31,6 @@ import sam.noter.editor.Editor;
 public class DyanamiMenus {
 	private final Logger LOGGER = MyLoggerFactory.logger(DyanamiMenus.class);
 	private MenuBar bar;
-	private ClassLoader loader;
 	private Editor editor;
 
 	public void load(MenuBar bar, Editor editor) throws JSONException, IOException {
@@ -52,15 +47,6 @@ public class DyanamiMenus {
 			LOGGER.severe(DYNAMIC_MENUS_FILE+" not found: "+s);
 			return;
 		}
-		
-		Path p2 = Optional.ofNullable(System2.lookup(PLUGIN_DIR)).map(Paths::get).orElseGet(p::getParent);
-		if(Files.notExists(p2)) {
-			LOGGER.severe("plugin_dir not found: "+p2);
-			return;
-		}
-		
-		loader = new URLClassLoader(new URL[] {p2.toUri().toURL()});
-		LOGGER.config(() -> "plugin_dir="+p2);
 		JSONObject json = new JSONObject(Files.lines(p).collect(Collectors.joining()));
 		json.toMap().forEach(this::configMenu);
 	}
@@ -113,7 +99,7 @@ public class DyanamiMenus {
 		if(clsName == null) return ;
 		mi.setOnAction(e -> {
 			try {
-				Consumer<TextArea> c = (Consumer<TextArea>) loader.loadClass(clsName).newInstance();
+				Consumer<TextArea> c = (Consumer<TextArea>) Class.forName(clsName).newInstance();
 				WeakReference<Consumer<TextArea>> w = new WeakReference<>(c);
 				mi.setOnAction(e1 -> consume2(mi, clsName, w));
 				consume2(mi, clsName, w);
@@ -136,7 +122,7 @@ public class DyanamiMenus {
 	@SuppressWarnings("unchecked")
 	private <E> void loadClass(String clsName, Consumer<E> consumer) {
 		try {
-			E e = (E)loader.loadClass(clsName).newInstance();
+			E e = (E)Class.forName(clsName).newInstance();
 			consumer.accept(e);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
 			LOGGER.log(Level.SEVERE, "failed to load class: "+clsName, e); 	

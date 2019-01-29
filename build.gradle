@@ -7,7 +7,9 @@ repositories {
 }
 
 dependencies {
-  compile project(':Noter-plugins')
+  compile (project(':Noter-plugins')) {
+    transitive = false
+  } 
   compile files('myutils.jar')
   compile 'org.json:json:20180130'
   compile 'org.xerial:sqlite-jdbc:3.7.2'
