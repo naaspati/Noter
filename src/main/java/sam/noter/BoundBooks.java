@@ -7,16 +7,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.logging.Level;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import sam.config.Session;
-import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.io.serilizers.StringWriter2;
-import sam.logging.MyLoggerFactory;
 import sam.noter.tabs.Tab;
 public class BoundBooks {
 	private final HashMap<String, String> boundBooks = new HashMap<>();
@@ -84,9 +84,12 @@ public class BoundBooks {
 
 		try {
 			StringWriter2.setText(p, sb);
-			MyLoggerFactory.logger(getClass()).fine(() -> "modified: "+p);
+			logger().debug("modified: ",p);
 		} catch (IOException e) {
-			MyLoggerFactory.logger(getClass()).log(Level.SEVERE, "failed to save: "+p, e);
+			logger().fatal( "failed to save: ",p, e);
 		}
+	}
+	private Logger logger() {
+		return LogManager.getLogger(getClass());
 	}
 }

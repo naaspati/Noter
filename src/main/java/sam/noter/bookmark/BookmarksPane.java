@@ -1,12 +1,11 @@
 package sam.noter.bookmark;
-
-
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeCombination.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.App.GRAYSCALE_EFFECT;
+import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.CHILD;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
@@ -14,7 +13,6 @@ import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 import java.io.IOException;
 import java.util.List;
 
-import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -242,7 +240,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		tree.setRoot(null);
 		if(root == null) return;
 		
-		Platform.runLater(() -> {
+		fx(() -> {
 			tree.setRoot(root);
 
 			if(root != null){

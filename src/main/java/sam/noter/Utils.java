@@ -7,9 +7,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import javafx.application.Platform;
 import javafx.scene.control.TreeItem;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -20,12 +22,11 @@ import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
-import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
 import sam.noter.dao.Entry;
 
 public class Utils {
-	private static final Logger LOGGER = MyLoggerFactory.logger(Utils.class);
+	private static final Logger logger = LogManager.getLogger(Utils.class);
 
 	private static final List<Runnable> onStop = new ArrayList<>();
 	public static final Path APP_DATA = EnvKeys.APP_DATA;
@@ -61,7 +62,7 @@ public class Utils {
 				try {
 					expectedDir = Files.exists(last_visited_save) ? new File(StringReader2.getText(last_visited_save)) : null;
 				} catch (IOException e) {
-					LOGGER.log(Level.WARNING, "failed to read: "+last_visited_save, e);
+					logger.error("failed to read: {}", last_visited_save, e);
 					expectedDir = null;
 				}
 			}
@@ -96,5 +97,8 @@ public class Utils {
 	public static void copyToClipboard(String s) {
 		FxClipboard.setString(s);
 		FxPopupShop.showHidePopup(s, 2000);
+	}
+	public static void fx(Runnable runnable) {
+		Platform.runLater(runnable);
 	}
 }

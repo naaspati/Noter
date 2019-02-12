@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Logger;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -58,7 +58,7 @@ public abstract class Entry extends TreeItem<String> {
 
 	public void setTitle(String title) {
 		if(isModified(TITLE) || !Objects.equals(title, getTitle())) {
-			LOGGER.fine(() -> "TITLE MODIFIED: "+this);
+			LOGGER.debug(() -> "TITLE MODIFIED: "+this);
 			setValue(title);
 			notifyModified(TITLE);
 		}
@@ -108,7 +108,7 @@ public abstract class Entry extends TreeItem<String> {
 		if(unmodifiable == null) {
 			loadChildren(items);
 			unmodifiable = FXCollections.unmodifiableObservableList(items);
-			LOGGER.fine(() -> "CHILDREN LOADED: "+this);
+			LOGGER.debug(() -> "CHILDREN LOADED: "+this);
 		}
 		return unmodifiable;
 	}
@@ -193,7 +193,7 @@ public abstract class Entry extends TreeItem<String> {
 	}
 
 	protected void notifyModified(EntryField type) {
-		LOGGER.fine(() -> "MODIFIED: "+this);
+		LOGGER.debug(() -> "MODIFIED: "+this);
 		notifyModified(this, type, false);
 	}
 	/**

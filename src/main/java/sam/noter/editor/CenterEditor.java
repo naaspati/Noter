@@ -1,5 +1,5 @@
 package sam.noter.editor;
-
+import static sam.noter.Utils.*;
 import static sam.fx.helpers.FxClassHelper.addClass;
 
 import java.lang.ref.WeakReference;
@@ -72,7 +72,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			title.setText(save.title);
 			content.setText(save.content);
 			content.requestFocus();
-			Platform.runLater(() -> content.selectRange(save.anchor, save.caret));
+			fx(() -> content.selectRange(save.anchor, save.caret));
 		} else {
 			super.setItem(entry);
 			setTitleText();

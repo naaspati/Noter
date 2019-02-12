@@ -2,6 +2,7 @@ package sam.noter.editor;
 
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
+import static sam.noter.Utils.fx;
 import static sam.noter.editor.ViewType.CENTER;
 import static sam.noter.editor.ViewType.COMBINED_CHILDREN;
 import static sam.noter.editor.ViewType.COMBINED_TEXT;
@@ -16,7 +17,8 @@ import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javafx.application.Platform;
+import org.apache.logging.log4j.LogManager;
+
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
@@ -35,7 +37,6 @@ import sam.config.Session;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
-import sam.logging.MyLoggerFactory;
 import sam.myutils.Checker;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
@@ -43,7 +44,6 @@ import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
 import sam.thread.DelayedQueueThread;
-
 public class Editor extends BorderPane {
 	private static final Session SESSION = Session.getSession(Editor.class);
 
@@ -82,7 +82,7 @@ public class Editor extends BorderPane {
 				return null;
 			return parser.apply(s.toUpperCase());
 		} catch (Exception e) {
-			MyLoggerFactory.logger(Editor.class);
+			LogManager.getLogger(Editor.class);
 		}
 		return null;
 	}
@@ -162,7 +162,7 @@ public class Editor extends BorderPane {
 		if(obj == SKIP_CHANGE)
 			return;
 		Object[] oo = (Object[])obj;
-		Platform.runLater(() -> actual_changed((Entry)oo[0], (ViewType)oo[1]));
+		fx(() -> actual_changed((Entry)oo[0], (ViewType)oo[1]));
 	}
 
 	private void actual_changed(Entry item, ViewType view) {

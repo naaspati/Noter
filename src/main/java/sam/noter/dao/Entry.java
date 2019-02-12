@@ -10,15 +10,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Logger;
+
+import org.apache.logging.log4j.LogManager;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
-import sam.logging.MyLoggerFactory;
 
 public abstract class Entry extends TreeItem<String> {
-	private static final Logger LOGGER = MyLoggerFactory.logger(Entry.class);
+	private static final Logger logger = LogManager.getLogger(Entry.class);
 
 	public final int id;
 	protected String content;
@@ -67,7 +68,7 @@ public abstract class Entry extends TreeItem<String> {
 	}
 	public void setTitle(String title) {
 		if(titleM || notEqual(title, getTitle())) {
-			LOGGER.fine(() -> "TITLE MODIFIED: "+this);
+			logger.debug(() -> "TITLE MODIFIED: "+this);
 			super.setValue(title);
 			titleM = true;
 			notifyParent(TITLE);
@@ -107,7 +108,7 @@ public abstract class Entry extends TreeItem<String> {
 			contentM = true;
 			updateLastmodified();
 			notifyParent(CONTENT);
-			LOGGER.fine(() -> "CONTENT MODIFIED: "+this);
+			logger.debug(() -> "CONTENT MODIFIED: "+this);
 		}
 	}
 

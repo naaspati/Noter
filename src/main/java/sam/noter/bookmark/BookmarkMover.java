@@ -1,10 +1,11 @@
 package sam.noter.bookmark;
 
+import static sam.noter.Utils.fx;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -29,7 +30,6 @@ import sam.noter.InitFinalized;
 import sam.noter.dao.Entry;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
-
 class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionEvent> {
 	private final Button moveAbove = new Button("Move Above");
 	private final Button moveBelow = new Button("Move Below");
@@ -84,6 +84,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		
 		List<Node> list = tabs.getChildren(); 
 		list.clear();
+		System.out.println(currentTab);
 		list.add(tab(currentTab));
 		
 		tabcontainer.forEach(t -> {
@@ -93,7 +94,7 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		
 		tabs.setVisible(tabs.getChildren().size() != 1);
 		((Hyperlink)tabs.getChildren().get(0)).fire();
-		Platform.runLater(() -> ((Hyperlink)tabs.getChildren().get(0)).fire());
+		fx(() -> ((Hyperlink)tabs.getChildren().get(0)).fire());
 		showAndWait();
 	}
 

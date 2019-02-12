@@ -1,11 +1,11 @@
 package sam.noter.bookmark;
 
+import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.util.Collection;
 
-import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -111,14 +111,14 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 		this.bookMarkType = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
 		header.setText(header());
 
-		Platform.runLater(() -> titleTf.requestFocus());
+		fx(() -> titleTf.requestFocus());
 		titleTf.clear();
 		titleTf.textProperty().addListener(this);
 		
 		Collection<Entry> list = tab.getAllEntries();
 		similar.getItems().setAll(list);
 		search.start(list);
-		search.setOnChange(() -> Platform.runLater(()-> search.applyFilter(similar.getItems())));
+		search.setOnChange(() -> fx(()-> search.applyFilter(similar.getItems())));
 		
 		showAndWait();
 		

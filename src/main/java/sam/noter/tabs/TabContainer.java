@@ -1,7 +1,7 @@
 package sam.noter.tabs;
-
 import static sam.fx.helpers.FxClassHelper.addClass;
 import static sam.noter.Utils.chooseFile;
+import static sam.noter.Utils.fx;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -14,7 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -88,7 +87,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 		}, widthProperty(), tabsBox.widthProperty(), Bindings.size(tabsBox.getChildren())));
 
 
-		Platform.runLater(() -> div = 1d/tabsBox.getChildren().size());
+		fx(() -> div = 1d/tabsBox.getChildren().size());
 	}
 	
 	public boolean removeOnTabClosing(Consumer<Tab> action) {

@@ -13,6 +13,7 @@ import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.EnvKeys.OPEN_CMD_DIR;
 import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
 import static sam.noter.Utils.APP_DATA;
+import static sam.noter.Utils.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,11 +31,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Level;
+import org.apache.logging.log4j.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
 import org.json.JSONException;
 
 import javafx.application.Application;
@@ -85,9 +87,7 @@ import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
 import sam.io.serilizers.StringWriter2;
-import sam.logging.MyLoggerFactory;
 import sam.myutils.Checker;
-import sam.thread.MyUtilsThread;
 import sam.nopkg.Junk;
 import sam.noter.Utils.FileChooserType;
 import sam.noter.bookmark.BookmarksPane;
@@ -96,6 +96,7 @@ import sam.noter.dao.Entry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
+import sam.thread.MyUtilsThread;
 public class App extends Application implements ChangeListener<Tab> {
 	static {
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
@@ -164,7 +165,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		if(!OPEN_CMD_ENABLE)
 			return;
 
-		MyLoggerFactory.logger(getClass()).fine(() -> "INIT: OPEN_CMD_DIR watcher");
+		LogManager.getLogger(getClass()).debug(() -> "INIT: OPEN_CMD_DIR watcher");
 		Files.createDirectories(OPEN_CMD_DIR);
 		MyUtilsThread.runOnDeamonThread(new DirWatcher(OPEN_CMD_DIR, StandardWatchEventKinds.ENTRY_CREATE) {
 			@Override
@@ -174,7 +175,7 @@ public class App extends Application implements ChangeListener<Tab> {
 					addTabs(Files.readAllLines(p));
 					Files.deleteIfExists(p);
 				} catch (IOException e) {
-					Platform.runLater(() -> FxAlert.showErrorDialog(context, "failed to read", e));
+					fx(() -> FxAlert.showErrorDialog(context, "failed to read", e));
 				}
 			}
 			@Override
@@ -222,7 +223,7 @@ public class App extends Application implements ChangeListener<Tab> {
 	}
 
 	private void addTabs(List<String> input) {
-		Platform.runLater(() -> {
+		fx(() -> {
 			try {
 				List<Path> files = new FilesLookup().parse(input);
 				if(files.isEmpty()) return;
@@ -325,7 +326,7 @@ public class App extends Application implements ChangeListener<Tab> {
 						.map(s -> s.replace('\\', '/'))
 						.collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			} catch (IOException e) {
-				MyLoggerFactory.logger(getClass()).log(Level.SEVERE,  "failed to save: recents.txt  ", e);   
+				LogManager.getLogger(getClass()).fatal("failed to save: recents.txt  ", e);   
 			}
 			Platform.exit();
 		}
@@ -404,7 +405,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		stage.hide();
 		stage.setScene(new Scene(root, Color.WHITE));
 		stage.show();
-		Platform.runLater(System::gc);
+		fx(System::gc);
 	}
 	private char[] separator;
 	private char[] separator(int size) {

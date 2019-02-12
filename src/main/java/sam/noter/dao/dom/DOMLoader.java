@@ -16,8 +16,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -29,6 +27,8 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -38,12 +38,11 @@ import org.xml.sax.SAXException;
 
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.serilizers.LongSerializer;
-import sam.logging.MyLoggerFactory;
 import sam.noter.dao.Entry;
 import sam.reference.WeakAndLazy;
 @SuppressWarnings("rawtypes")
 class DOMLoader {
-	private static final Logger LOGGER = MyLoggerFactory.logger(DOMLoader.class);
+	private static final Logger logger = LogManager.getLogger(DOMLoader.class);
 	private static final Path BACKUP_DIR = TEMP_DIR.resolve(DOMLoader.class.getName()+"/"+LocalDate.now());
 	
 	static {
@@ -176,7 +175,7 @@ class DOMLoader {
 		try {
 			Files.copy(file.toPath(), BACKUP_DIR.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')), StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
-			LOGGER.log(Level.WARNING, "failed to backup: "+file, e);
+			logger.error("failed to backup: {}",file, e);
 		}
 	}
 
@@ -191,7 +190,7 @@ class DOMLoader {
 			LocalDate date = LocalDate.parse(s);
 			if(Duration.between(date.atStartOfDay(), now).toDays() > 3){
 				FilesUtilsIO.delete(new File(backup, s));
-				LOGGER.info("DELETE backup(s): "+s);
+				logger.info("DELETE backup(s): {}", s);
 			}
 		}
 	}
@@ -207,7 +206,7 @@ class DOMLoader {
 
 		StreamResult result = new StreamResult(target);
 		transformer.transform(new DOMSource(doc), result);
-		LOGGER.info("XML SAVED: "+target);
+		logger.info("XML SAVED: {}", target);
 	}
 
 
@@ -309,7 +308,7 @@ class DOMLoader {
 
 		if(t.id == null) {
 			t.id = append(ID, String.valueOf(t.id()), source);
-			LOGGER.fine(() -> "SET ID TO OLD DATA: "+t.title()+" ("+t.id()+")");
+			logger.debug("SET ID TO OLD DATA: {} ({})", t.title(), t.id());
 		}
 
 		return new DOMEntry(t); 
@@ -360,22 +359,22 @@ class DOMLoader {
 		if(dom.rootNode == null) {
 			dom.createRootNode(d);
 			d.clearModified();
-			LOGGER.fine(() -> "NEW: "+d);
+			logger.debug(() -> "NEW: "+d);
 			return dom.rootNode;
 		}
 		if(d.isModified()){
 			updateNode(LAST_MODIFIED, String.valueOf(d.getLastModified()), dom, dom.lastModified);
-			LOGGER.fine(() -> "UPDATE LAST_MODIFIED: "+d);
+			logger.debug(() -> "UPDATE LAST_MODIFIED: "+d);
 		}
 		if(d.isTitleModified()) {
 			updateNode(TITLE, d.getTitle(), dom, dom.title);
-			LOGGER.fine(() -> "UPDATE TITLE: "+d);
+			logger.debug(() -> "UPDATE TITLE: "+d);
 		} if(d.isContentModified()){ 
 			updateNode(CONTENT, d.getContent(), dom, dom.content);
-			LOGGER.fine(() -> "UPDATE CONTENT: "+d);
+			logger.debug(() -> "UPDATE CONTENT: "+d);
 		} if(d.isChildrenModified()) {
 			updateChildren(d, d.dom().rootNode, d.dom().children, d.getChildren());
-			LOGGER.fine(() -> "UPDATE CHILDREN: "+d);
+			logger.debug(() -> "UPDATE CHILDREN: "+d);
 		}
 		d.clearModified();
 
@@ -407,7 +406,7 @@ class DOMLoader {
 					Node[] remove = new Node[nodesSize - nodeN];
 					int k = nodeN;
 					int cn = childN; 
-					LOGGER.fine(() -> "RELOCATE/REMOVE CHILDREN: "+owner+" STARTING AT:"+" -> ["+k+"("+children.get(cn)+"),"+nodesSize+")");
+					logger.debug(() -> "RELOCATE/REMOVE CHILDREN: "+owner+" STARTING AT:"+" -> ["+k+"("+children.get(cn)+"),"+nodesSize+")");
 					
 					int n = 0;
 					for (int j = nodeN; j < nodesSize; j++)
@@ -418,7 +417,7 @@ class DOMLoader {
 				}
 				if(childN < children.size()){
 					int k = childN;
-					LOGGER.fine(() -> "ADDED CHILDREN: "+owner+" -> "+(children.size() - k));
+					logger.debug(() -> "ADDED CHILDREN: "+owner+" -> "+(children.size() - k));
 					for (int j = childN; j < children.size(); j++)
 						currentChildrenNode.appendChild(update(children.get(j)));
 				}
@@ -447,7 +446,7 @@ class DOMLoader {
 	private static WeakAndLazy<StringBuilder> logSB = new WeakAndLazy<>(StringBuilder::new);
 	
 	private void logModification(Entry e) {
-		LOGGER.info(() -> {
+		logger.info(() -> {
 			synchronized(logSB) {	
 				StringBuilder sb = logSB.get();
 				sb.setLength(0);

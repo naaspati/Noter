@@ -1,12 +1,12 @@
 package sam.noter;
 
-import sam.logging.MyLoggerFactory;
+import org.apache.logging.log4j.LogManager;
 
 public interface InitFinalized {
 	default void init(){
-		MyLoggerFactory.logger(getClass()).fine("INIT");
+		LogManager.getLogger(getClass()).debug("INIT");
 	}
 	default void finalized(){
-		MyLoggerFactory.logger(getClass()).fine("FINALIZED");
+		LogManager.getLogger(getClass()).debug("FINALIZED");
 	}
 }

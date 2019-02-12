@@ -9,10 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -25,11 +25,10 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCombination;
 import sam.fx.alert.FxAlert;
-import sam.logging.MyLoggerFactory;
 import sam.myutils.System2;
 import sam.noter.editor.Editor;
 public class DyanamiMenus {
-	private final Logger LOGGER = MyLoggerFactory.logger(DyanamiMenus.class);
+	private final Logger logger = LogManager.getLogger(DyanamiMenus.class);
 	private MenuBar bar;
 	private Editor editor;
 
@@ -38,13 +37,13 @@ public class DyanamiMenus {
 		this.editor = editor;
 		String s = System2.lookup(DYNAMIC_MENUS_FILE);
 		if(s == null) {
-			LOGGER.warning(DYNAMIC_MENUS_FILE+" variable not set");
+			logger.error("{} variable not set", DYNAMIC_MENUS_FILE);
 			return;
 		}
 
 		Path p = Paths.get(s);
 		if(Files.notExists(p)) {
-			LOGGER.severe(DYNAMIC_MENUS_FILE+" not found: "+s);
+			logger.fatal("{} not found: {}", DYNAMIC_MENUS_FILE, s);
 			return;
 		}
 		JSONObject json = new JSONObject(Files.lines(p).collect(Collectors.joining()));
@@ -64,7 +63,7 @@ public class DyanamiMenus {
 		}).findFirst().orElse(null);
 
 		if(menu == null) {
-			LOGGER.severe("no menu found with name: "+key);
+			logger.fatal("no menu found with name: {}", key);
 			return;
 		}
 
@@ -105,7 +104,7 @@ public class DyanamiMenus {
 				consume2(mi, clsName, w);
 			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | ClassCastException e1) {
 				FxAlert.showErrorDialog(null, "failed to load class: "+clsName, e1);
-				LOGGER.log(Level.SEVERE, "failed to load class: "+clsName, e1);
+				logger.fatal( "failed to load class: "+clsName, e1);
 				mi.setDisable(true);
 			}
 		});
@@ -113,7 +112,7 @@ public class DyanamiMenus {
 	private void consume2(MenuItem mi, String clsName, WeakReference<Consumer<TextArea>> weak) {
 		Consumer<TextArea> c = weak.get();
 		if(c == null) { 
-			LOGGER.fine(() -> clsName+": gabaged");
+			logger.debug(() -> clsName+": gabaged");
 			consume(mi, clsName);
 		} else {
 			editor.consume(c);			
@@ -125,7 +124,7 @@ public class DyanamiMenus {
 			E e = (E)Class.forName(clsName).newInstance();
 			consumer.accept(e);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-			LOGGER.log(Level.SEVERE, "failed to load class: "+clsName, e); 	
+			logger.fatal( "failed to load class: "+clsName, e); 	
 		}
 	}
 }

@@ -18,17 +18,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Logger;
+
+import org.apache.logging.log4j.LogManager;
 
 import sam.config.Session;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
-import sam.logging.MyLoggerFactory;
 import sam.myutils.Checker;
 import sam.myutils.System2;
 
 public class FilesLookup {
-	private final Logger LOGGER = MyLoggerFactory.logger(FilesLookup.class);
+	private final Logger logger = LogManager.getLogger(FilesLookup.class);
 
 	public List<Path> parse(List<String> args) throws IOException {
 		if(args.isEmpty()) 
@@ -47,7 +48,7 @@ public class FilesLookup {
 
 			File f = find(s);
 			if(f == null)
-				LOGGER.severe("file not found for: "+s);
+				logger.fatal("file not found for: {}", s);
 			else
 				files.add(f.toPath());
 		}
@@ -65,7 +66,7 @@ public class FilesLookup {
 
 		f = new File(string);
 		if(f.exists()) {
-			LOGGER.info(() -> "FILE_FOUND: "+string);
+			logger.info("FILE_FOUND: {}", string);
 			return f;
 		};
 
@@ -74,7 +75,7 @@ public class FilesLookup {
 			Path dd = defaultDir();
 			if(Checker.notExists(dd)) {
 				files = Collections.emptyMap();
-				LOGGER.severe("default dir, not found: "+dd);
+				logger.fatal("default dir, not found: {}", dd);
 			} else {
 				files = new HashMap<>();
 				Files.walk(dd)
@@ -97,8 +98,7 @@ public class FilesLookup {
 			p = files.entrySet().stream().filter(e -> e.getKey().startsWith(string)).findFirst().map(e -> e.getValue()).orElse(null);
 
 		if(p == null) return null;
-		Path p2 = p;
-		LOGGER.info(() -> "DEFAULT_DIR_WALK: "+string+"= "+p2);
+		logger.info("DEFAULT_DIR_WALK: {} = \"{}\"", string, p);
 		save(string, p);
 		return p.toFile();
 	}
@@ -115,8 +115,7 @@ public class FilesLookup {
 		if(Arrays.binarySearch(opencache, string) >= 0) {
 			f = new File(StringReader2.getText(openCacheDir.resolve( string)));
 			if(f.exists()) {
-				File f2 = f;
-				LOGGER.info(() -> "OPEN_CACHE: "+string+"="+f2);
+				logger.info("OPEN_CACHE: {} = {}", string, f);
 				return f;
 			}
 		}

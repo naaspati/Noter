@@ -22,11 +22,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import org.apache.logging.log4j.LogManager;
 
 import sam.collection.IntSet;
 import sam.io.IOConstants;
@@ -37,7 +39,6 @@ import sam.io.serilizers.ObjectReader;
 import sam.io.serilizers.ObjectWriter;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
-import sam.logging.MyLoggerFactory;
 import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.dao.RootEntry;
@@ -47,46 +48,33 @@ import sam.reference.WeakAndLazy;
 import sam.string.StringUtils.StringSplitIterator;
 
 class CacheDir {
-	private static final Logger LOGGER = MyLoggerFactory.logger(CacheDir.class);
+	private static final int MAX_ID = 0;
+	private static final int LAST_MODIFIED = 1;
+	private static final int SELECTED_ITEM = 2;
+	
+	private static final Logger logger = LogManager.getLogger(CacheDir.class);
 	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[IOConstants.defaultBufferSize()]);
 	private final IntSet newEntries = new IntSet();
 
-	Path startFile;
-	private Path currentFile;
-	public final Path root;
-	public final Path contentDir;
+	private final Path source;
+	public final Path cacheDir;
 	private int maxId;
 	private WeakReference<Map<Integer, String>> lines;
-	private Path removedDir;
-	private final PathToCacheDir pathToCacheDir; 
-	
 
-	public CacheDir(Path path, Path cacheDir, PathToCacheDir pathToCacheDir) throws IOException {
-		this.startFile = path;
-		this.currentFile = path;
-		this.root = cacheDir;
-		this.contentDir = cacheDir.resolve("content");
-		this.pathToCacheDir = pathToCacheDir;
-		this.removedDir = this.root.resolve("removed");
+	public CacheDir(Path source, Path cacheDir) throws IOException {
+		this.source = source;
+		this.cacheDir = cacheDir;
 		prepareCache();
 
 	}
-	private Path maxId() { return root.resolve("maxId"); }
-	private Path index2() { return root.resolve("index2"); }	
-	private Path lastModified() { return root.resolve("lastmodified"); }
-	private Path index() { return this.root.resolve("index"); }
-
 	public Path getSourceFile() {
-		return currentFile;
-	}
-	public void setSourceFile(Path path) {
-		currentFile = path;
+		return source;
 	}
 	public void loadEntries(RootEntryZ root) throws IOException, ClassNotFoundException {
 		Path index = index2();
 		if(Files.exists(index)) {
 			Path p = index;
-			LOGGER.fine(() -> "index loaded: "+p);
+			logger.debug(() -> "index loaded: "+p);
 			maxId = new IntSerializer().read(maxId()); 
 			root.setItems(ObjectReader.read(index, dis -> EntryZ.read(dis, root)).getChildren());
 			return;
@@ -135,15 +123,13 @@ class CacheDir {
 		this.lines = new WeakReference<Map<Integer,String>>(lines);
 		saveRoot(root);
 	}
-	private Path contentPath(EntryZ e) {
-		return contentDir.resolve(String.valueOf(e.getId()));
-	}
+	
 	public String getContent(EntryZ e) throws IOException {
 		Path p = contentPath(e);
 		if(Files.notExists(p))
 			return null;
 		String  s = StringReader2.getText(p);
-		LOGGER.fine(() -> "CONTENT LOADED: "+e);
+		logger.debug(() -> "CONTENT LOADED: "+e);
 		return s;
 	}
 	public void save(RootEntryZ root, Path file) throws IOException {
@@ -160,7 +146,7 @@ class CacheDir {
 			else {
 				lines = Files.lines(index).collect(Collectors.toMap(s -> Integer.parseInt(s.substring(0, s.indexOf(' '))), s -> s));
 				this.lines = new WeakReference<Map<Integer,String>>(lines);
-				LOGGER.fine(() -> "loaded for lines: "+index);
+				logger.debug(() -> "loaded for lines: "+index);
 			}
 		}
 
@@ -176,8 +162,8 @@ class CacheDir {
 	private void saveRoot(RootEntryZ root) throws IOException {
 		new IntSerializer().write(maxId, maxId());
 		ObjectWriter.write(index2(), root, RootEntryZ::write);
-		LOGGER.fine(() -> "CREATED: "+maxId()+" (maxId: "+maxId+")");
-		LOGGER.fine(() -> "CREATED: "+index2());
+		logger.debug(() -> "CREATED: "+maxId()+" (maxId: "+maxId+")");
+		logger.debug(() -> "CREATED: "+index2());
 	}
 
 	private void walk(EntryZ entry, List<String> sink, StringBuilder sb, Map<Integer, String> lines) throws IOException {
@@ -213,7 +199,7 @@ class CacheDir {
 						Path p = contentPath(e);
 						if(isEmpty(s)) {
 							if(Files.deleteIfExists(p))
-								LOGGER.fine(() -> "DELETED: "+p);
+								logger.debug(() -> "DELETED: "+p);
 						} else
 							StringWriter2.setText(p, s);
 					}
@@ -224,7 +210,7 @@ class CacheDir {
 		}
 	}
 	private void logModification(EntryZ e, StringBuilder sb) {
-		LOGGER.fine(() -> {
+		logger.debug(() -> {
 			if(newEntries.contains(e.id))
 				return "NEW "+e;
 			
@@ -244,7 +230,7 @@ class CacheDir {
 	}
 	@Override
 	public String toString() {
-		return "CacheDir [currentFile=" + currentFile + ", cacheDir=" + root + "]";
+		return "CacheDir [currentFile=" + currentFile + ", cacheDir=" + cacheDir + "]";
 	}
 	public EntryZ newEntry(String title, RootEntryZ root) {
 		EntryZ e = new EntryZ(root, ++maxId, title, true);
@@ -276,7 +262,7 @@ class CacheDir {
 		Path temp = _zip(target);
 		
 		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-		LOGGER.fine("MOVED: "+temp+ "  "+target);
+		logger.debug("MOVED: "+temp+ "  "+target);
 		this.currentFile = target;
 		saveLastModified();
 	} 
@@ -325,12 +311,12 @@ class CacheDir {
 		if(anyMatch(Checker::notExists, currentFile, lm) || currentFile.toFile().lastModified() != new LongSerializer().read(lm)) 
 			_prepareCache();	
 		else  
-			LOGGER.info(() -> "CACHE LOADED: "+root);
+			logger.info(() -> "CACHE LOADED: "+root);
 	}
 	private void _prepareCache() throws FileNotFoundException, IOException {
-		if(Files.exists(root)) {
-			FilesUtilsIO.deleteDir(root);
-			LOGGER.info(() -> "DELETE cacheDir: "+root);
+		if(Files.exists(cacheDir)) {
+			FilesUtilsIO.deleteDir(cacheDir);
+			logger.info(() -> "DELETE cacheDir: "+root);
 		}
 
 		Files.createDirectories(contentDir);
@@ -344,14 +330,14 @@ class CacheDir {
 				ZipEntry z = null;
 
 				while((z = zis.getNextEntry()) != null) {
-					try(OutputStream out = Files.newOutputStream(root.resolve(z.getName()))) {
+					try(OutputStream out = Files.newOutputStream(cacheDir.resolve(z.getName()))) {
 						int n = 0;
 						while((n = zis.read(buffer)) > 0)
 							out.write(buffer, 0, n);
 					}
 				}
 			}
-			LOGGER.info(() -> "CACHE CREATED: "+this);
+			logger.info(() -> "CACHE CREATED: "+this);
 			saveLastModified();
 			pathToCacheDir.put(this);
 		}
@@ -359,13 +345,13 @@ class CacheDir {
 	private void saveLastModified() throws IOException {
 		if(notExists(currentFile)) return;
 		new LongSerializer().write(currentFile.toFile().lastModified(), lastModified());
-		StringWriter2.setText(this.root.resolve("file"), currentFile.toString());
+		StringWriter2.setText(this.cacheDir.resolve("file"), currentFile.toString());
 	}
 	public void close(RootEntryZ ez) {
 		Entry selectedItem = ez.getSelectedItem();
 		
 		Util.hide(() -> {
-			Path p = root.resolve("selecteditem");
+			Path p = resolve("selecteditem");
 			Files.deleteIfExists(p);
 			if(selectedItem != null)
 				new IntSerializer().write(selectedItem.id, p);
@@ -375,7 +361,7 @@ class CacheDir {
 
 	}
 	public int getSelectedItem() {
-		Path p = root.resolve("selecteditem");
+		Path p = resolve("selecteditem");
 		if(Files.notExists(p)) return -1;
 		return Util.get(() -> new IntSerializer().read(p), -1);
 	}
@@ -404,7 +390,7 @@ class CacheDir {
 	private void move(Path src, Path target) {
 		if(Files.notExists(src)) return;
 		if(Util.hide(() -> Files.move(src, target, StandardCopyOption.REPLACE_EXISTING)))
-			LOGGER.fine(() -> "MOVED: "+src +" -> "+target);
+			logger.debug(() -> "MOVED: "+src +" -> "+target);
 	}
 }
 
