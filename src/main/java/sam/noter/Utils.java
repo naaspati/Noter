@@ -169,7 +169,7 @@ public class Utils {
 		}
 	}
 
-	public static String decode(ByteBuffer byteBuffer) {
+	public static String decode(ByteBuffer buffer) throws IOException {
 			if(buffer.remaining() == 0)
 				return "";
 

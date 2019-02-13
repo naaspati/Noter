@@ -16,5 +16,5 @@ include 'services:webservice'
 */
 
 include ':Noter-plugins'
-project(':Noter-plugins').projectDir = file('../Noter-plugins')
+project(':Noter-plugins').projectDir = file('Noter-plugins')
 rootProject.name = 'Noter'

@@ -1,0 +1,28 @@
+import java.nio.file.*
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+	compile files('myutils.jar')
+}
+
+ext.appdir = file("${System.env.SAM_PROGRAMS}\\noter\\app")
+
+task install(dependsOn:[jar]) {
+  doLast {
+    Files.copy(jar.archivePath.toPath(), appdir.toPath().resolve(jar.archivePath.name), StandardCopyOption.REPLACE_EXISTING)
+  }
+}
+
+jar {
+  exclude 'fxml/*.fxgraph'
+}
+
+defaultTasks 'install'
+

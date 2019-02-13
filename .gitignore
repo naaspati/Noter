@@ -15,6 +15,9 @@ book_list.tsv
 
 /.gradle/
 /build/
+**/.gradle/
+**/build/
+
 !myutils.jar
 
 # Ignore Gradle GUI config
