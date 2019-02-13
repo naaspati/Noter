@@ -62,8 +62,8 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		entries.put(e.getId(), e);
 	}
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Override
-	public void setItems(List items) {
+	@Override //TODO
+	private void setItems(List items) {
 		this.items.setAll(items);
 		entries = new HashMap<>(Checker.isEmpty(entries) ? 50 : entries.size()+10);
 		entries.clear();

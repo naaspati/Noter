@@ -37,7 +37,7 @@ public class DyanamiMenus {
 		this.editor = editor;
 		String s = System2.lookup(DYNAMIC_MENUS_FILE);
 		if(s == null) {
-			logger.error("{} variable not set", DYNAMIC_MENUS_FILE);
+			logger.warn("{} variable not set", DYNAMIC_MENUS_FILE);
 			return;
 		}
 

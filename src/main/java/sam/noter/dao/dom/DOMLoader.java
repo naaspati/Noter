@@ -175,7 +175,7 @@ class DOMLoader {
 		try {
 			Files.copy(file.toPath(), BACKUP_DIR.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')), StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
-			logger.error("failed to backup: {}",file, e);
+			logger.warn("failed to backup: {}",file, e);
 		}
 	}
 

@@ -108,7 +108,7 @@ public abstract class Entry extends TreeItem<String> {
 			contentM = true;
 			updateLastmodified();
 			notifyParent(CONTENT);
-			logger.debug(() -> "CONTENT MODIFIED: "+this);
+			logger.debug("CONTENT MODIFIED: {}", this);
 		}
 	}
 

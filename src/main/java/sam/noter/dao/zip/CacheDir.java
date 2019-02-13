@@ -1,5 +1,6 @@
 package sam.noter.dao.zip;
 
+import static java.nio.charset.CodingErrorAction.REPORT;
 import static sam.myutils.Checker.anyMatch;
 import static sam.myutils.Checker.isEmpty;
 import static sam.myutils.Checker.notExists;
@@ -9,78 +10,142 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import org.apache.logging.log4j.Logger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import sam.collection.IndexedMap;
 import sam.collection.IntSet;
 import sam.io.IOConstants;
 import sam.io.fileutils.FilesUtilsIO;
-import sam.io.serilizers.IntSerializer;
 import sam.io.serilizers.LongSerializer;
 import sam.io.serilizers.ObjectReader;
 import sam.io.serilizers.ObjectWriter;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
+import sam.io.serilizers.StringReader2.ReaderConfig;
 import sam.myutils.Checker;
-import sam.noter.dao.Entry;
+import sam.myutils.ThrowException;
+import sam.nopkg.AutoCloseableWrapper;
+import sam.nopkg.SavedAsStringResource;
+import sam.nopkg.SavedResource;
+import static sam.noter.Utils.*;
 import sam.noter.dao.RootEntry;
-import sam.noter.dao.zip.RootEntryZFactory.PathToCacheDir;
 import sam.reference.ReferenceUtils;
-import sam.reference.WeakAndLazy;
+import sam.reference.WeakPool;
 import sam.string.StringUtils.StringSplitIterator;
 
-class CacheDir {
+class CacheDir implements AutoCloseable {
 	private static final int MAX_ID = 0;
 	private static final int LAST_MODIFIED = 1;
 	private static final int SELECTED_ITEM = 2;
-	
-	private static final Logger logger = LogManager.getLogger(CacheDir.class);
-	private static final WeakAndLazy<byte[]> wbuffer = new WeakAndLazy<>(() -> new byte[IOConstants.defaultBufferSize()]);
-	private final IntSet newEntries = new IntSet();
+	private static final int MOD = 3;
 
-	private final Path source;
+	private static final int SIZE = 4;
+
+	private static final String INDEX = "index";
+	private static final String CONTENT_PREFIX = "content/";
+	private static final String CONTENT_PREFIX_2 = "content\\";
+
+	private static final Logger logger = LogManager.getLogger(CacheDir.class);
+
+	private final IntSet newEntries = new IntSet();
+	private IndexedMap<Position> positions;
+
+	private final SavedResource<Path> savedSourceLoc;
+	private FileChannel cached;
+	private long cached_size = -1;
+	public Path source;
 	public final Path cacheDir;
-	private int maxId;
+	private final long[] meta;
+	private int mod;
 	private WeakReference<Map<Integer, String>> lines;
+
+	public static class Position {
+		public final int id, position, size;
+
+		public Position(int id, long position, long size) {
+			if(position > Integer.MAX_VALUE)
+				ThrowException.illegalArgumentException("position("+position+") > Integer.MAX_VALUE");
+			if(size > Integer.MAX_VALUE)
+				ThrowException.illegalArgumentException("size("+size+") > Integer.MAX_VALUE");
+
+			this.id = id;
+			this.position = (int) position;
+			this.size = (int) size;
+		}
+	}
 
 	public CacheDir(Path source, Path cacheDir) throws IOException {
 		this.source = source;
 		this.cacheDir = cacheDir;
-		prepareCache();
 
+		Path p = meta(); 
+		long[] meta = Files.notExists(p) ? null : new LongSerializer().readArray(p);
+		savedSourceLoc = new SavedAsStringResource<Path>(cacheDir.resolve("file"), Paths::get);
+		Path t = savedSourceLoc.get();
+		if(t != null && !t.equals(source))
+			throw new IOException(String.format("source mismatch, expected=\"%s\", supplied: \"%s\"", savedSourceLoc.get(), source));
+
+		init(meta);
+
+		if(meta == null) {
+			meta = new long[SIZE];
+			Arrays.fill(meta, -1);
+		}
+		this.meta = meta;
 	}
+
+	private Path resolve(String s) { return cacheDir.resolve(s); }
+
+	private Path meta() { return resolve("meta"); }
+	private Path content() { return resolve("content"); }
+	private Path index2() { return resolve("index2"); }
+	private Path index() { return resolve(INDEX); }
+
 	public Path getSourceFile() {
 		return source;
 	}
-	public void loadEntries(RootEntryZ root) throws IOException, ClassNotFoundException {
+	public void loadEntries(@SuppressWarnings("rawtypes") Consumer<List> onFound, RootEntryZ root0) throws IOException, ClassNotFoundException {
 		Path index = index2();
 		if(Files.exists(index)) {
 			Path p = index;
-			logger.debug(() -> "index loaded: "+p);
-			maxId = new IntSerializer().read(maxId()); 
-			root.setItems(ObjectReader.read(index, dis -> EntryZ.read(dis, root)).getChildren());
+			onFound.accept(ObjectReader.<EntryZ>read(index, dis -> EntryZ.read(dis, root0)).getChildren());
+			logger.debug("index loaded: {}", p);
 			return;
 		}
 		index = index();
-		if(Files.notExists(index)) return;
+
+		if(Files.notExists(index)) {
+			logger.warn("not found: {}", index);
+			return; 
+		}
 
 		HashMap<Integer, Temp> map = new HashMap<>();
 		HashMap<Integer, String> lines = new HashMap<>();
@@ -94,8 +159,8 @@ class CacheDir {
 					long lastModified = Long.parseLong(iter.next());
 					String title = iter.next();
 
-					Temp  t = new Temp(parent_id, order, new EntryZ(root, id, lastModified, title));
-					maxId = Math.max(maxId, id);
+					Temp  t = new Temp(parent_id, order, new EntryZ(root0, id, lastModified, title));
+					meta[MAX_ID] = Math.max(meta[MAX_ID], id);
 					map.put(id, t);
 					lines.put(id, s);
 					return  t;
@@ -119,17 +184,60 @@ class CacheDir {
 		Optional.ofNullable(grouped.get(RootEntry.ROOT_ENTRY_ID))
 		.ifPresent(list -> list.forEach(x -> temp.add(x.entry)));
 
-		root.setItems(temp);
+		onFound.accept(temp);
 		this.lines = new WeakReference<Map<Integer,String>>(lines);
-		saveRoot(root);
+		mod++;
+		saveCache(root0);
 	}
-	
-	public String getContent(EntryZ e) throws IOException {
-		Path p = contentPath(e);
-		if(Files.notExists(p))
+
+	private AutoCloseableWrapper<ByteBuffer> read(Position pos) throws IOException {
+		if(pos == null || pos.size <= 0)
 			return null;
-		String  s = StringReader2.getText(p);
-		logger.debug(() -> "CONTENT LOADED: "+e);
+
+		ByteBuffer buffer = wbuff.poll();
+		if(buffer.capacity() < pos.size) {
+			wbuff.add(buffer);
+			buffer = ByteBuffer.allocate(pos.size);
+		}
+
+		if(cached == null)
+			cached = FileChannel.open(content(), StandardOpenOption.READ, StandardOpenOption.WRITE);
+
+		buffer.clear();
+		buffer.limit(pos.size);
+		cached.position(pos.position);
+		while(cached.read(buffer) != -1 && buffer.hasRemaining()) {
+		}
+
+		if(buffer.hasRemaining()) {
+			int n = buffer.remaining();
+			buffer.clear();
+			wbuff.add(buffer);
+			throw new IOException("incomplete read, expected:"+pos.size+", actual: "+(pos.size - n));
+		}
+
+		buffer.flip();
+		ByteBuffer b = buffer;
+		return new AutoCloseableWrapper<>(() -> b, bb -> {
+			bb.clear();
+			wbuff.add(bb);
+		});
+	}
+
+	private String parse(AutoCloseableWrapper<ByteBuffer> acw) throws IOException {
+		if(acw == null)
+			return null;
+
+		try(AutoCloseableWrapper<ByteBuffer> acw2 = acw) {
+			return decode(acw.get());
+		}
+	}
+	public String getContent(EntryZ e) throws IOException {
+		Position pos = position(e);
+		if(pos == null)
+			return null;
+		String s = parse(read(pos));
+		logger.debug("CONTENT LOADED: {}",  e);
 		return s;
 	}
 	public void save(RootEntryZ root, Path file) throws IOException {
@@ -152,18 +260,13 @@ class CacheDir {
 
 		walk(root, list, sv2, lines);
 		Files.write(index(), list, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-		saveRoot(root);
+		mod++;
 		zip(file);
-		this.currentFile = file;
-		pathToCacheDir.put(this);
+		saveCache(root);
+		savedSourceLoc.set(file);
+		savedSourceLoc.close();
+		this.source = file;
 		newEntries.clear();
-	}
-
-	private void saveRoot(RootEntryZ root) throws IOException {
-		new IntSerializer().write(maxId, maxId());
-		ObjectWriter.write(index2(), root, RootEntryZ::write);
-		logger.debug(() -> "CREATED: "+maxId()+" (maxId: "+maxId+")");
-		logger.debug(() -> "CREATED: "+index2());
 	}
 
 	private void walk(EntryZ entry, List<String> sink, StringBuilder sb, Map<Integer, String> lines) throws IOException {
@@ -213,7 +316,7 @@ class CacheDir {
 		logger.debug(() -> {
 			if(newEntries.contains(e.id))
 				return "NEW "+e;
-			
+
 			sb.setLength(0);
 
 			sb.append("UPDATED ").append(e).append(" [");
@@ -230,22 +333,19 @@ class CacheDir {
 	}
 	@Override
 	public String toString() {
-		return "CacheDir [currentFile=" + currentFile + ", cacheDir=" + cacheDir + "]";
+		return "CacheDir [currentFile=\"" + source + "\", cacheDir=\"" + subpath(cacheDir) + "\"]";
 	}
 	public EntryZ newEntry(String title, RootEntryZ root) {
-		EntryZ e = new EntryZ(root, ++maxId, title, true);
+		EntryZ e = new EntryZ(root, nextId(), title, true);
 		newEntries.add(e.id);
 		return e;
-	
-	}
-	public EntryZ newEntry(EntryZ d, RootEntryZ root) {
-		Path src = d.getRoot().getCacheDir().contentPath(d);
-		EntryZ nnew = new EntryZ(root, ++maxId, d.getTitle(), true);
-		nnew.setLastModified(d.getLastModified());
-		newEntries.add(nnew.id);
 
-		move(src, contentPath(nnew));
-		return nnew;
+	}
+	private int nextId() {
+		return (int)(meta[MAX_ID] = meta[MAX_ID] + 1);
+	}
+	private Position position(EntryZ d) {
+		return positions.get(d.id);
 	}
 
 	private class Temp {
@@ -257,38 +357,39 @@ class CacheDir {
 			this.order = order;
 		}
 	}
-	
+
 	private void zip(Path target) throws IOException {
 		Path temp = _zip(target);
-		
+
 		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
 		logger.debug("MOVED: "+temp+ "  "+target);
-		this.currentFile = target;
-		saveLastModified();
+		this.source = target;
+		setLastModified();
 	} 
-	
+	private void setLastModified() throws IOException {
+		meta[LAST_MODIFIED] = source.toFile().lastModified();
+	}
 	private Path _zip(Path target) throws IOException {
 		Path temp = Files.createTempFile(target.getFileName().toString(), null);
 
-		synchronized (wbuffer) {
-			try(OutputStream os = Files.newOutputStream(temp);
-					ZipOutputStream zos = new ZipOutputStream(os, StandardCharsets.UTF_8)) {
+		try(OutputStream os = Files.newOutputStream(temp);
+				ZipOutputStream zos = new ZipOutputStream(os, StandardCharsets.UTF_8);
+				AutoCloseableWrapper<byte[]> wb = wwbytes.autoCloseableWrapper()) {
 
-				Path index = index();
-				if(Files.notExists(index))
-					return temp;
+			Path index = index();
+			if(Files.notExists(index))
+				return temp;
 
-				byte[] buffer = wbuffer.get();
-				write("index", buffer, index, zos);
+			byte[] buffer = wb.get();
+			write("index", buffer, index, zos);
 
-				Path content = contentDir;
-				if(Files.notExists(content)) return temp;
+			if(cached_size <= 0 || positions == null || positions.isEmpty())
+				return temp;
 
-				String[] contents = content.toFile().list();
-				if(contents == null || contents.length == 0) return temp;
-				for (String f : contents)
-					write("content/"+f, buffer, content.resolve(f), zos);
-			}
+			String[] contents = content.toFile().list();
+			if(contents == null || contents.length == 0) return temp;
+			for (String f : contents) //FIXME
+				write(CONTENT_PREFIX+f, buffer, content.resolve(f), zos);
 		}
 		return temp;
 	}
@@ -305,92 +406,101 @@ class CacheDir {
 		}
 	}
 
-	private void prepareCache() throws FileNotFoundException, IOException {
-		Path lm = lastModified();
-
-		if(anyMatch(Checker::notExists, currentFile, lm) || currentFile.toFile().lastModified() != new LongSerializer().read(lm)) 
+	private void init(long[] meta) throws FileNotFoundException, IOException {
+		if(meta == null || anyMatch(Checker::notExists, source, content(), index2()) || source.toFile().lastModified() != meta[LAST_MODIFIED]) 
 			_prepareCache();	
 		else  
-			logger.info(() -> "CACHE LOADED: "+root);
+			logger.debug("CACHE LOADED: {}",() -> subpath(cacheDir));
 	}
+
+	// TODO
+
 	private void _prepareCache() throws FileNotFoundException, IOException {
 		if(Files.exists(cacheDir)) {
 			FilesUtilsIO.deleteDir(cacheDir);
-			logger.info(() -> "DELETE cacheDir: "+root);
+			logger.debug("DELETE cacheDir: {}", () -> subpath(cacheDir));
 		}
 
-		Files.createDirectories(contentDir);
-		if(notExists(currentFile)) return;
+		if(notExists(source)) 
+			return;
 
-		synchronized (wbuffer) {
-			try(InputStream is = Files.newInputStream(currentFile);
-					ZipInputStream zis = new ZipInputStream(is, StandardCharsets.UTF_8) ) {
+		Files.createDirectories(cacheDir);
 
-				byte[] buffer = wbuffer.get();
-				ZipEntry z = null;
+		cached = FileChannel.open(content(), StandardOpenOption.READ, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+		cached.position(0);
 
-				while((z = zis.getNextEntry()) != null) {
-					try(OutputStream out = Files.newOutputStream(cacheDir.resolve(z.getName()))) {
-						int n = 0;
-						while((n = zis.read(buffer)) > 0)
-							out.write(buffer, 0, n);
-					}
+		try(InputStream is = Files.newInputStream(source);
+				ZipInputStream zis = new ZipInputStream(is, StandardCharsets.UTF_8); 
+				AutoCloseableWrapper<byte[]> cb = wwbytes.autoCloseableWrapper();) {
+
+			byte[] bytes = cb.get();
+			ZipEntry z = null;
+			ArrayList<Position> positions = new ArrayList<>();
+
+			while((z = zis.getNextEntry()) != null) {
+				String name = z.getName();
+
+				int id = getId(name);
+				if(id != NO_ID) {
+					long position = cached.position();
+					long size = pipe(zis, cached, bytes);
+					positions.add(new Position(id, position, size));
+				} else {
+					pipe(zis, cacheDir.resolve(name), bytes);
 				}
 			}
-			logger.info(() -> "CACHE CREATED: "+this);
-			saveLastModified();
-			pathToCacheDir.put(this);
+			this.cached_size = cached.position();
+			this.positions = new IndexedMap<>(positions.toArray(new Position[0]), p -> p.id);
 		}
-	}
-	private void saveLastModified() throws IOException {
-		if(notExists(currentFile)) return;
-		new LongSerializer().write(currentFile.toFile().lastModified(), lastModified());
-		StringWriter2.setText(this.cacheDir.resolve("file"), currentFile.toString());
-	}
-	public void close(RootEntryZ ez) {
-		Entry selectedItem = ez.getSelectedItem();
-		
-		Util.hide(() -> {
-			Path p = resolve("selecteditem");
-			Files.deleteIfExists(p);
-			if(selectedItem != null)
-				new IntSerializer().write(selectedItem.id, p);
+		logger.info("CACHE CREATED: {}", this);
 
-			FilesUtilsIO.deleteDir(removedDir);
-		});
+	}
 
+	private static final int NO_ID = -10;
+
+	private int getId(String name) {
+		try {
+			if(name.startsWith(CONTENT_PREFIX))
+				return Integer.parseInt(name.substring(CONTENT_PREFIX.length()));
+			if(name.startsWith(CONTENT_PREFIX_2))
+				return Integer.parseInt(name.substring(CONTENT_PREFIX_2.length()));
+		} catch (NumberFormatException e) {
+			logger.catching(e);
+		}
+		return NO_ID;
+	}
+
+	private String subpath(Path p) {
+		return subpathWithPrefix(p);
+	}
+	private void saveCache(RootEntryZ root) throws IOException {
+		if(mod == 0)
+			return;
+
+		int n = root.getSelectedItem().id;
+		if(n != this.meta[SELECTED_ITEM]) {
+			this.meta[SELECTED_ITEM] = n;
+			mod++;
+		}
+
+		if(mod == 0)
+			logger.debug("saving skipped: mod == 0, {}", this);
+
+		this.meta[SELECTED_ITEM] = n;
+		new LongSerializer().write(meta, meta());
+		ObjectWriter.write(index2(), root, RootEntryZ::write);
+		logger.debug("saveCache {}\n  meta: ", () -> this, () -> Arrays.toString(meta));
+		mod = 0;
+	}
+
+	@Override
+	public void close() throws IOException {
+		if(cached != null)
+			cached.close();
+		cached = null;
 	}
 	public int getSelectedItem() {
-		Path p = resolve("selecteditem");
-		if(Files.notExists(p)) return -1;
-		return Util.get(() -> new IntSerializer().read(p), -1);
-	}
-	private static int counter = 0;
-	private HashMap<EntryZ, Path> removedMap;
-
-	public void remove(EntryZ e) throws IOException {
-		Objects.requireNonNull(e);
-		Path dir = removedDir.resolve((counter++)+"-"+e.id);
-		Files.createDirectories(dir);
-		e.walk(d -> move(contentPath((EntryZ)d), dir.resolve(String.valueOf(d.id))));
-		move(contentPath(e), dir.resolve(String.valueOf(e.id)));
-		if(removedMap == null)
-			removedMap = new HashMap<>();
-		removedMap.put(e, dir);
-	}
-	public void restore(EntryZ e) throws IOException {
-		if(isEmpty(removedMap))
-			return;
-		Path dir  = removedMap.remove(e);
-		if(notExists(dir)) return;
-		
-		Files.list(dir)
-		.forEach(p -> move(p, contentDir.resolve(p.getFileName())));
-	}
-	private void move(Path src, Path target) {
-		if(Files.notExists(src)) return;
-		if(Util.hide(() -> Files.move(src, target, StandardCopyOption.REPLACE_EXISTING)))
-			logger.debug(() -> "MOVED: "+src +" -> "+target);
+		return (int) meta[SELECTED_ITEM];
 	}
 }
 

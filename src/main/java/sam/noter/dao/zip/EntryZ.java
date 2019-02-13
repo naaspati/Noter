@@ -6,10 +6,16 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import javafx.scene.control.TreeItem;
+import sam.noter.Utils;
 import sam.noter.dao.Entry;
 
 class EntryZ extends Entry {
+	private static final Logger logger = LogManager.getLogger(EntryZ.class); 
+	
 	private final RootEntryZ root;
 	private boolean contentLoaded;
 
@@ -39,13 +45,22 @@ class EntryZ extends Entry {
 	public boolean isContentLoaded() {
 		return contentLoaded;
 	}
+	
+	@Override
+	public void setContent(String content) {
+		if(contentProxy != null)
+			throw new IllegalStateException("contentProxy != null");
+		
+		contentLoaded = true;
+		super.setContent(content);
+	}
 
 	@Override
 	public String getContent() {
 		if(!contentLoaded) {
 			contentLoaded = true;
 			if(content == null) 
-				content = Util.get(() -> root.getContent(this), content);
+				content = Utils.get(logger, () -> root.getContent(this), content);
 		}
 		return super.getContent();
 	}
@@ -53,7 +68,7 @@ class EntryZ extends Entry {
 	public String getContentWithoutCaching() {
 		if(contentLoaded || content != null || contentProxy != null)
 			return super.getContent();
-		return Util.get(() -> root.getContent(this), "");
+		return Utils.get(logger, () -> root.getContent(this), "");
 	}
 
 	public void setItems(List<EntryZ> items) {
