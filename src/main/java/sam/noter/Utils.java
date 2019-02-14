@@ -1,17 +1,19 @@
 package sam.noter;
 
+import static java.nio.charset.CodingErrorAction.REPORT;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static sam.io.fileutils.FilesUtilsIO.write;
+
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +33,10 @@ import sam.config.Session;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.io.IOConstants;
-import sam.io.serilizers.StringReader2;
-import sam.io.serilizers.StringWriter2;
+import sam.myutils.Checker;
 import sam.myutils.ErrorRunnable;
 import sam.myutils.System2;
+import sam.nopkg.SavedAsStringResource;
 import sam.noter.dao.Entry;
 import sam.reference.WeakPool;
 
@@ -45,14 +47,14 @@ public class Utils {
 	public static final Path APP_DATA = EnvKeys.APP_DATA;
 	public static final Path TEMP_DIR = APP_DATA.resolve("java_temp");
 	public static final int TEMP_DIR_COUNT = TEMP_DIR.getNameCount();
+	public static final Charset CHARSET = UTF_8;
 	
 	public static final WeakPool<byte[]> wwbytes = new WeakPool<>(true, () -> new byte[IOConstants.defaultBufferSize()]);
 	public static final WeakPool<ByteBuffer> wbuff = new WeakPool<>(true, () -> ByteBuffer.allocate(IOConstants.defaultBufferSize()));
 	public static final WeakPool<StringBuilder> wsb = new WeakPool<>(true, StringBuilder::new);
 	public static final WeakPool<CharBuffer> wcharBuff = new WeakPool<>(true, () -> CharBuffer.allocate(100));
-	public static final WeakPool<CharsetDecoder> wdecoder = new WeakPool<>(true, () -> StandardCharsets.UTF_8.newDecoder()
-			.onMalformedInput(CodingErrorAction.REPORT)
-			.onUnmappableCharacter(CodingErrorAction.REPORT));
+	public static final WeakPool<CharsetDecoder> wdecoder = new WeakPool<>(true, () -> CHARSET.newDecoder().onMalformedInput(REPORT).onUnmappableCharacter(REPORT));
+	public static final WeakPool<CharsetEncoder> wencoder = new WeakPool<>(true, () -> CHARSET.newEncoder().onMalformedInput(REPORT).onUnmappableCharacter(REPORT));
 
 	static {
 		String s = System2.lookup("session_file");
@@ -66,8 +68,7 @@ public class Utils {
 	public enum FileChooserType {
 		OPEN, SAVE
 	}
-	private static final Path last_visited_save = APP_DATA.resolve("last-visited-folder.txt");
-	private static File last_visited;
+	private static final SavedAsStringResource<File> last_visited = new SavedAsStringResource<>(APP_DATA.resolve("last-visited-folder.txt"), File::new);
 
 	public static File chooseFile(String title, File expectedDir, String expectedFilename, FileChooserType type) {
 		Objects.requireNonNull(type);
@@ -77,18 +78,8 @@ public class Utils {
 		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
 		Window parent = Session.global().get(Stage.class);
 
-		if(expectedDir == null || !expectedDir.isDirectory()){
-			if(last_visited != null)
-				expectedDir = last_visited;
-			else {
-				try {
-					expectedDir = Files.exists(last_visited_save) ? new File(StringReader2.getText(last_visited_save)) : null;
-				} catch (IOException e) {
-					logger.warn("failed to read: {}", last_visited_save, e);
-					expectedDir = null;
-				}
-			}
-		}
+		if(expectedDir == null || !expectedDir.isDirectory())
+			expectedDir = last_visited.get();
 
 		if(expectedDir != null && expectedDir.isDirectory())
 			chooser.setInitialDirectory(expectedDir);
@@ -98,12 +89,8 @@ public class Utils {
 
 		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
 
-		if(file != null) {
-			try {
-				last_visited = file.getParentFile();
-				StringWriter2.setText(last_visited_save, last_visited.toString().replace('\\', '/'));
-			} catch (IOException e) {}
-		}
+		if(file != null) 
+			last_visited.set(file.getParentFile());
 		return file;
 	}
 	public static Entry castEntry(TreeItem<String> parent) {
@@ -130,27 +117,6 @@ public class Utils {
 		return p.toString();
 	}
 
-	public static long pipe(InputStream is, Path path, byte[] buffer) throws IOException {
-		try(OutputStream out = Files.newOutputStream(path)) {
-			int n = 0;
-			long size = 0;
-			while((n = is.read(buffer)) > 0) {
-				out.write(buffer, 0, n);
-				size += n;
-			}
-			return size;
-		}
-	}
-	public static long pipe(InputStream in, FileChannel out, byte[] buffer) throws IOException {
-		int n = 0;
-		long size = 0;
-		while((n = in.read(buffer)) > 0) {
-			out.write(ByteBuffer.wrap(buffer, 0, n));
-			size += n;
-		}
-		return size;
-	}
-
 	public static <E> E get(Logger logger, Callable<E> call, E defaultValue)  {
 		try {
 			return call.call();
@@ -168,6 +134,50 @@ public class Utils {
 			return false;
 		}
 	}
+	public static long encodeNWrite(CharSequence content, FileChannel file) throws IOException {
+		if(Checker.isEmpty(content))
+			return 0;
+		
+		int size = 0;
+		CharsetEncoder encoder = wencoder.poll();
+		ByteBuffer buffer = wbuff.poll();
+		CharBuffer chars = CharBuffer.wrap(content);
+		
+		try {
+			encoder.reset();
+			buffer.clear();
+			
+			while(true) {
+				CoderResult cr = encoder.encode(chars, buffer, true);
+				check(cr);
+				
+				size += write(buffer, file, true);
+				
+				if(!chars.hasRemaining()) {
+					while(true) {
+						cr = encoder.flush(buffer);
+						check(cr);
+						size += write(buffer, file, true);
+						
+						if(cr.isUnderflow())
+							return size;
+					}
+				}
+			}
+		} finally {
+			encoder.reset();
+			buffer.clear();
+			
+			wencoder.add(encoder);
+			wbuff.add(buffer);
+			
+		}
+	}
+
+	private static void check(CoderResult c) throws CharacterCodingException {
+		if(!(c.isUnderflow() || c.isOverflow()))
+			c.throwException();
+	}
 
 	public static String decode(ByteBuffer buffer) throws IOException {
 			if(buffer.remaining() == 0)
@@ -182,21 +192,22 @@ public class Utils {
 				loop:
 				while(true) {
 					CoderResult cr = buffer.hasRemaining() ? decoder.decode(buffer, chars, true) : CoderResult.UNDERFLOW;
+					check(cr);
+					
 					if (cr.isUnderflow()) {
 						int n = 0;
 						while(n++ < 3) {
 							cr = decoder.flush(chars);
+							check(cr);
 							append(sb, chars);
+							
 							if(cr.isUnderflow())
 								break loop;
-							else if(!cr.isOverflow())
-								cr.throwException();
 						}
 						throw new IOException("failed to parse all bytes");
-					} else if (cr.isOverflow()) 
+					} else if (cr.isOverflow()) {
 						append(sb, chars);
-					else
-						cr.throwException();
+					} 
 				}
 				return sb.toString();
 			} finally {
@@ -216,5 +227,4 @@ public class Utils {
 		sb.append(chars);
 		chars.clear();
 	}
-
 }

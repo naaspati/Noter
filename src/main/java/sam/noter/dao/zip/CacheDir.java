@@ -4,6 +4,8 @@ import static java.nio.charset.CodingErrorAction.REPORT;
 import static sam.myutils.Checker.anyMatch;
 import static sam.myutils.Checker.isEmpty;
 import static sam.myutils.Checker.notExists;
+import static sam.io.fileutils.FilesUtilsIO.*;
+
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -30,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -56,6 +59,8 @@ import sam.nopkg.AutoCloseableWrapper;
 import sam.nopkg.SavedAsStringResource;
 import sam.nopkg.SavedResource;
 import static sam.noter.Utils.*;
+
+import sam.noter.Utils;
 import sam.noter.dao.RootEntry;
 import sam.reference.ReferenceUtils;
 import sam.reference.WeakPool;
@@ -90,6 +95,12 @@ class CacheDir implements AutoCloseable {
 	public static class Position {
 		public final int id, position, size;
 
+		protected Position(int id) { 
+			this.id = id;
+			this.position = -1;
+			this.size = -1;
+		}
+
 		public Position(int id, long position, long size) {
 			if(position > Integer.MAX_VALUE)
 				ThrowException.illegalArgumentException("position("+position+") > Integer.MAX_VALUE");
@@ -100,6 +111,26 @@ class CacheDir implements AutoCloseable {
 			this.position = (int) position;
 			this.size = (int) size;
 		}
+
+		@Override
+		public int hashCode() {
+			return id;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Position other = (Position) obj;
+			return id == other.id;
+		}
+
+
+
 	}
 
 	public CacheDir(Path source, Path cacheDir) throws IOException {
@@ -189,19 +220,27 @@ class CacheDir implements AutoCloseable {
 		mod++;
 		saveCache(root0);
 	}
+	
+	private Position write(int id, String content) throws IOException {
+		if(Checker.isEmpty(content))
+			return new Position(id);
+		
+		long pos = cached_size;
+		cached.position(pos);
+		long size = encodeNWrite(content, cached);
+		return new Position(id, pos, size);
+	}
 
 	private AutoCloseableWrapper<ByteBuffer> read(Position pos) throws IOException {
-		if(pos == null || pos.size <= 0)
+		if(pos == null || pos.size <= 0 || pos.position < 0)
 			return null;
 
 		ByteBuffer buffer = wbuff.poll();
+		buffer.clear();
 		if(buffer.capacity() < pos.size) {
 			wbuff.add(buffer);
 			buffer = ByteBuffer.allocate(pos.size);
 		}
-
-		if(cached == null)
-			cached = FileChannel.open(content(), StandardOpenOption.READ, StandardOpenOption.WRITE);
 
 		buffer.clear();
 		buffer.limit(pos.size);
@@ -298,13 +337,7 @@ class CacheDir implements AutoCloseable {
 
 				if(e.isModified()) {
 					if(e.isContentModified()) {
-						String s = e.getContent();
-						Path p = contentPath(e);
-						if(isEmpty(s)) {
-							if(Files.deleteIfExists(p))
-								logger.debug(() -> "DELETED: "+p);
-						} else
-							StringWriter2.setText(p, s);
+						positions.put(write(e.id, e.getContent()));
 					}
 					logModification(e, sb);
 				}
@@ -312,6 +345,7 @@ class CacheDir implements AutoCloseable {
 			walk(e, sink, sb, lines);
 		}
 	}
+
 	private void logModification(EntryZ e, StringBuilder sb) {
 		logger.debug(() -> {
 			if(newEntries.contains(e.id))
