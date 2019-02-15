@@ -2,7 +2,7 @@ package sam.noter;
 
 import static java.nio.charset.CodingErrorAction.REPORT;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static sam.io.fileutils.FilesUtilsIO.write;
+import static sam.io.IOUtils.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +33,8 @@ import sam.config.Session;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.io.IOConstants;
+import sam.io.infile.DataMeta;
+import sam.io.infile.InFile;
 import sam.myutils.Checker;
 import sam.myutils.ErrorRunnable;
 import sam.myutils.System2;
@@ -134,36 +136,16 @@ public class Utils {
 			return false;
 		}
 	}
-	public static long encodeNWrite(CharSequence content, FileChannel file) throws IOException {
+	public static DataMeta encodeNWrite(CharSequence content, InFile file) throws IOException {
 		if(Checker.isEmpty(content))
-			return 0;
+			return null;
 		
-		int size = 0;
 		CharsetEncoder encoder = wencoder.poll();
 		ByteBuffer buffer = wbuff.poll();
-		CharBuffer chars = CharBuffer.wrap(content);
+		buffer.clear();
 		
 		try {
-			encoder.reset();
-			buffer.clear();
-			
-			while(true) {
-				CoderResult cr = encoder.encode(chars, buffer, true);
-				check(cr);
-				
-				size += write(buffer, file, true);
-				
-				if(!chars.hasRemaining()) {
-					while(true) {
-						cr = encoder.flush(buffer);
-						check(cr);
-						size += write(buffer, file, true);
-						
-						if(cr.isUnderflow())
-							return size;
-					}
-				}
-			}
+			return file.write(content, buffer, encoder);
 		} finally {
 			encoder.reset();
 			buffer.clear();
@@ -174,10 +156,7 @@ public class Utils {
 		}
 	}
 
-	private static void check(CoderResult c) throws CharacterCodingException {
-		if(!(c.isUnderflow() || c.isOverflow()))
-			c.throwException();
-	}
+	
 
 	public static String decode(ByteBuffer buffer) throws IOException {
 			if(buffer.remaining() == 0)

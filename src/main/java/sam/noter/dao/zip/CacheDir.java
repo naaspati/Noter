@@ -47,6 +47,8 @@ import sam.collection.IndexedMap;
 import sam.collection.IntSet;
 import sam.io.IOConstants;
 import sam.io.fileutils.FilesUtilsIO;
+import sam.io.infile.DataMeta;
+import sam.io.infile.InFile;
 import sam.io.serilizers.LongSerializer;
 import sam.io.serilizers.ObjectReader;
 import sam.io.serilizers.ObjectWriter;
@@ -65,6 +67,7 @@ import sam.noter.dao.RootEntry;
 import sam.reference.ReferenceUtils;
 import sam.reference.WeakPool;
 import sam.string.StringUtils.StringSplitIterator;
+import static sam.io.IOUtils.*;
 
 class CacheDir implements AutoCloseable {
 	private static final int MAX_ID = 0;
@@ -84,7 +87,7 @@ class CacheDir implements AutoCloseable {
 	private IndexedMap<Position> positions;
 
 	private final SavedResource<Path> savedSourceLoc;
-	private FileChannel cached;
+	private InFile cached;
 	private long cached_size = -1;
 	public Path source;
 	public final Path cacheDir;
@@ -92,24 +95,23 @@ class CacheDir implements AutoCloseable {
 	private int mod;
 	private WeakReference<Map<Integer, String>> lines;
 
-	public static class Position {
-		public final int id, position, size;
+	public static class Position extends DataMeta {
+		public final int id;
 
-		protected Position(int id) { 
+		protected Position(int id) {
+			super(-1, -1);
 			this.id = id;
-			this.position = -1;
-			this.size = -1;
 		}
 
 		public Position(int id, long position, long size) {
+			super(position, size);
+
 			if(position > Integer.MAX_VALUE)
 				ThrowException.illegalArgumentException("position("+position+") > Integer.MAX_VALUE");
 			if(size > Integer.MAX_VALUE)
 				ThrowException.illegalArgumentException("size("+size+") > Integer.MAX_VALUE");
 
 			this.id = id;
-			this.position = (int) position;
-			this.size = (int) size;
 		}
 
 		@Override
@@ -220,15 +222,17 @@ class CacheDir implements AutoCloseable {
 		mod++;
 		saveCache(root0);
 	}
-	
+
 	private Position write(int id, String content) throws IOException {
 		if(Checker.isEmpty(content))
 			return new Position(id);
+
+		DataMeta d = encodeNWrite(content, cached);
 		
-		long pos = cached_size;
-		cached.position(pos);
-		long size = encodeNWrite(content, cached);
-		return new Position(id, pos, size);
+		if(d == null)
+			return new Position(id, -1, -1);
+		else
+			return new Position(id, d.position, d.size);
 	}
 
 	private AutoCloseableWrapper<ByteBuffer> read(Position pos) throws IOException {
@@ -243,11 +247,8 @@ class CacheDir implements AutoCloseable {
 		}
 
 		buffer.clear();
-		buffer.limit(pos.size);
-		cached.position(pos.position);
-		while(cached.read(buffer) != -1 && buffer.hasRemaining()) {
-		}
-
+		cached.read(buffer, pos);
+		
 		if(buffer.hasRemaining()) {
 			int n = buffer.remaining();
 			buffer.clear();
@@ -460,8 +461,7 @@ class CacheDir implements AutoCloseable {
 
 		Files.createDirectories(cacheDir);
 
-		cached = FileChannel.open(content(), StandardOpenOption.READ, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-		cached.position(0);
+		cached = new InFile(content(), true);
 
 		try(InputStream is = Files.newInputStream(source);
 				ZipInputStream zis = new ZipInputStream(is, StandardCharsets.UTF_8); 
@@ -477,7 +477,7 @@ class CacheDir implements AutoCloseable {
 				int id = getId(name);
 				if(id != NO_ID) {
 					long position = cached.position();
-					long size = pipe(zis, cached, bytes);
+					long size = cached.write(zis, bytes);
 					positions.add(new Position(id, position, size));
 				} else {
 					pipe(zis, cacheDir.resolve(name), bytes);
