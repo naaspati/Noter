@@ -2,7 +2,7 @@ package sam.noter.bookmark;
 import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.fx.helpers.FxKeyCodeCombination.combination;
+import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.App.GRAYSCALE_EFFECT;
 import static sam.noter.Utils.fx;
