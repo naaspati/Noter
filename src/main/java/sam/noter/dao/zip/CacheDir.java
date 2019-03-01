@@ -9,15 +9,12 @@ import static sam.noter.Utils.subpathWithPrefix;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
-import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
@@ -25,7 +22,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -37,7 +33,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -54,15 +49,14 @@ import sam.io.fileutils.FilesUtilsIO;
 import sam.io.infile.DataMeta;
 import sam.io.infile.TextInFile;
 import sam.io.serilizers.LongSerializer;
-import sam.io.serilizers.ObjectWriter;
 import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
 import sam.nopkg.Junk;
 import sam.nopkg.SavedAsStringResource;
 import sam.nopkg.SavedResource;
 import sam.nopkg.SimpleSavedResource;
+import sam.nopkg.StringResources;
 import sam.noter.dao.RootEntry;
-import sam.reference.ReferenceUtils;
 import sam.string.StringUtils.StringSplitIterator;
 
 class CacheDir implements AutoCloseable {
@@ -85,8 +79,8 @@ class CacheDir implements AutoCloseable {
 	private static final Logger logger = LogManager.getLogger(CacheDir.class);
 
 	private IndexedMap<EntryCache> entries;
-	private final SavedResource<Path> savedSourceLoc;
-	private final SavedResource<long[]> _cacheMeta;
+	private final SavedAsStringResource<Path> savedSourceLoc;
+	private final SavedAsStringResource<long[]> _cacheMeta;
 	private final long[] cacheMeta;
 
 	private TextInFile contentTextfile;
@@ -129,7 +123,7 @@ class CacheDir implements AutoCloseable {
 	public CacheDir(Path source, Path cacheDir) throws IOException {
 		this.source = source;
 		this.cacheDir = cacheDir;
-		this._cacheMeta = _metaResource();
+		this._cacheMeta = _metaStringResources();
 		savedSourceLoc = new SavedAsStringResource<Path>(resolve("source-file-location"), Paths::get);
 
 		Path t = savedSourceLoc.get();
@@ -149,7 +143,7 @@ class CacheDir implements AutoCloseable {
 		this.cacheMeta = this._cacheMeta.get();
 	}
 
-	private SavedResource<long[]> _metaResource() {
+	private SavedResource<long[]> _metaStringResources() {
 		Function<Path, long[]> reader = p -> {
 			try {
 				logger.debug("read: {}", p);
@@ -202,7 +196,7 @@ class CacheDir implements AutoCloseable {
 			dataMetaSet(id, new DataMeta(0, 0), type);
 		else {
 			TextInFile file = file(type);
-			try(Resource r = Resource.get()) {
+			try(StringResources r = StringResources.get()) {
 				DataMeta d = file.write(content, r.encoder, r.buffer, REPORT, REPORT);
 				dataMetaSet(id, d, type);
 			}
@@ -259,7 +253,7 @@ class CacheDir implements AutoCloseable {
 
 		TextInFile file = file(type);
 
-		try(Resource r = Resource.get()) {
+		try(StringResources r = StringResources.get()) {
 			StringBuilder sink = r.wsink.get();
 
 			file.readText(dm, r.buffer, r.chars, r.decoder, sink, REPORT, REPORT);
@@ -279,7 +273,7 @@ class CacheDir implements AutoCloseable {
 	public void save(RootEntryZ root, Path file) throws IOException {
 		if(!root.isModified()) return;
 
-		try(Resource r = Resource.get()) {
+		try(StringResources r = StringResources.get()) {
 			mod++;
 			zip(file, r, root);
 			saveCache(root);
@@ -289,7 +283,7 @@ class CacheDir implements AutoCloseable {
 		}
 	}
 
-	private void writeIndex(final OutputStream out, final EntryZ entry, final Resource r, final List<EntryCache> entryCaches, final StringBuilder sink, final int maxSinkSize) throws IOException {
+	private void writeIndex(final OutputStream out, final EntryZ entry, final StringResources r, final List<EntryCache> entryCaches, final StringBuilder sink, final int maxSinkSize) throws IOException {
 		@SuppressWarnings("rawtypes")
 		List list = entry.getChildren();
 		if(list.isEmpty()) 
@@ -326,7 +320,7 @@ class CacheDir implements AutoCloseable {
 		}
 	}
 
-	private void write(CharSequence data, Resource r, OutputStream out) throws IOException {
+	private void write(CharSequence data, StringResources r, OutputStream out) throws IOException {
 		if(data.length() == 0)
 			return;
 
@@ -335,7 +329,7 @@ class CacheDir implements AutoCloseable {
 		logger.debug(() -> "WRITTEN text.length: "+ data.length());
 	}
 
-	private void write(ByteBuffer b, Resource r, OutputStream out) throws IOException {
+	private void write(ByteBuffer b, StringResources r, OutputStream out) throws IOException {
 		if(b != r.buffer)
 			throw new IllegalStateException();
 
@@ -386,7 +380,7 @@ class CacheDir implements AutoCloseable {
 		}
 	}
 
-	private void zip(Path target, Resource r, RootEntryZ root) throws IOException {
+	private void zip(Path target, StringResources r, RootEntryZ root) throws IOException {
 		Path temp = _zip(target, r, root);
 
 		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
@@ -397,7 +391,7 @@ class CacheDir implements AutoCloseable {
 	private void setLastModified() throws IOException {
 		cacheMeta[LAST_MODIFIED] = source.toFile().lastModified();
 	}
-	private Path _zip(Path target, Resource r, RootEntryZ rootEntry) throws IOException {
+	private Path _zip(Path target, StringResources r, RootEntryZ rootEntry) throws IOException {
 		IOUtils.ensureCleared(r.buffer);
 
 		StringBuilder sb = r.sb();
@@ -467,7 +461,7 @@ class CacheDir implements AutoCloseable {
 		try(InputStream _is = Files.newInputStream(source);
 				BufferedInputStream bis = new BufferedInputStream(_is);
 				ZipInputStream zis = new ZipInputStream(bis, StandardCharsets.UTF_8);
-				Resource r = Resource.get(); ) {
+				StringResources r = StringResources.get(); ) {
 
 			Files.createDirectories(cacheDir);
 			Path p = resolve("content");
