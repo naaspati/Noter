@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javafx.scene.control.TreeItem;
+import sam.nopkg.Junk;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
 
@@ -114,5 +115,10 @@ class EntryZ extends Entry {
 	@Override
 	protected Entry getRoot0() {
 		return getRoot();
+	}
+
+	public void setContentModified(boolean b) {
+		// TODO Auto-generated method stub
+		Junk.notYetImplemented();
 	}
 }

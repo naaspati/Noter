@@ -1,26 +1,24 @@
 package sam.noter.dao.zip;
 
 
-import static java.nio.charset.CodingErrorAction.*;
-import static sam.io.IOUtils.pipe;
+import static java.nio.charset.CodingErrorAction.REPORT;
 import static sam.myutils.Checker.anyMatch;
 import static sam.myutils.Checker.notExists;
-import static sam.noter.Utils.*;
+import static sam.noter.Utils.subpathWithPrefix;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.channels.Channels;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -46,42 +45,28 @@ import java.util.zip.ZipOutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javafx.application.Platform;
 import sam.collection.IndexedMap;
-import sam.collection.IntSet;
+import sam.functions.IOExceptionBiConsumer;
+import sam.functions.IOExceptionConsumer;
 import sam.io.BufferSupplier;
-import sam.io.IOConstants;
+import sam.io.IOUtils;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.infile.DataMeta;
-import sam.io.infile.InFile;
 import sam.io.infile.TextInFile;
 import sam.io.serilizers.LongSerializer;
-import sam.io.serilizers.ObjectReader;
 import sam.io.serilizers.ObjectWriter;
+import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
-import sam.myutils.ThrowException;
-import sam.nopkg.AutoCloseableWrapper;
 import sam.nopkg.Junk;
 import sam.nopkg.SavedAsStringResource;
 import sam.nopkg.SavedResource;
+import sam.nopkg.SimpleSavedResource;
 import sam.noter.dao.RootEntry;
 import sam.reference.ReferenceUtils;
-import sam.reference.WeakAndLazy;
-import sam.reference.WeakPool;
 import sam.string.StringUtils.StringSplitIterator;
 
 class CacheDir implements AutoCloseable {
 
-	private static final Object LOCK = new Object();
-
-	private static final byte[] bytes = new byte[IOConstants.defaultBufferSize()];
-	private static final ByteBuffer buffer = ByteBuffer.wrap(bytes);
-	private static final CharBuffer chars = CharBuffer.allocate(100);
-	private static final WeakAndLazy<StringBuilder> wsink = new WeakAndLazy<>(StringBuilder::new);
-
-	private static final Charset CHARSET = StandardCharsets.UTF_8; 
-	private static final CharsetDecoder decoder = CHARSET.newDecoder().onMalformedInput(REPORT).onUnmappableCharacter(REPORT);
-	private static final CharsetEncoder encoder = CHARSET.newEncoder().onMalformedInput(REPORT).onUnmappableCharacter(REPORT);
 
 	private static final int MAX_ID = 0;
 	private static final int LAST_MODIFIED = 1;
@@ -101,13 +86,14 @@ class CacheDir implements AutoCloseable {
 
 	private IndexedMap<EntryCache> entries;
 	private final SavedResource<Path> savedSourceLoc;
-	
+	private final SavedResource<long[]> _cacheMeta;
+	private final long[] cacheMeta;
+
 	private TextInFile contentTextfile;
 	private TextInFile titleTextfile;
-	
+
 	public Path source;
 	public final Path cacheDir;
-	private final long[] meta;
 	private int mod;
 	private final BitSet modified = new BitSet();
 	private final BitSet newEntries = new BitSet();
@@ -120,7 +106,7 @@ class CacheDir implements AutoCloseable {
 		public EntryCache(int id) {
 			this.id = id;
 		}
-		
+
 		@Override
 		public int hashCode() {
 			return id;
@@ -139,24 +125,47 @@ class CacheDir implements AutoCloseable {
 		}
 	}
 
+
 	public CacheDir(Path source, Path cacheDir) throws IOException {
 		this.source = source;
 		this.cacheDir = cacheDir;
+		this._cacheMeta = _metaResource();
+		savedSourceLoc = new SavedAsStringResource<Path>(resolve("source-file-location"), Paths::get);
 
-		Path p = meta(); 
-		long[] meta = Files.notExists(p) ? null : new LongSerializer().readArray(p);
-		savedSourceLoc = new SavedAsStringResource<Path>(cacheDir.resolve("file"), Paths::get);
 		Path t = savedSourceLoc.get();
 		if(t != null && !t.equals(source))
 			throw new IOException(String.format("source mismatch, expected=\"%s\", supplied: \"%s\"", savedSourceLoc.get(), source));
+
+		long[] meta = this._cacheMeta.get();
 
 		init(meta);
 
 		if(meta == null) {
 			meta = new long[SIZE];
 			Arrays.fill(meta, -1);
+
+			this._cacheMeta.set(meta);
 		}
-		this.meta = meta;
+		this.cacheMeta = this._cacheMeta.get();
+	}
+
+	private SavedResource<long[]> _metaResource() {
+		Function<Path, long[]> reader = p -> {
+			try {
+				logger.debug("read: {}", p);
+				return new LongSerializer().readArray(p);
+			} catch (IOException e) {
+				logger.warn("failed to read: {}",p, e);
+			}
+			return null;
+		};
+
+		IOExceptionBiConsumer<Path, long[]> writer = (path, array) -> {
+			new LongSerializer().write(array, path);
+			logger.debug("write: {}", path);
+		};
+
+		return new SimpleSavedResource<>(resolve("meta"), reader, writer, Arrays::equals);
 	}
 
 	private Path resolve(String s) { return cacheDir.resolve(s); }
@@ -166,7 +175,8 @@ class CacheDir implements AutoCloseable {
 	}
 	@Deprecated //moving code to proper places
 	public void loadEntries(@SuppressWarnings("rawtypes") Consumer<List> onFound, RootEntryZ root0) throws IOException, ClassNotFoundException {
-		Path index = index2();
+		/** FIXME
+		 * 		Path index = index2();
 		if(Files.exists(index)) {
 			Path p = index;
 			onFound.accept(ObjectReader.<EntryZ>read(index, dis -> EntryZ.read(dis, root0)).getChildren());
@@ -179,28 +189,27 @@ class CacheDir implements AutoCloseable {
 			logger.warn("not found: {}", index);
 			return; 
 		}
-		//moved to _prepareCache();
+		// loading entries moved to _prepareCache();
 		onFound.accept(temp);
 		mod++;
 		saveCache(root0);
+		 */
+
 	}
 
 	private void write(int id, String content, int type) throws IOException {
-		
 		if(Checker.isEmpty(content)) 
-			metaSet(id, new DataMeta(0, 0), type);
+			dataMetaSet(id, new DataMeta(0, 0), type);
 		else {
 			TextInFile file = file(type);
-
-			synchronized (LOCK) {
-				buffer.clear();
-				DataMeta d = file.write(content, encoder, buffer, REPORT, REPORT);
-				metaSet(id, d, type);
-			}	
+			try(Resource r = Resource.get()) {
+				DataMeta d = file.write(content, r.encoder, r.buffer, REPORT, REPORT);
+				dataMetaSet(id, d, type);
+			}
 		}
 	}
 
-	private EntryCache metaSet(int id, DataMeta meta, int type) {
+	private EntryCache dataMetaSet(int id, DataMeta meta, int type) {
 		EntryCache cache = entries.get(id);
 		if(cache == null)
 			entries.put(cache = new EntryCache(id));
@@ -250,15 +259,13 @@ class CacheDir implements AutoCloseable {
 
 		TextInFile file = file(type);
 
-		synchronized (LOCK) {
-			buffer.clear();
-			chars.clear();
-			StringBuilder sink = wsink.get();
-			sink.setLength(0);
+		try(Resource r = Resource.get()) {
+			StringBuilder sink = r.wsink.get();
 
-			file.readText(dm, buffer, chars, decoder, sink, REPORT, REPORT);
+			file.readText(dm, r.buffer, r.chars, r.decoder, sink, REPORT, REPORT);
 			return sink.length() == 0 ? "" : sink.toString();
 		}
+
 	}
 
 	public String readContent(EntryZ e) throws IOException {
@@ -266,80 +273,82 @@ class CacheDir implements AutoCloseable {
 	}
 	public void writeContent(EntryZ e) throws IOException {
 		write(e.id, e.getContent(), CONTENT);
+		e.setContentModified(false);
 	}
 
 	public void save(RootEntryZ root, Path file) throws IOException {
 		if(!root.isModified()) return;
 
-		StringBuilder sv2 = new StringBuilder(100);
-		ArrayList<String> list = new ArrayList<>(); 
-
-		Map<Integer, String> lines = ReferenceUtils.get(this.lines);
-		if(lines == null) {
-			Path index = index();
-			if(Files.notExists(index))
-				lines = new HashMap<>();
-			else {
-				lines = Files.lines(index).collect(Collectors.toMap(s -> Integer.parseInt(s.substring(0, s.indexOf(' '))), s -> s));
-				this.lines = new WeakReference<Map<Integer,String>>(lines);
-				logger.debug(() -> "loaded for lines: "+index);
-			}
+		try(Resource r = Resource.get()) {
+			mod++;
+			zip(file, r, root);
+			saveCache(root);
+			savedSourceLoc.set(file);
+			savedSourceLoc.close();
+			this.source = file;
 		}
-
-		walk(root, list, sv2, lines);
-		Files.write(index(), list, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-		mod++;
-		zip(file);
-		saveCache(root);
-		savedSourceLoc.set(file);
-		savedSourceLoc.close();
-		this.source = file;
 	}
 
-	private void walk(EntryZ entry, List<String> sink, StringBuilder sb, Map<Integer, String> lines) throws IOException {
+	private void writeIndex(final OutputStream out, final EntryZ entry, final Resource r, final List<EntryCache> entryCaches, final StringBuilder sink, final int maxSinkSize) throws IOException {
 		@SuppressWarnings("rawtypes")
 		List list = entry.getChildren();
-		if(list.isEmpty()) return;
+		if(list.isEmpty()) 
+			return;
 
 		int parentId = entry.getId();
-
 		int order = 0;
-		boolean cM = entry.isChildrenModified();
 
 		for (Object ti : list) {
 			EntryZ e = (EntryZ) ti;
-			String line = lines.get(e.id);
-			if(line != null && !e.isModified() && !cM) {
-				sink.add(line);
-			} else {
-				sb.setLength(0);
-				sb.append(e.id).append(' ')
-				.append(parentId).append(' ')
-				.append(order++).append(' ')
-				.append(e.getLastModified()).append(' ')
-				.append(e.getTitle());
 
-				line = sb.toString();
-				lines.put(e.id, line);
-				sink.add(line);
+			sink.append(e.id).append(' ')
+			.append(parentId).append(' ')
+			.append(order++).append(' ')
+			.append(e.getLastModified()).append(' ')
+			.append(e.getTitle());
 
-				if(e.isModified()) {
-					if(e.isContentModified()) 
-						writeContent(e);
+			if(e.isModified()) {
+				if(e.isContentModified()) 
+					writeContent(e);
 
-					logModification(e, sb);
-				}
+				if(logger.isDebugEnabled())
+					logModification(e);
 			}
-			walk(e, sink, sb, lines);
+
+			entryCaches.add(entries.get(e.id)); //FIXME get from entryz
+			writeIndex(out, e, r, entryCaches, sink, maxSinkSize);
+
+			if(sink.length() >= maxSinkSize) {
+				logger.debug(() -> "writing text.length: "+ sink.length());
+				write(sink, r, out);
+				sink.setLength(0);
+			}
 		}
 	}
 
-	private void logModification(EntryZ e, StringBuilder sb) {
+	private void write(CharSequence data, Resource r, OutputStream out) throws IOException {
+		if(data.length() == 0)
+			return;
+
+		IOUtils.ensureCleared(r.buffer);
+		StringIOUtils.write(b -> write(b, r, out), data, r.encoder, r.buffer, REPORT, REPORT);
+		logger.debug(() -> "WRITTEN text.length: "+ data.length());
+	}
+
+	private void write(ByteBuffer b, Resource r, OutputStream out) throws IOException {
+		if(b != r.buffer)
+			throw new IllegalStateException();
+
+		out.write(r.bytes, 0, b.limit());
+		b.clear();
+	}
+
+	private void logModification(EntryZ e) {
 		logger.debug(() -> {
 			if(newEntries.get(e.id))
 				return "NEW "+e;
 
-			sb.setLength(0);
+			StringBuilder sb = new StringBuilder();
 
 			sb.append("UPDATED ").append(e).append(" [");
 			if(e.isTitleModified())
@@ -364,8 +373,9 @@ class CacheDir implements AutoCloseable {
 
 	}
 	private int nextId() {
-		return (int)(meta[MAX_ID] = meta[MAX_ID] + 1);
+		return (int)(cacheMeta[MAX_ID] = cacheMeta[MAX_ID] + 1);
 	}
+
 	private class Temp {
 		final int parent_id, order;
 		final EntryZ entry;
@@ -376,8 +386,8 @@ class CacheDir implements AutoCloseable {
 		}
 	}
 
-	private void zip(Path target) throws IOException {
-		Path temp = _zip(target);
+	private void zip(Path target, Resource r, RootEntryZ root) throws IOException {
+		Path temp = _zip(target, r, root);
 
 		Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
 		logger.debug("MOVED: "+temp+ "  "+target);
@@ -385,34 +395,56 @@ class CacheDir implements AutoCloseable {
 		setLastModified();
 	} 
 	private void setLastModified() throws IOException {
-		meta[LAST_MODIFIED] = source.toFile().lastModified();
+		cacheMeta[LAST_MODIFIED] = source.toFile().lastModified();
 	}
-	private Path _zip(Path target) throws IOException {
-		synchronized (LOCK) {
-			Path temp = Files.createTempFile(target.getFileName().toString(), null);
+	private Path _zip(Path target, Resource r, RootEntryZ rootEntry) throws IOException {
+		IOUtils.ensureCleared(r.buffer);
 
-			try(OutputStream os = Files.newOutputStream(temp);
-					ZipOutputStream zos = new ZipOutputStream(os, StandardCharsets.UTF_8);) {
+		StringBuilder sb = r.sb();
+		if(sb.length() != 0)
+			throw new IllegalArgumentException("sb.length("+sb.length()+") != 0");
 
-				Path index = index();
-				if(Files.notExists(index))
-					return temp;
+		Path temp = Files.createTempFile(target.getFileName().toString(), null);
 
-				contentTextfile.read(meta, buffer, bufferConsumer);
-				byte[] buffer = wb.get();
-				write("index", buffer, index, zos);
+		try(OutputStream _os = Files.newOutputStream(temp);
+				BufferedOutputStream bos = new BufferedOutputStream(_os);
+				ZipOutputStream zos = new ZipOutputStream(bos, r.CHARSET);) {
 
-				if(entries == null || entries.isEmpty())
-					return temp;
+			if(rootEntry.isEmpty())
+				return temp;
 
-				String[] contents = content.toFile().list();
-				if(contents == null || contents.length == 0) return temp;
-				for (String f : contents) //FIXME
-					write(CONTENT_PREFIX+f, buffer, content.resolve(f), zos);
+			IOExceptionConsumer<String> putEntry = name -> {
+				ZipEntry z = new ZipEntry(name);
+				zos.putNextEntry(z);
+			};
+
+			putEntry.accept(INDEX);
+
+			List<EntryCache> entries = new ArrayList<>();
+			int maxSinkSize = (int) (r.bytes.length/r.encoder.averageBytesPerChar());
+			logger.debug(() -> "maxSinkSize: "+maxSinkSize);
+
+			for (Object e : rootEntry.getChildren()) 
+				writeIndex(zos, (EntryZ)e, r, entries, sb, maxSinkSize);
+
+			write(sb, r, zos);
+			zos.closeEntry();
+
+			if(Checker.isEmpty(entries))
+				return temp;
+
+			for (EntryCache e : entries) {
+				final DataMeta d = e == null ? null : e.content;
+				if(d == null || d.size == 0)
+					continue;
+
+				r.buffer.clear();
+				putEntry.accept(CONTENT_PREFIX+e.id);
+				contentTextfile.read(d, r.buffer, b -> write(b, r, zos));
+				zos.closeEntry();
 			}
-			return temp;
-
 		}
+		return temp;
 	}
 
 	private void init(long[] meta) throws FileNotFoundException, IOException {
@@ -432,79 +464,78 @@ class CacheDir implements AutoCloseable {
 
 		if(notExists(source)) 
 			return;
+		try(InputStream _is = Files.newInputStream(source);
+				BufferedInputStream bis = new BufferedInputStream(_is);
+				ZipInputStream zis = new ZipInputStream(bis, StandardCharsets.UTF_8);
+				Resource r = Resource.get(); ) {
 
-		synchronized(LOCK) {
-			try(InputStream _is = Files.newInputStream(source);
-					BufferedInputStream bis = new BufferedInputStream(_is);
-					ZipInputStream zis = new ZipInputStream(bis, StandardCharsets.UTF_8);
-					) {
+			Files.createDirectories(cacheDir);
+			Path p = resolve("content");
+			Files.deleteIfExists(p);
+			contentTextfile = new TextInFile(p, true);
+			Map<Integer, DataMeta> titleMap = null;
 
-				Files.createDirectories(cacheDir);
-				Path p = resolve("content");
-				Files.deleteIfExists(p);
-				contentTextfile = new TextInFile(p, true);
-				buffer.clear();
-				Map<Integer, DataMeta> titleMap = null;
 
-				ZipEntry z = null;
-				ArrayList<EntryCache> positions = new ArrayList<>();
 
-				while((z = zis.getNextEntry()) != null) {
-					String name = z.getName();
-					
-					if(name.equals(INDEX)) {
-						titleMap = parseEntries(zis);
+			ZipEntry z = null;
+			ArrayList<EntryCache> positions = new ArrayList<>();
+
+			while((z = zis.getNextEntry()) != null) {
+				String name = z.getName();
+
+				if(name.equals(INDEX)) {
+					titleMap = parseEntries(zis, r.buffer, r.encoder);
+				} else {
+					int id = getId(name);
+
+					if(id != NO_ID) {
+						DataMeta d = contentTextfile.write(new BufferSupplier() {
+							int n = 0;
+
+							@Override
+							public ByteBuffer next() throws IOException {
+								n = zis.read(r.bytes);
+								if(n < 0)
+									return null;
+
+								r.buffer.clear();
+								r.buffer.limit(n);
+
+								return r.buffer;
+							}
+							@Override
+							public boolean isEndOfInput() throws IOException {
+								return n < 0;
+							}
+						});
+
+						EntryCache c = new EntryCache(id);
+						c.content = d;
+						positions.add(c);
 					} else {
-						int id = getId(name);
-						
-						if(id != NO_ID) {
-							DataMeta d = contentTextfile.write(new BufferSupplier() {
-								int n = 0;
-
-								@Override
-								public ByteBuffer next() throws IOException {
-									n = zis.read(bytes);
-									if(n < 0)
-										return null;
-
-									buffer.clear();
-									buffer.limit(n);
-
-									return buffer;
-								}
-
-								@Override
-								public boolean isEndOfInput() throws IOException {
-									return n < 0;
-								}
-							});
-
-							EntryCache c = new EntryCache(id);
-							c.content = d;
-							positions.add(c);
-						} else {
-							logger.debug("unknown file in zip: {}", name);
-						}
-						
+						logger.debug("unknown file in zip: {}", name);
 					}
-				}
 
-				if(Checker.isNotEmpty(titleMap))  {
-					Map<Integer, DataMeta> map = titleMap;
-					positions.forEach(e -> e.title = map.get(e.id));
 				}
-				
-				this.entries = new IndexedMap<>(positions.toArray(new EntryCache[0]), d -> d.id);
 			}
-			logger.info("CACHE CREATED: {}", this);
+
+			if(Checker.isNotEmpty(titleMap))  {
+				Map<Integer, DataMeta> map = titleMap;
+				positions.forEach(e -> e.title = map.get(e.id));
+			}
+
+			this.entries = new IndexedMap<>(positions.toArray(new EntryCache[0]), d -> d.id);
 		}
+		logger.debug("CACHE CREATED: {}", this);
 	}
 
-	private Map<Integer, DataMeta> parseEntries(InputStream zis) throws UnsupportedEncodingException, IOException {
+	private Map<Integer, DataMeta> parseEntries(InputStream zis, ByteBuffer buffer, CharsetEncoder encoder) throws UnsupportedEncodingException, IOException {
+		IOUtils.ensureCleared(buffer);
+
 		HashMap<Integer, Temp> map = new HashMap<>();
 		RootEntryZ root0 = Junk.notYetImplemented();// FIXME
 
-		try(InputStreamReader isr = new InputStreamReader(zis, "utf-8");
+		try(InputStreamReader isr = new InputStreamReader(zis, encoder.charset());
 				BufferedReader reader = new BufferedReader(isr);
 				) {
 			if(titleTextfile == null)
@@ -515,7 +546,7 @@ class CacheDir implements AutoCloseable {
 			titleTextfile = new TextInFile(p, true);
 			Map<Integer, DataMeta> dmMap = new HashMap<>();
 			Map<Integer, List<Temp>> grouped = new HashMap<>();
-			
+
 			String s = null;
 			while((s = reader.readLine()) != null) {
 				Iterator<String> iter = new StringSplitIterator(s, ' ', 5);
@@ -526,9 +557,9 @@ class CacheDir implements AutoCloseable {
 				String title = iter.next();
 
 				Temp  t = new Temp(parent_id, order, new EntryZ(root0, id, lastModified, title));
-				meta[MAX_ID] = Math.max(meta[MAX_ID], id);
+				_cacheMeta.get()[MAX_ID] = Math.max(_cacheMeta.get()[MAX_ID], id);
 				map.put(id, t);
-				
+
 				buffer.clear();
 				dmMap.put(id, titleTextfile.write(title, encoder, buffer, REPORT, REPORT));
 			}
@@ -549,7 +580,7 @@ class CacheDir implements AutoCloseable {
 			temp.clear();
 			Optional.ofNullable(grouped.get(RootEntry.ROOT_ENTRY_ID))
 			.ifPresent(list -> list.forEach(x -> temp.add(x.entry)));
-			
+
 			return dmMap;
 		}
 	}
@@ -576,18 +607,20 @@ class CacheDir implements AutoCloseable {
 			return;
 
 		int n = root.getSelectedItem().id;
-		if(n != this.meta[SELECTED_ITEM]) {
-			this.meta[SELECTED_ITEM] = n;
+		if(n != this.cacheMeta[SELECTED_ITEM]) {
+			this.cacheMeta[SELECTED_ITEM] = n;
 			mod++;
 		}
 
 		if(mod == 0)
 			logger.debug("saving skipped: mod == 0, {}", this);
 
-		this.meta[SELECTED_ITEM] = n;
-		new LongSerializer().write(meta, meta());
-		ObjectWriter.write(index2(), root, RootEntryZ::write);
-		logger.debug("saveCache {}\n  meta: ", () -> this, () -> Arrays.toString(meta));
+		this.cacheMeta[SELECTED_ITEM] = n;
+		_cacheMeta.set(cacheMeta);
+		_cacheMeta.close();
+
+		//FIXME ObjectWriter.write(index2(), root, RootEntryZ::write);
+		logger.debug("saveCache {}\n  meta: ", () -> this, () -> Arrays.toString(cacheMeta));
 		mod = 0;
 	}
 
@@ -598,7 +631,7 @@ class CacheDir implements AutoCloseable {
 		contentTextfile = null;
 	}
 	public int getSelectedItem() {
-		return (int) meta[SELECTED_ITEM];
+		return (int) cacheMeta[SELECTED_ITEM];
 	}
 }
 
