@@ -1,10 +1,12 @@
 package sam.noter.bookmark;
 
-import static sam.noter.Utils2.fx;
+import static sam.noter.Utils.fx;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import javax.inject.Inject;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -22,24 +24,28 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import sam.noter.EntryTreeItem;
+import sam.noter.app.FullScreen;
 import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabContainer;
+import sam.noter.tabs.TabBox;
 
 class BookmarkMover extends BorderPane implements EventHandler<ActionEvent> {
 	private final Button moveAbove = new Button("Move Above");
 	private final Button moveBelow = new Button("Move Below");
 	private final Button moveAsFirstChild = new Button("Move As First Child");
 	private final Button moveAsLastChild = new Button("Move As Last Child");
-	private final TabContainer tabcontainer;
+	private final TabBox tabcontainer;
 
 	private TreeItem<TreeItem<String>> root; 
 	private final TreeView<TreeItem<String>> view = new TreeView<>();
 	private MultipleSelectionModel<TreeItem<String>> selectionModel;
 	private Tab  currentTab;
 	private FlowPane tabs = new FlowPane();
+	private final FullScreen fullScreen;
 
-	public BookmarkMover(TabContainer tabcontainer) {
+	@Inject
+	public BookmarkMover(TabBox tabcontainer, FullScreen fullScreen) {
 		this.tabcontainer = tabcontainer;
+		this.fullScreen = fullScreen;
 
 		moveAbove.setOnAction(this);
 		moveBelow.setOnAction(this);
@@ -83,7 +89,7 @@ class BookmarkMover extends BorderPane implements EventHandler<ActionEvent> {
 		tabs.setVisible(tabs.getChildren().size() != 1);
 		((Hyperlink)tabs.getChildren().get(0)).fire();
 		fx(() -> ((Hyperlink)tabs.getChildren().get(0)).fire());
-		showAndWait();
+		//FIXME showAndWait();
 	}
 
 	private Node tab(Tab t) {
@@ -127,7 +133,7 @@ class BookmarkMover extends BorderPane implements EventHandler<ActionEvent> {
 		else if(node == moveAsLastChild)
 			currentTab.moveChild(list, item, Integer.MAX_VALUE);
 
-		hide();
+		// FIXME hide();
 		selectionModel.clearSelection();
 		selectionModel.select(list.get(0));
 	}

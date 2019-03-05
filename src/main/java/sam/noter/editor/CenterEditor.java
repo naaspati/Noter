@@ -1,6 +1,6 @@
 package sam.noter.editor;
 import static sam.fx.helpers.FxClassHelper.addClass;
-import static sam.noter.Utils2.fx;
+import static sam.noter.Utils.fx;
 
 import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;

@@ -5,8 +5,10 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import sam.nopkg.Junk;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
+import sam.noter.dao.api.IEntry;
 import sam.noter.dao.dom.DOMLoader.DomEntryInit;
 
 class DOMEntry extends Entry {
@@ -74,5 +76,11 @@ class DOMEntry extends Entry {
 	}
 	public List getChildren() {
 		return children;
+	}
+
+	@Override
+	public IEntry getParent() {
+		// TODO Auto-generated method stub
+		return Junk.notYetImplemented();
 	}
 }

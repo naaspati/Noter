@@ -12,9 +12,12 @@ import java.util.stream.Collectors;
 import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
-import sam.noter.dao.RootEntry;
+import sam.noter.dao.api.IEntry;
+import sam.noter.dao.api.IRootEntry;
 
-class RootEntryZ extends EntryZ implements RootEntry {
+class RootEntryZ extends EntryZ implements IRootEntry {
+	final static int ROOT_ENTRY_ID = -1;
+	
 	private CacheDir cacheDir;
 	private Runnable onModified;
 	private HashMap<Integer, Entry> entries = new HashMap<>();
@@ -25,7 +28,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		this.cacheDir = cacheDir;
 		reload();
 		if(cacheDir.getSourceFile() != null)
-			setValue(cacheDir.getSourceFile().getFileName().toString());
+			this.title = cacheDir.getSourceFile().getFileName().toString();
 	}
 
 	@Override public void close() throws Exception {
@@ -40,7 +43,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	public void setJbookPath(Path path) {
 		Objects.requireNonNull(path);
 		cacheDir.setSourceFile(path);
-		setValue(path.getFileName().toString());
+		this.title = path.getFileName().toString();
 	}
 
 	@Override
@@ -201,7 +204,7 @@ class RootEntryZ extends EntryZ implements RootEntry {
 		entries.remove(d.getId());
 		castNonNull(d.parent()).modifiableChildren(l -> l.remove(d));
 	}
-	String getContent(EntryZ e) throws IOException {
+	String readContent(EntryZ e) {
 		return cacheDir.getContent(e);
 	}
 	public CacheDir getCacheDir() {
@@ -217,6 +220,30 @@ class RootEntryZ extends EntryZ implements RootEntry {
 	@Override
 	public Entry getSelectedItem() {
 		return selecteditem;
+	}
+
+	@Override
+	public IEntry addChild(String title, IEntry parent, int index) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void addChild(IEntry child, IEntry parent, int index) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void removeFromParent(IEntry child) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

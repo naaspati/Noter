@@ -1,6 +1,5 @@
 package sam.noter.tabs;
 import static sam.fx.helpers.FxClassHelper.addClass;
-import static sam.noter.Utils.chooseFile;
 import static sam.noter.Utils.fx;
 
 import java.io.File;
@@ -40,11 +39,11 @@ import sam.io.fileutils.FileOpenerNE;
 import sam.myutils.Checker;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
-import sam.noter.Utils;
-import sam.noter.Utils2.FileChooserType;
+import sam.noter.app.AppUtils;
+import sam.noter.app.AppUtils.FileChooserType;
 
 @Singleton
-public class TabContainer extends BorderPane implements ChangeListener<Tab> {
+public class TabBox extends BorderPane implements ChangeListener<Tab> {
 	private final HBox tabsBox = new HBox(2);
 	private final ReadOnlyIntegerWrapper tabsCount = new ReadOnlyIntegerWrapper();
 	private final List<Tab> tabs = new ArrayList<>();
@@ -52,12 +51,14 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	private ReadOnlyObjectWrapper<Tab> currentTab = new ReadOnlyObjectWrapper<>();
 	private final Consumer<Tab> onSelect;
 	private final BoundBooks boundBooks;
-	private final ArrayList<Consumer<Tab>> tabclosing = new ArrayList<>(); 
+	private final ArrayList<Consumer<Tab>> tabclosing = new ArrayList<>();
+	private final AppUtils utils;
 
 	private double div = 0;
 
 	@Inject
-	public TabContainer(BoundBooks boundBooks) {
+	public TabBox(AppUtils utils, BoundBooks boundBooks) {
+		this.utils = utils;
 		setId("tab-container");
 		onSelect = currentTab::set;
 		currentTab.addListener(this);
@@ -134,7 +135,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 			.orElse(0);
 			
 			String s = "New "+(n+1);
-			File p = Utils.chooseFile("create new file", null, s, FileChooserType.SAVE);
+			File p = utils.chooseFile("create new file", null, s, FileChooserType.SAVE);
 			if(p == null) {
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
@@ -264,7 +265,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	public void open(List<Path> jbookPath, Menu recentsMenu)  {
 		if(jbookPath == null) {
-			File file = chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
+			File file = utils.chooseFile("select a file to open...", null, null, FileChooserType.OPEN);
 
 			if(file == null)
 				return;

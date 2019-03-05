@@ -122,7 +122,7 @@ public final class SearchBox extends Popup {
 		}
 		else {
 			List<Entry> list = new ArrayList<>();
-			tab.walk(list::add);
+			//FIXME tab.walk(list::add);
 			iterator = list.listIterator();
 			next();
 		}

@@ -89,7 +89,6 @@ public abstract class Entry implements IEntry {
 			});
 		}
 	}
-
 	@Override
 	public final int hashCode() {
 		return id;
@@ -103,8 +102,9 @@ public abstract class Entry implements IEntry {
 			throw new IllegalStateException("two different entry have same id"+this+", "+obj);
 		return false;
 	}
-	public int indexOf(Entry child) {
-		// TODO Auto-generated method stub
-		return 0;
+	@Override
+	public List<IEntry> getChildren() {
+		return children;
 	}
+	
 }

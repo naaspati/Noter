@@ -4,7 +4,7 @@ import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
-import static sam.noter.Utils2.fx;
+import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.CHILD;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
@@ -44,7 +44,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import sam.config.Session;
 import sam.di.Injector;
-import sam.di.Utils;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -52,9 +51,10 @@ import sam.myutils.Checker;
 import sam.myutils.MyUtilsException;
 import sam.nopkg.EnsureSingleton;
 import sam.noter.EntryTreeItem;
+import sam.noter.app.AppUtils;
 import sam.noter.dao.api.IEntry;
 import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabContainer;
+import sam.noter.tabs.TabBox;
 import sam.reference.WeakAndLazy;
 
 @Singleton
@@ -191,7 +191,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private final WeakAndLazy<BookmarkAddeder> adder = new WeakAndLazy<>(() -> adderCreate());
 	
 	private BookmarkAddeder adderCreate() {
-		return MyUtilsException.noError(() -> new BookmarkAddeder(injector.instance(Utils.class)));
+		return MyUtilsException.noError(() -> new BookmarkAddeder(injector.instance(AppUtils.class)));
 	}
 
 	private void addNewBookmark(BookmarkType bookMarkType) {
@@ -238,7 +238,7 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private BookmarkMover mover;
 	private BookmarkMover mover() {
 		if(mover == null)
-			mover = new BookmarkMover(injector.instance(TabContainer.class));
+			mover = injector.instance(BookmarkMover.class);
 		return mover;
 	}
 

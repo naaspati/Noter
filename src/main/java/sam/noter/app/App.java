@@ -12,7 +12,7 @@ import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.EnvKeys.OPEN_CMD_DIR;
 import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
-import static sam.noter.Utils2.fx;
+import static sam.noter.Utils.fx;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +60,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -92,7 +93,6 @@ import sam.di.ConfigManager;
 import sam.di.Injector;
 import sam.di.OnExitQueue;
 import sam.di.ParentWindow;
-import sam.di.Utils;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxBindings;
@@ -112,12 +112,11 @@ import sam.noter.DyanamiMenus;
 import sam.noter.EntryTreeItem;
 import sam.noter.FilesLookup;
 import sam.noter.bookmark.BookmarksPane;
-import sam.noter.bookmark.SearchBox;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabContainer;
+import sam.noter.tabs.TabBox;
 import sam.thread.MyUtilsThread;
-public class App extends Application implements ChangeListener<Tab>, Utils {
+public class App extends Application implements ChangeListener<Tab>, AppUtils {
 	private static final EnsureSingleton singleons = new EnsureSingleton();
 	
 	private final Logger logger = LogManager.getLogger(App.class);
@@ -133,12 +132,11 @@ public class App extends Application implements ChangeListener<Tab>, Utils {
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
 	@FXML private BookmarksPane bookmarks;
-	@FXML private TabContainer tabsContainer;
+	@FXML private TabBox tabsContainer;
 	@FXML private Editor editor;
 
 	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
-	private WeakReference<SearchBox> weakSearchBox = new WeakReference<SearchBox>(null);
 
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
 	private Stage stage;
@@ -208,7 +206,7 @@ public class App extends Application implements ChangeListener<Tab>, Utils {
 			return this;
 		}
 		@Provides
-		public Utils utils( ) {
+		public AppUtils utils( ) {
 			return App.this;
 		}
 		
@@ -469,7 +467,7 @@ public class App extends Application implements ChangeListener<Tab>, Utils {
 		MenuBar bar =  new MenuBar(
 				getFileMenu(), 
 				bookmarks.getBookmarkMenu(), 
-				getSearchMenu(), 
+				//TODO getSearchMenu(), 
 				editorMenu()
 				);
 
@@ -597,7 +595,8 @@ public class App extends Application implements ChangeListener<Tab>, Utils {
 				})
 				);
 	}
-	private Menu getSearchMenu() {
+/* TODO 
+ * 	private Menu getSearchMenu() {
 		Menu menu = new Menu("_Search", null, 
 				menuitem("Search", combination(F, SHORTCUT_DOWN), e -> {
 					tabsContainer.setDisable(true);
@@ -623,7 +622,8 @@ public class App extends Application implements ChangeListener<Tab>, Utils {
 		menu.setDisable(true);
 		// TODO
 		return menu;
-	}
+	} 
+ */
 
 	private final Menu recentsMenu = new Menu("_Recents");
 	private Menu getFileMenu() {
@@ -722,6 +722,18 @@ public class App extends Application implements ChangeListener<Tab>, Utils {
 		if(file != null)
 			injector.setConfig(ConfigKey.LAST_VISITED, file.getParent());
 		return file;
+	}
+
+	@Override
+	public Runnable showDialog(Node view) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ObservableValue<Tab> currentTabProperty() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import javax.inject.Inject;
@@ -75,10 +76,10 @@ class DOMLoader {
 			backupDir.toFile().mkdirs();
 			
 			try {
-				long value = configManager.getLong(ConfigKey.BACKUP_SCHEDULE, -1);
+				Long value = Optional.ofNullable(configManager.getConfig(ConfigKey.BACKUP_SCHEDULE)).map(Long::parseLong).orElse(null);
 				
-				if(value >= System.currentTimeMillis()) {
-					configManager.put(ConfigKey.BACKUP_SCHEDULE, System.currentTimeMillis()+Duration.ofDays(7).toMillis());
+				if(value == null || value >= System.currentTimeMillis()) {
+					configManager.setConfig(ConfigKey.BACKUP_SCHEDULE, String.valueOf(System.currentTimeMillis()+Duration.ofDays(7).toMillis()));
 					exitQueue.runOnExist(() -> backupClean());
 				}
 			} catch (Exception e) {

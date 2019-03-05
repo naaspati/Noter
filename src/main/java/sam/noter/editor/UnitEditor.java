@@ -15,6 +15,7 @@ import sam.fx.helpers.FxHBox;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
 import sam.noter.EntryTreeItem;
+import sam.noter.Utils;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
@@ -71,7 +72,7 @@ class UnitEditor extends BorderPane {
 		if(item == null)
 			return;
 		
-		title.setTooltip(new Tooltip(item.toTreeString(false)));
+		title.setTooltip(new Tooltip(Utils.toTreeString(item, false)));
 		title.setText(item.getTitle());
 	}
 	public void setWordWrap(boolean wrap) {

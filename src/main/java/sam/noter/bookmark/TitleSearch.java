@@ -17,9 +17,9 @@ class TitleSearch extends FxTextSearch<Entry> {
 
 			@Override
 			public String apply(Entry t) {
-				String s = map.get(t.id);
+				String s = map.get(t.getId());
 				if(s == null)
-					map.put(t.id, s = t.getTitle().toLowerCase());
+					map.put(t.getId(), s = t.getTitle().toLowerCase());
 				return s;
 			}
 		};

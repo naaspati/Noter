@@ -1,4 +1,4 @@
-package sam.di;
+package sam.noter.app;
 
 import java.io.File;
 
@@ -10,7 +10,7 @@ import javafx.scene.control.TreeItem;
 import sam.noter.tabs.Tab;
 
 
-public interface Utils {
+public interface AppUtils {
 	public enum FileChooserType {
 		OPEN, SAVE
 	}

@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
+import sam.nopkg.Junk;
 import sam.noter.dao.VisitResult;
 import sam.noter.dao.Walker;
 import sam.noter.dao.api.IEntry;
@@ -16,21 +18,25 @@ import sam.noter.dao.api.IEntry;
 public class EntryTreeItem extends TreeItem<String> {
 	private IEntry entry;
 	
+	public static EntryTreeItem cast(Object o) {
+		return (EntryTreeItem) o;
+	}
 	
-	public void walk(Consumer<IEntry> consumer) {
+	public void walk(Consumer<EntryTreeItem> consumer) {
 		walkTree(w -> {
 			consumer.accept(w);
 			return CONTINUE;
 		});
 	}
-	public void walkTree(Walker walker) {
+	public void walkTree(Walker<EntryTreeItem> walker) {
 		walk0(this, walker);
 	}
-	private VisitResult walk0(IEntry parent, Walker walker) {
-		if(parent.getChildren().isEmpty()) return CONTINUE;
+	private VisitResult walk0(EntryTreeItem parent, Walker<EntryTreeItem> walker) {
+		if(parent.getChildren().isEmpty()) 
+			return CONTINUE;
 
 		for (TreeItem<String> item : parent.getChildren()) {
-			IEntry e = (IEntry) item;
+			EntryTreeItem e = (EntryTreeItem) item;
 			VisitResult v = walker.accept(e);
 
 			switch (v) {
@@ -49,38 +55,35 @@ public class EntryTreeItem extends TreeItem<String> {
 	}
 	
 	
-	
-	public String toTreeString(boolean includeRootName) {
-		IEntry e = parent();
-		if(e == null)
-			return includeRootName ? getValue() : null;
-		String s = e.toTreeString(includeRootName); 
-		return s == null ? getValue() : s +" > "+getValue();
-	}
 	@SuppressWarnings("unchecked")
 	protected void addAll(@SuppressWarnings("rawtypes") List child, int index) {
-		modifiableChildren(list -> {
-			if(index <= 0)
-				list.addAll(0, child);
-			else if(index >= size())
-				list.addAll(child);
-			else
-				list.addAll(index, child);
-		});
+		/*
+		 * if(index <= 0)
+			list.addAll(0, child);
+		else if(index >= size())
+			list.addAll(child);
+		else
+			list.addAll(index, child);
+		 */
 	}
 	protected void add(IEntry child, int index) {
-		modifiableChildren(list -> {
-			if(index <= 0)
-				list.add(0, child);
-			else if(index >= size())
-				list.add(child);
-			else
-				list.add(index, child);			
-		});
+		/*
+		 * if(index <= 0)
+			list.add(0, child);
+		else if(index >= size())
+			list.add(child);
+		else
+			list.add(index, child);
+		 */
 	}
 	
-	void setSelectedItem(IEntry e);
-	IEntry getSelectedItem();
+	public void setSelectedItem(EntryTreeItem e) {
+		//TODO
+	}
+	public EntryTreeItem getSelectedItem() {
+		return Junk.notYetImplemented(); 
+	}
+	
 	public String getTitle() {
 		return entry.getTitle();
 	}

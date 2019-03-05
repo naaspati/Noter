@@ -2,7 +2,7 @@ package sam.noter.editor;
 
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
-import static sam.noter.Utils2.fx;
+import static sam.noter.Utils.fx;
 import static sam.noter.editor.ViewType.CENTER;
 import static sam.noter.editor.ViewType.COMBINED_CHILDREN;
 import static sam.noter.editor.ViewType.COMBINED_TEXT;
@@ -38,9 +38,9 @@ import sam.fxml.Button2;
 import sam.myutils.Checker;
 import sam.nopkg.Junk;
 import sam.noter.EntryTreeItem;
-import sam.noter.Utils2;
+import sam.noter.Utils;
 import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabContainer;
+import sam.noter.tabs.TabBox;
 import sam.reference.WeakAndLazy;
 import sam.thread.DelayedQueueThread;
 
@@ -67,7 +67,7 @@ public class Editor extends BorderPane {
 		return font;
 	}
 
-	public Editor(ConfigManager configManager, ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabContainer container) throws IOException {
+	public Editor(ConfigManager configManager, ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabBox container) throws IOException {
 		FxFxml.load(this, true);
 		this.configManager = configManager;
 		
@@ -273,7 +273,7 @@ public class Editor extends BorderPane {
 
 	public Menu getEditorMenu() {
 		Menu menu = new Menu("editor", null,
-				menuitem("copy EntryTreeItem Tree", e -> Utils2.copyToClipboard(currentItem().toTreeString(true)), currentItem.isNull()),
+				menuitem("copy EntryTreeItem Tree", e -> Utils.copyToClipboard(Utils.toTreeString(currentItem(), true)), currentItem.isNull()),
 				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected()))
 				//TODO menuitem("Font", e -> setFont())
 				);

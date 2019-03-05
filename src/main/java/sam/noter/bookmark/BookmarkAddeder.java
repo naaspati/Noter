@@ -1,6 +1,6 @@
 package sam.noter.bookmark;
 
-import static sam.noter.Utils2.fx;
+import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
@@ -21,12 +21,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
-import sam.di.Utils;
 import sam.fx.helpers.FxCell;
 import sam.fx.popup.FxPopupShop;
 import sam.myutils.Checker;
 import sam.noter.EntryTreeItem;
-import sam.noter.Utils2;
+import sam.noter.Utils;
+import sam.noter.app.AppUtils;
 import sam.noter.dao.api.IEntry;
 import sam.noter.tabs.Tab;
 
@@ -41,18 +41,18 @@ class BookmarkAddeder extends VBox {
 	private final StringBuilder sb = new StringBuilder();
 	private final WeakChangeListener<IEntry> similarSelect = new WeakChangeListener<>((p, o, n) -> {
 		sb.setLength(0);
-		Utils2.toTreeString(n, sb);
+		Utils.toTreeString(n, sb);
 		entryPath.setText(n == null ? null : sb.toString());
 	});
 	
-	private final Utils utils;
+	private final AppUtils utils;
 	
 	private BookmarkType bookMarkType;
 	private EntryTreeItem item;
 	private BookMarkTree root;
 	private Runnable close;
 
-	public BookmarkAddeder(Utils utils) throws IOException {
+	public BookmarkAddeder(AppUtils utils) throws IOException {
 		this.utils = utils;
 		similar.setCellFactory(FxCell.listCell(IEntry::getTitle));
 		similar.getSelectionModel()

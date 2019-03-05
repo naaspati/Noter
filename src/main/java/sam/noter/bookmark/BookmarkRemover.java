@@ -8,7 +8,7 @@ import java.util.Optional;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
-import sam.noter.Utils;
+import sam.nopkg.Junk;
 import sam.noter.tabs.Tab;
 public class BookmarkRemover {
 	private HashMap<Tab, LinkedList<PatrentChildRelation[]>> deletedItems = new HashMap<>();
@@ -23,16 +23,25 @@ public class BookmarkRemover {
 			list = new LinkedList<>();
 			deletedItems.put(tab, list);
 		}
-		PatrentChildRelation[] ditems = selectionModel.getSelectedItems().stream()
-				.map(Utils::castEntry)
+		PatrentChildRelation[] ditems = Junk.notYetImplemented(); // FIXME
+		/*
+		 * selectionModel.getSelectedItems()
+				.stream()
+				.map(EntryTreeItem::cast)
+				.map(EntryTreeItem::getEntry)
 				.map(c -> new PatrentChildRelation(tab, c))
 				.toArray(PatrentChildRelation[]::new);
+		 */
 
 		list.add(ditems);
 		undoDeleteSize.set(list.size());
 		selectionModel.clearSelection();
 
-		for (PatrentChildRelation d : ditems) d.removeChildFromParent();
+		/* FIXME
+		 * for (PatrentChildRelation d : ditems) 
+			d.removeChildFromParent();
+		 */
+		
 	}
 	public void tabClosed(Tab tab) {
 		deletedItems.remove(tab);
@@ -45,8 +54,11 @@ public class BookmarkRemover {
 		.map(deletedItems::get)
 		.map(LinkedList::pollLast)
 		.ifPresent(items -> {
-			for (int i = items.length - 1; i >= 0 ; i--)
+			/*
+			 * FIXME
+			 * for (int i = items.length - 1; i >= 0 ; i--)
 				items[i].addChildToParent();
+			 */
 
 			undoDeleteSize.set(deletedItems.get(tab).size());
 		});
