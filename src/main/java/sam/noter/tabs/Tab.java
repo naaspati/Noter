@@ -32,7 +32,7 @@ import sam.io.fileutils.FileOpenerNE;
 import sam.noter.ActionResult;
 import sam.noter.EntryTreeItem;
 import sam.noter.Utils2.FileChooserType;
-import sam.noter.dao.RootIEntryFactory;
+import sam.noter.dao.RootEntryFactory;
 import sam.noter.dao.Walker;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
@@ -45,10 +45,10 @@ public class Tab extends HBox implements IRootEntry {
 	private final Button open = new Button("o");
 
 	public static Tab load(Path path, Consumer<Tab> onSelect) throws Exception {
-		return new Tab(RootIEntryFactory.getInstance().load(path), onSelect);
+		return new Tab(RootEntryFactory.getInstance().load(path), onSelect);
 	}
 	public static Tab create(Path path, Consumer<Tab> onSelect) throws Exception {
-		return new Tab(RootIEntryFactory.getInstance().create(path), onSelect);
+		return new Tab(RootEntryFactory.getInstance().create(path), onSelect);
 	}
 	private Tab(IRootIEntry root, Consumer<Tab> onSelect) throws Exception {
 		this.root = root;

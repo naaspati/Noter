@@ -6,16 +6,16 @@
 <?import java.lang.*?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.RadioButton?>
-<?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
 <?import sam.fxml.Button2?>
+<?import sam.noter.bookmark.BookMarkRoot?>
 
 <fx:root xmlns:fx="http://javafx.com/fxml" type="BorderPane">
 
 	<center>
-		<TreeView fx:id="tree" showRoot="false" editable="true" onEditStart="#bookmarksEditStart"/> 
+		<BookMarkRoot fx:id="tree" showRoot="false" editable="true" onEditStart="#bookmarksEditStart"/> 
 	</center>
 	<top>
 		<HBox spacing="3"> 

@@ -1,3 +1,5 @@
+import sam.noter.bookmark.BookMarkTree
+
 package fxml
 
 import javafx.scene.layout.BorderPane
@@ -7,10 +9,11 @@ import sam.fxml.Button2
 import javafx.scene.control.RadioButton
 import javafx.scene.layout.Pane
 import javafx.geometry.Insets
+import sam.noter.bookmark.BookMarkRoot
 
 dynamic component BookmarksPane {
 	BorderPane {
-		center : TreeView id tree {
+		center : BookMarkTree id tree {
 			showRoot : false,
 			editable : true,
 			onEditStart : controllermethod bookmarksEditStart

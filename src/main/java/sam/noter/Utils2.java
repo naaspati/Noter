@@ -21,41 +21,6 @@ public interface Utils2 {
 		Platform.runLater(runnable);
 	}
 	
-	public enum FileChooserType {
-		OPEN, SAVE
-	}
-	
-	public static File chooseFile(Window parent, String title, File expectedDir, String expectedFilename, FileChooserType type) {
-		Objects.requireNonNull(type);
-
-		FileChooser chooser = new FileChooser();
-		chooser.setTitle(title);
-		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
-
-		if(expectedDir == null || !expectedDir.isDirectory())
-			expectedDir = last_visited.get();
-
-		if(expectedDir != null && expectedDir.isDirectory())
-			chooser.setInitialDirectory(expectedDir);
-
-		if(expectedFilename != null)
-			chooser.setInitialFileName(expectedFilename);
-
-		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(parent) : chooser.showSaveDialog(parent);
-
-		if(file != null) 
-			last_visited.set(file.getParentFile());
-		return file;
-	}
-	
-	private final StringBuilder sb = new StringBuilder();
-	
-	public static String toTreeString(IEntry n) {
-		sb.setLength(0);
-		toTreeString(n, sb);
-		sb.setLength(0);
-		sb.toString();
-	}
 	public static void toTreeString(IEntry n, StringBuilder  sb) {
 		toTreeString(n.getParent(), sb);
 		

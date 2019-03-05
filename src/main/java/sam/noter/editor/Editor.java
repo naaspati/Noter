@@ -133,7 +133,7 @@ public class Editor extends BorderPane {
 			return;
 		}
 		if(delay == null) {
-			delay = new DelayedQueueThread<>(Optional.ofNullable(configManager.getString(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
+			delay = new DelayedQueueThread<>(Optional.ofNullable(configManager.getConfig(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
 			delay.start();
 		}
 		delay.add(new Object[]{item, view});

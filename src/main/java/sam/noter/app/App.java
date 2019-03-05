@@ -80,6 +80,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -90,6 +92,7 @@ import sam.di.ConfigManager;
 import sam.di.Injector;
 import sam.di.OnExitQueue;
 import sam.di.ParentWindow;
+import sam.di.Utils;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxBindings;
@@ -102,21 +105,26 @@ import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
 import sam.io.serilizers.StringWriter2;
 import sam.myutils.Checker;
+import sam.nopkg.EnsureSingleton;
 import sam.nopkg.Junk;
 import sam.noter.BoundBooks;
 import sam.noter.DyanamiMenus;
 import sam.noter.EntryTreeItem;
 import sam.noter.FilesLookup;
-import sam.noter.Utils2;
-import sam.noter.Utils2.FileChooserType;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.bookmark.SearchBox;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.thread.MyUtilsThread;
-public class App extends Application implements ChangeListener<Tab> {
+public class App extends Application implements ChangeListener<Tab>, Utils {
+	private static final EnsureSingleton singleons = new EnsureSingleton();
+	
 	private final Logger logger = LogManager.getLogger(App.class);
+	
+	{
+		singleons.init();
+	}
 
 	static {
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
@@ -198,6 +206,10 @@ public class App extends Application implements ChangeListener<Tab> {
 		@Provides
 		public ConfigManager cm( ) {
 			return this;
+		}
+		@Provides
+		public Utils utils( ) {
+			return App.this;
 		}
 		
 		@ParentWindow
@@ -498,7 +510,7 @@ public class App extends Application implements ChangeListener<Tab> {
 		}
 		Button save = new Button("save");
 		save.setOnAction(e1 -> {
-			File file = Utils2.chooseFile(stage, "save in text", null, tab.getTabTitle().concat(".txt"), FileChooserType.SAVE);
+			File file = chooseFile("save in text", null, tab.getTabTitle().concat(".txt"), FileChooserType.SAVE);
 			if(file == null) {
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
@@ -686,6 +698,30 @@ public class App extends Application implements ChangeListener<Tab> {
 		list.add(0, recentsMenuItem(p));
 		if(list.size() > 10)
 			list.subList(10, list.size()).clear();
+	}
+	
+	@Override
+	public File chooseFile(String title, File expectedDir, String expectedFilename, FileChooserType type) {
+		Objects.requireNonNull(type);
+
+		FileChooser chooser = new FileChooser();
+		chooser.setTitle(title);
+		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
+
+		if(expectedDir == null || !expectedDir.isDirectory())
+			expectedDir = new File(injector.getConfig(ConfigKey.LAST_VISITED));
+
+		if(expectedDir != null && expectedDir.isDirectory())
+			chooser.setInitialDirectory(expectedDir);
+
+		if(expectedFilename != null)
+			chooser.setInitialFileName(expectedFilename);
+
+		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(stage) : chooser.showSaveDialog(stage);
+
+		if(file != null)
+			injector.setConfig(ConfigKey.LAST_VISITED, file.getParent());
+		return file;
 	}
 
 }

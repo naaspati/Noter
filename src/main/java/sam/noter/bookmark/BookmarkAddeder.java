@@ -6,8 +6,9 @@ import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
 import java.util.Collection;
-
-import javax.inject.Provider;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
@@ -20,108 +21,103 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
-import sam.di.Injector;
+import sam.di.Utils;
 import sam.fx.helpers.FxCell;
-import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.myutils.Checker;
+import sam.noter.EntryTreeItem;
 import sam.noter.Utils2;
 import sam.noter.dao.api.IEntry;
 import sam.noter.tabs.Tab;
 
-class BookmarkAddeder {
-	
+class BookmarkAddeder extends VBox {
+
 	@FXML private Label header;
 	@FXML private VBox center;
 	@FXML private TextField titleTf;
 	@FXML private ListView<IEntry> similar;
 	@FXML private TextArea entryPath;
+
+	private final StringBuilder sb = new StringBuilder();
+	private final WeakChangeListener<IEntry> similarSelect = new WeakChangeListener<>((p, o, n) -> {
+		sb.setLength(0);
+		Utils2.toTreeString(n, sb);
+		entryPath.setText(n == null ? null : sb.toString());
+	});
 	
-	private final TitleSearch search = new TitleSearch();
-	private final WeakChangeListener<String> searcher = new WeakChangeListener<>((p, o, n) -> search.addSearch(n));
-	private Tab tab;
-	private final WeakChangeListener<IEntry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : Utils2.toTreeString(n)));
+	private final Utils utils;
+	
 	private BookmarkType bookMarkType;
-	private IEntry item;
-	private final Provider<Injector> injector;
+	private EntryTreeItem item;
+	private BookMarkTree root;
+	private Runnable close;
 
-	public BookmarkAddeder(Provider<Injector> injector) throws IOException {
-		this.injector = injector;
-		FxFxml.load(this, true);
-
+	public BookmarkAddeder(Utils utils) throws IOException {
+		this.utils = utils;
 		similar.setCellFactory(FxCell.listCell(IEntry::getTitle));
 		similar.getSelectionModel()
 		.selectedItemProperty()
 		.addListener(similarSelect);
 	}
-	
-	private IEntry result;
-	
-	@FXML
-	private void cancelAction(ActionEvent e) {
-		hide();
-	}
-	@FXML
+
 	private void okAction(ActionEvent e) {
-		result = null;
-		
+		EntryTreeItem result = null;
+
 		String s = titleTf.getText();
 		if(Checker.isEmptyTrimmed(s)){
+			//TODO
 			FxPopupShop.showHidePopup("Invalid title", 1500);
 			return;
 		}
 
 		String title = titleTf.getText();
 		if(item == null)
-			tab.addChild( title);
+			root.addChild( title);
 		else {
 			switch (bookMarkType) {
 				case RELATIVE:
-					result =  tab.addChild(title, item.parent(), item);
+					result =  root.addChild(title, item.getParent(), item);
 					break;
 				case CHILD: 
-					result =  tab.addChild(title, item);
+					result =  root.addChild(title, item);
 					break;
 				case RELATIVE_TO_PARENT:
-					result =  tab.addChild(title,item.parent().parent(), item.parent());
+					result =  root.addChild(title,item.getParent().getParent(), item.getParent());
 					break;
 			}
 		}
-		super.hide();
+
+		if(result != null) 
+			root.clearAndSelect(result);
+		close();
 	}
-	
-	@Override
-	public void hide() {
-		super.hide();
+
+	private void close() {
 		similar.getItems().clear();
-		titleTf.textProperty().removeListener(searcher);
 		titleTf.clear();
-		search.stop();
+		this.item = null;
+		
+		if(close != null)
+			close.run();
+		close = null;
 	}
-	
-	public IEntry showDialog(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
-		this.item = (IEntry)selectionModel.getSelectedItem();
-		this.tab = tab;
+
+	public void showDialog(BookmarkType bookMarkType, BookMarkTree tree) {
+		this.root = tree;
 
 		this.bookMarkType = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
 		header.setText(header());
 
 		fx(() -> titleTf.requestFocus());
 		titleTf.clear();
-		titleTf.textProperty().addListener(searcher);
 		
-		Collection<IEntry> list = tab.getAllEntries();
-		similar.getItems().setAll(list);
-		search.start(list);
-		search.setOnChange(() -> fx(()-> search.applyFilter(similar.getItems())));
+		this.item = tree.getSelectedItem(); 
+
+		List<IEntry> list =  similar.getItems();
+		list.clear();
+		tree.getEntry().walk(list::add);
 		
-		showAndWait();
-		
-		if(result != null){
-			selectionModel.clearSelection();
-			selectionModel.select(result);
-		}
-		return result;
+		close = utils.showDialog(this);
 	}
 	private String header() {
 		String header = "Add new Bookmark";
@@ -139,11 +135,5 @@ class BookmarkAddeder {
 			}	
 		}
 		return header;
-	}
-	@Override
-	protected void finalize() throws Throwable {
-		search.completeStop();
-		finalized();
-		super.finalize();
 	}
 }
