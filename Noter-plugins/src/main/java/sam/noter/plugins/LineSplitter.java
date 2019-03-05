@@ -16,7 +16,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import sam.config.Session;
+
 import sam.fx.helpers.FxFxml;
 
 public class LineSplitter extends Stage implements Consumer<TextArea>, InitFinalized {

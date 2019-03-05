@@ -2,8 +2,9 @@ package sam.noter.dao.dom;
 
 import java.nio.file.Path;
 
-import sam.noter.dao.RootEntry;
+import sam.di.Injector;
 import sam.noter.dao.RootEntryFactory;
+import sam.noter.dao.api.IRootEntry;
 
 /**
  * DataManeger and View Controller
@@ -14,11 +15,11 @@ import sam.noter.dao.RootEntryFactory;
 
 public class RootDOMEntryFactory implements RootEntryFactory {
 	@Override
-	public RootEntry create(Path path) throws Exception {
-		return new RootDOMEntry(path);
+	public IRootEntry create(Injector injector, Path path) throws Exception {
+		return new RootDOMEntry(injector, path);
 	}
 	@Override
-	public RootEntry load(Path file) throws Exception {
-		return new RootDOMEntry(file);
+	public IRootEntry load(Injector injector, Path file) throws Exception {
+		return new RootDOMEntry(injector, file);
 	}
 }

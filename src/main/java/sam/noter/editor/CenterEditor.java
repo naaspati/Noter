@@ -1,6 +1,6 @@
 package sam.noter.editor;
-import static sam.noter.Utils.*;
 import static sam.fx.helpers.FxClassHelper.addClass;
+import static sam.noter.Utils2.fx;
 
 import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;
@@ -10,11 +10,10 @@ import java.time.format.FormatStyle;
 import java.util.IdentityHashMap;
 import java.util.function.Consumer;
 
-import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
-import sam.noter.dao.Entry;
+import sam.noter.EntryTreeItem;
 import sam.noter.tabs.Tab;
 import sam.reference.ReferenceUtils;
 
@@ -30,7 +29,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 			caret = c.content.getCaretPosition();
 		}
 	}
-	private IdentityHashMap<Entry, WeakReference<Save>> cache = new IdentityHashMap<>();
+	private IdentityHashMap<EntryTreeItem, WeakReference<Save>> cache = new IdentityHashMap<>();
 	protected Tab tab;
 
 	public CenterEditor() {
@@ -53,7 +52,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 		item = null;
 	}
 	@Override
-	public void setItem(Entry entry) {
+	public void setItem(EntryTreeItem entry) {
 		if(this.item == entry) return;
 
 		close();
@@ -105,7 +104,7 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 		setTitleText();
 	}
 	private void setTitleText() {
-		title.setText("id: "+item.id +", Modified: "+time(item.getLastModified()));
+		title.setText("id: "+item.getId() +", Modified: "+time(item.getLastModified()));
 	}
 	public void consume(Consumer<TextArea> e) {
 		e.accept(content);

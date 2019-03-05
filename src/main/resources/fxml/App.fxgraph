@@ -19,8 +19,8 @@ dynamic component App {
 				center : SplitPane id splitPane{
 					BookmarksPane id bookmarks,
 					BorderPane {
-						center :  Editor,
-						top : TabContainer
+						center :  Editor id editor,
+						top : TabContainer id tabsContainer
 						
 					} 
 				}

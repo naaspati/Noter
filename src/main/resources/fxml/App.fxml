@@ -22,10 +22,10 @@
 						<BookmarksPane fx:id="bookmarks"/> 
 						<BorderPane> 
 							<center>
-								<Editor/> 
+								<Editor fx:id="editor"/> 
 							</center>
 							<top>
-								<TabContainer/> 
+								<TabContainer fx:id="tabsContainer"/> 
 							</top>
 						</BorderPane>
 					</SplitPane>

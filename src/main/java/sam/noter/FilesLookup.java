@@ -2,7 +2,6 @@ package sam.noter;
 
 import static sam.noter.EnvKeys.DEFAULT_SAVE_DIR;
 import static sam.noter.EnvKeys.ENABLE_FILE_LOOKUP_OPEN_CACHE;
-import static sam.noter.Utils.APP_DATA;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,11 +17,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.apache.logging.log4j.Logger;
 
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import sam.config.Session;
+import sam.di.ConfigKey;
+import sam.di.ConfigManager;
 import sam.io.serilizers.StringReader2;
 import sam.io.serilizers.StringWriter2;
 import sam.myutils.Checker;
@@ -30,10 +30,13 @@ import sam.myutils.System2;
 
 public class FilesLookup {
 	private final Logger logger = LogManager.getLogger(FilesLookup.class);
+	private ConfigManager config;
 
-	public List<Path> parse(List<String> args) throws IOException {
+	public List<Path> parse(ConfigManager config, Path appdataDir, List<String> args) throws IOException {
 		if(args.isEmpty()) 
 			return Collections.emptyList();
+		openCacheDir =  appdataDir.resolve("open_cache");
+		this.config = config;
 
 		if(args.size() == 1) {
 			File p = find(args.get(0));
@@ -57,7 +60,7 @@ public class FilesLookup {
 
 	private Map<String, Path> files;
 	private String[] opencache ;
-	private final Path openCacheDir = APP_DATA.resolve("open_cache");
+	private Path openCacheDir; 
 
 	private File find(final String string) throws UnsupportedEncodingException, IOException {
 		File f = ENABLE_FILE_LOOKUP_OPEN_CACHE ? openCacheLookup(string) : null;
@@ -129,7 +132,7 @@ public class FilesLookup {
 	private Path defaultDir() {
 		String s = System2.lookup(DEFAULT_SAVE_DIR);
 		if(s == null)
-			return Optional.ofNullable(Session.global().getProperty(EnvKeys.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
+			return Optional.ofNullable(config.getConfig(ConfigKey.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
 		else 
 			return Paths.get(s);
 	}

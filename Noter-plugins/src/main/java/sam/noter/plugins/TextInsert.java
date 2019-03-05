@@ -6,7 +6,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import sam.config.Session;
+
 import sam.fx.popup.FxPopupShop;
 import sam.reference.WeakAndLazy;
 

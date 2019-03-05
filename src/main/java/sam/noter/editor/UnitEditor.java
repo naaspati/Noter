@@ -14,12 +14,12 @@ import javafx.scene.layout.HBox;
 import sam.fx.helpers.FxHBox;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
-import sam.noter.dao.Entry;
+import sam.noter.EntryTreeItem;
 
 class UnitEditor extends BorderPane {
 	protected final Label title = new Label();
 	protected final TextArea content = new TextArea();
-	protected Entry item;
+	protected EntryTreeItem item;
 	
 	protected UnitEditor() {
 		updateFont();
@@ -30,7 +30,7 @@ class UnitEditor extends BorderPane {
 		addClass(content, "content");
 	}
 	
-	public UnitEditor(Consumer<Entry> onExpanded) {
+	public UnitEditor(Consumer<EntryTreeItem> onExpanded) {
 		this();
 		Objects.requireNonNull(onExpanded);
 
@@ -43,7 +43,7 @@ class UnitEditor extends BorderPane {
 		setTop(titleContainer);
 	}
 	
-	public void setItem(Entry e) {
+	public void setItem(EntryTreeItem e) {
 		this.item = null;
 		title.setText(e.getTitle());
 		content.setText(coalesce(e.getContent()));
@@ -64,7 +64,7 @@ class UnitEditor extends BorderPane {
 	public String getItemTitle() {
 		return item.getTitle();
 	}
-	public Entry getItem() {
+	public EntryTreeItem getItem() {
 		return item;
 	}
 	public void updateTitle() {

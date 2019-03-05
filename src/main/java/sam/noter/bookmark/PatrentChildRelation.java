@@ -1,11 +1,13 @@
 package sam.noter.bookmark;
 
+import sam.noter.EntryTreeItem;
 import sam.noter.dao.Entry;
+import sam.noter.dao.api.IEntry;
 import sam.noter.tabs.Tab;
 
 class PatrentChildRelation {
 	final Tab tab;
-	final Entry parent, child;
+	final EntryTreeItem parent, child;
 	private int index;
 	
 	PatrentChildRelation(Tab tab, Entry child) {

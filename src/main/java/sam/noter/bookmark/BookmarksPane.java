@@ -4,14 +4,17 @@ import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
-import static sam.noter.App.GRAYSCALE_EFFECT;
-import static sam.noter.Utils.fx;
+import static sam.noter.Utils2.fx;
 import static sam.noter.bookmark.BookmarkType.CHILD;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
 import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
+import javax.inject.Singleton;
 
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
@@ -46,11 +49,14 @@ import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
-import sam.noter.dao.Entry;
+import sam.noter.EntryTreeItem;
+import sam.noter.dao.api.IEntry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
+
+@Singleton
 public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 
 	@FXML
@@ -69,12 +75,16 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 	private final ReadOnlyObjectProperty<Tab> currentTab;
 	private final Editor editor;
 	private final TabContainer tabcontainer;
+	private final BookMarkRoot root = new BookMarkRoot();
 
+	@Inject
 	public BookmarksPane(Editor editor, TabContainer tabcontainer) throws IOException {
 		FxFxml.load(this, true);
+		
 		this.currentTab = tabcontainer.currentTabProperty();
 		this.editor = editor;
 		this.tabcontainer = tabcontainer;
+		this.tree.setRoot(root);
 
 		this.selectionModel = tree.getSelectionModel();
 		selectionModel.selectedItemProperty()
@@ -116,9 +126,13 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		currentTab.addListener(this);
 		tabcontainer.addOnTabClosing(tab -> {
 			if(tab == currentTab.get())
-				tab.setSelectedItem((Entry) selectionModel.getSelectedItem());
+				tab.setSelectedItem(((EntryTreeItem) selectionModel.getSelectedItem()).getEntry());
 		});
 		this.disableProperty().bind(currentTabNull);
+	}
+	
+	public EntryTreeItem getRoot() {
+		return (EntryTreeItem) tree.getRoot();
 	}
 
 	@FXML
@@ -146,9 +160,9 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			if(s.equals(e.getOldValue()))
 				return;
 
-			Entry ti = (Entry) e.getTreeItem();
+			EntryTreeItem ti = (EntryTreeItem) e.getTreeItem();
 			ti.setTitle(s);
-			editor.updateTitle(ti);
+			//FIXME editor.updateTitle(ti);
 		});
 	}
 
@@ -233,32 +247,34 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		}
 
 		if(oldValue != null && tree.getRoot() != null)
-			oldValue.setSelectedItem((Entry) selectionModel.getSelectedItem());
+			oldValue.setSelectedItem(((EntryTreeItem) selectionModel.getSelectedItem()).getEntry());
 
 		selectionModel.clearSelection();
-		Entry root = newValue == null ?  null : newValue.getRoot();
-		tree.setRoot(null);
-		if(root == null) return;
+		IEntry root = newValue == null ?  null : newValue.getRoot();
 		
-		fx(() -> {
-			tree.setRoot(root);
-
-			if(root != null){
-				Entry item = newValue.getSelectedItem();
-
-				if(item != null) 
-					selectionModel.select(item);
-				else if(!root.getChildren().isEmpty()) 
-					selectionModel.select(root.getChildren().get(0));
-			}
-		});
 		
+		if(root == null) {
+			this.root.set(root);
+		} else {
+			fx(() -> {
+				this.root.set(root);
+
+				if(root != null){
+					IEntry item = newValue.getSelectedItem();
+
+					if(item != null) 
+						selectionModel.select(this.root.itemFor(item));
+					else if(!root.getChildren().isEmpty()) 
+						selectionModel.select(this.root.getChildren().get(0));
+				}
+			});
+		}
 	}
 	public ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty() {
 		return selectionModel.selectedItemProperty();
 	}
 
-	void clearAndSelect(Entry entry) {
+	void clearAndSelect(EntryTreeItem entry) {
 		selectionModel.clearSelection();
 		selectionModel.select(entry);
 	}

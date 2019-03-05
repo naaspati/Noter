@@ -2,7 +2,7 @@ package sam.noter.editor;
 
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.fx.helpers.FxMenu.radioMenuitem;
-import static sam.noter.Utils.fx;
+import static sam.noter.Utils2.fx;
 import static sam.noter.editor.ViewType.CENTER;
 import static sam.noter.editor.ViewType.COMBINED_CHILDREN;
 import static sam.noter.editor.ViewType.COMBINED_TEXT;
@@ -15,9 +15,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
-import org.apache.logging.log4j.LogManager;
+import javax.inject.Singleton;
 
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -31,80 +30,61 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
-import javafx.scene.text.FontPosture;
-import javafx.scene.text.FontWeight;
-import sam.config.Session;
+import sam.di.ConfigKey;
+import sam.di.ConfigManager;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
-import sam.noter.Utils;
-import sam.noter.dao.Entry;
+import sam.nopkg.Junk;
+import sam.noter.EntryTreeItem;
+import sam.noter.Utils2;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
 import sam.reference.WeakAndLazy;
 import sam.thread.DelayedQueueThread;
-public class Editor extends BorderPane {
-	private static final Session SESSION = Session.getSession(Editor.class);
 
+@Singleton
+public class Editor extends BorderPane {
 	@FXML private BorderPane editor;
 	@FXML private Button2 backBtn;
 	@FXML private Label maintitle;
 	@FXML private Button2 combineContentBtn;
 	@FXML private Button2 combineChildrenBtn;
 
-	private final Consumer<Entry> onExpanded = t -> changed(t, EXPANDED);
+	private final Consumer<EntryTreeItem> onExpanded = t -> changed(t, EXPANDED);
 	private final WeakAndLazy<UnitContainer> unitsContainerWL = new WeakAndLazy<>(() -> new UnitContainer(onExpanded));
 	private final WeakAndLazy<CombinedText> combinedTextWL = new WeakAndLazy<>(CombinedText::new);
 	private final CenterEditor centerEditor = new CenterEditor();
 
-	private final SimpleObjectProperty<Entry> currentItem = new SimpleObjectProperty<>();
-	private final IdentityHashMap<Entry, Stack<ViewType>> history0 = new IdentityHashMap<>();
+	private final SimpleObjectProperty<EntryTreeItem> currentItem = new SimpleObjectProperty<>();
+	private final IdentityHashMap<EntryTreeItem, Stack<ViewType>> history0 = new IdentityHashMap<>();
+	private final ConfigManager configManager;
 
 	private static Font font;
 
 	public static Font getFont() {
 		return font;
 	}
-	static {
-		// Font.font(family, weight, posture, size)
-		String family = SESSION.getProperty("font.family");
-		FontWeight weight = parse("font.weight", FontWeight::valueOf);
-		FontPosture posture = parse("font.posture", FontPosture::valueOf);
-		Float size = parse("font.size", Float::parseFloat);
 
-		font = Font.font(family, weight, posture, size == null ? -1 : size);
-	}
-	private static <R> R parse(String key, Function<String, R> parser) {
-		try {
-			String s = SESSION.getProperty(key);
-			if(s == null)
-				return null;
-			return parser.apply(s.toUpperCase());
-		} catch (Exception e) {
-			LogManager.getLogger(Editor.class);
-		}
-		return null;
-	}
-
-	public Editor() throws IOException {
+	public Editor(ConfigManager configManager, ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabContainer container) throws IOException {
 		FxFxml.load(this, true);
+		this.configManager = configManager;
+		
+			Objects.requireNonNull(selectedItemProperty);
+			selectedItemProperty.addListener((p, o, n) -> changed((EntryTreeItem)n, PREVIOUS));
+			disableProperty().bind(selectedItemProperty.isNull());
+			container.currentTabProperty().addListener((p, o, n) -> {tab = n;});
+			container.addOnTabClosing(tab -> {
+				if(tab == this.tab)
+					centerEditor.commit();
+			});
 	}
 	
 	private Tab tab;
 	
-	public void init(ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabContainer container){
-		Objects.requireNonNull(selectedItemProperty);
-		selectedItemProperty.addListener((p, o, n) -> changed((Entry)n, PREVIOUS));
-		disableProperty().bind(selectedItemProperty.isNull());
-		container.currentTabProperty().addListener((p, o, n) -> {tab = n;});
-		container.addOnTabClosing(tab -> {
-			if(tab == this.tab)
-				centerEditor.commit();
-		});
-	}
 	@FXML
-	private void changeEntry(ActionEvent e) {
+	private void changeEntryTreeItem(ActionEvent e) {
 		ViewType t = e.getSource() == combineContentBtn ? COMBINED_TEXT : COMBINED_CHILDREN;
 		changed(centerEditor.getItem(), t);
 	}
@@ -118,7 +98,7 @@ public class Editor extends BorderPane {
 		changed(currentItem(), PREVIOUS);
 	}
 
-	private Entry currentItem() {
+	private EntryTreeItem currentItem() {
 		return currentItem.get();
 	}
 
@@ -128,7 +108,7 @@ public class Editor extends BorderPane {
 		combinedTextWL.ifPresent(u -> u.setWrapText(wrap));
 	}
 	public void setFont() {
-		Font font = new FontSetter(SESSION).getFont();
+		Font font = Junk.notYetImplemented() ;//FIXME new FontSetter(SESSION).getFont();
 		if(font == null) return;
 
 		centerEditor.updateFont();
@@ -145,7 +125,7 @@ public class Editor extends BorderPane {
 	private DelayedQueueThread<Object> delay;
 	private static final Object SKIP_CHANGE = new Object();
 	
-	private void changed(Entry item, ViewType view) {
+	private void changed(EntryTreeItem item, ViewType view) {
 		if(item != null && item.isContentLoaded()) {
 			if(delay != null)
 				delay.add(SKIP_CHANGE);
@@ -153,7 +133,7 @@ public class Editor extends BorderPane {
 			return;
 		}
 		if(delay == null) {
-			delay = new DelayedQueueThread<>(Optional.ofNullable(SESSION.getProperty("change.delay")).map(Integer::parseInt).orElse(1000), this::delayedChange);
+			delay = new DelayedQueueThread<>(Optional.ofNullable(configManager.getString(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
 			delay.start();
 		}
 		delay.add(new Object[]{item, view});
@@ -162,10 +142,10 @@ public class Editor extends BorderPane {
 		if(obj == SKIP_CHANGE)
 			return;
 		Object[] oo = (Object[])obj;
-		fx(() -> actual_changed((Entry)oo[0], (ViewType)oo[1]));
+		fx(() -> actual_changed((EntryTreeItem)oo[0], (ViewType)oo[1]));
 	}
 
-	private void actual_changed(Entry item, ViewType view) {
+	private void actual_changed(EntryTreeItem item, ViewType view) {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);
@@ -215,7 +195,7 @@ public class Editor extends BorderPane {
 		}
 		currentItem.set(item);
 	}
-	private void setCombined_text(Entry item) {
+	private void setCombined_text(EntryTreeItem item) {
 		CombinedText c = combinedTextWL.get();
 		if(getCenter() == c && c.getItem() == item) return;
 
@@ -227,7 +207,7 @@ public class Editor extends BorderPane {
 
 		buttonsVisible();
 	}
-	private void setCombined_children(Entry item) {
+	private void setCombined_children(EntryTreeItem item) {
 		UnitContainer c = unitsContainerWL.get();
 		if(getCenter() == c && c.getItem() == item) return;
 
@@ -246,13 +226,13 @@ public class Editor extends BorderPane {
 		combineContentBtn.setVisible(false);
 	}
 
-	private void addHistory(ViewType type, Entry item) {
+	private void addHistory(ViewType type, EntryTreeItem item) {
 		if(type == null) return;
 		Stack<ViewType> stack = history(item, true);
 		if(stack.isEmpty() || stack.lastElement() != type)
 			stack.add(type);
 	}
-	private Stack<ViewType> history(Entry item, boolean create) {
+	private Stack<ViewType> history(EntryTreeItem item, boolean create) {
 		Stack<ViewType> stack = history0.get(item);
 
 		if(create && stack == null) 
@@ -261,7 +241,7 @@ public class Editor extends BorderPane {
 		return stack;
 	}
 
-	private void setCenterEditor(Entry item) {
+	private void setCenterEditor(EntryTreeItem item) {
 		if(getCenter() != centerEditor)
 			setCenter(centerEditor);
 
@@ -275,7 +255,7 @@ public class Editor extends BorderPane {
 		combineContentBtn.setVisible(!item.getChildren().isEmpty());
 	}
 	@Deprecated //listen Tab changelistenr for title changes
-	public void updateTitle(Entry ti) {
+	public void updateTitle(EntryTreeItem ti) {
 		unitsContainerWL.ifPresent(u -> u.updateTitle(ti));
 
 		centerEditor.updateTitle();
@@ -293,7 +273,7 @@ public class Editor extends BorderPane {
 
 	public Menu getEditorMenu() {
 		Menu menu = new Menu("editor", null,
-				menuitem("copy Entry Tree", e -> Utils.copyToClipboard(currentItem().toTreeString(true)), currentItem.isNull()),
+				menuitem("copy EntryTreeItem Tree", e -> Utils2.copyToClipboard(currentItem().toTreeString(true)), currentItem.isNull()),
 				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected()))
 				//TODO menuitem("Font", e -> setFont())
 				);

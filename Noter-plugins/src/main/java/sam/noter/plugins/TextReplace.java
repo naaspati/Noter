@@ -6,7 +6,7 @@ import javafx.scene.control.TextArea;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import sam.config.Session;
+
 import sam.fx.helpers.FxFxml;
 
 public class TextReplace extends Stage implements Consumer<TextArea>, InitFinalized {

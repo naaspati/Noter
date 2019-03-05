@@ -7,22 +7,36 @@ import java.util.stream.Stream;
 
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.StringConverter;
 
 
-class FontSetter extends GridPane {
+class FontSetter extends Stage {
 	private Font font;
+	private Session session;
 	
-	public FontSetter() {
+	public FontSetter(Session session) {
+		super(StageStyle.UTILITY);
+		this.session = session;
+		initModality(Modality.APPLICATION_MODAL);
+		initOwner(Session.global().get(Stage.class));
+		setTitle("Select Font");
+
 		GridPane root = new GridPane();
 		root.setHgap(5);
 		root.setVgap(5);
@@ -83,8 +97,7 @@ class FontSetter extends GridPane {
 		Button ok = new Button("OK");
 		ok.setPrefWidth(70);
 		cancel.setPrefWidth(70);
-		/* TODO
-		 * 		cancel.setOnAction(e -> hide());
+		cancel.setOnAction(e -> hide());
 		HBox bottom = new HBox(10, cancel, ok);
 		bottom.setAlignment(Pos.CENTER_RIGHT);
 		bottom.setPadding(new Insets(10));
@@ -105,7 +118,16 @@ class FontSetter extends GridPane {
 			session.put("font.posture",posture.getValue().toString());
 			session.put("font.size", size.getValue().toString());
 		});
-		 */
+	}
+	
+	@Override
+	public void showAndWait() {
+		font = null;
+		super.showAndWait();
+	}
 
+	public Font getFont() {
+		this.showAndWait();
+		return font;
 	}
 }

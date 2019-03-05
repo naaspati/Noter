@@ -1,6 +1,6 @@
 package sam.noter.bookmark;
 
-import static sam.noter.Utils.fx;
+import static sam.noter.Utils2.fx;
 
 import java.util.Collections;
 import java.util.List;
@@ -11,7 +11,6 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.MultipleSelectionModel;
@@ -22,15 +21,11 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import sam.config.Session;
-import sam.noter.InitFinalized;
-import sam.noter.dao.Entry;
+import sam.noter.EntryTreeItem;
 import sam.noter.tabs.Tab;
 import sam.noter.tabs.TabContainer;
-class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionEvent> {
+
+class BookmarkMover extends BorderPane implements EventHandler<ActionEvent> {
 	private final Button moveAbove = new Button("Move Above");
 	private final Button moveBelow = new Button("Move Below");
 	private final Button moveAsFirstChild = new Button("Move As First Child");
@@ -44,9 +39,6 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 	private FlowPane tabs = new FlowPane();
 
 	public BookmarkMover(TabContainer tabcontainer) {
-		super(StageStyle.UNIFIED);
-		initModality(Modality.APPLICATION_MODAL);
-		initOwner(Session.global().get(Stage.class));
 		this.tabcontainer = tabcontainer;
 
 		moveAbove.setOnAction(this);
@@ -70,12 +62,8 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 
 		view.setId("bookmarks");
 
-		Scene scene = new Scene(new BorderPane(new HBox(view,buttons), tabs, null, null, null));
-		scene.getStylesheets().add("css/style.css");
-		setScene(scene);
-		setResizable(false);
-
-		init();
+		setCenter(new HBox(view,buttons));
+		setTop(tabs);
 	}
 
 	public void moveBookmarks(MultipleSelectionModel<TreeItem<String>> selectionModel) {
@@ -119,15 +107,15 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		Node node = (Node) e1.getSource();
 		if(node.getUserData()  != null) {
             Tab selectedTab = (Tab) node.getUserData();
-			root = fillRootItem((Entry)(selectedTab.getRoot()), selectedTab == currentTab ? selectionModel.getSelectedItems() : Collections.emptyList());
+			root = fillRootItem((EntryTreeItem)(selectedTab.getRoot()), selectedTab == currentTab ? selectionModel.getSelectedItems() : Collections.emptyList());
 			view.setRoot(root);
 			return;
 		}
 
-		Entry item = (Entry)view.getSelectionModel().getSelectedItem().getValue();
-		Entry parent = (Entry) item.getParent(); 
+		EntryTreeItem item = (EntryTreeItem)view.getSelectionModel().getSelectedItem().getValue();
+		EntryTreeItem parent = (EntryTreeItem) item.getParent(); 
 		int index = parent.indexOf(item);
-		List<Entry> list = selectionModel.getSelectedItems().stream().map(e -> (Entry)e).collect(Collectors.toList());
+		List<EntryTreeItem> list = selectionModel.getSelectedItems().stream().map(e -> (EntryTreeItem)e).collect(Collectors.toList());
 		selectionModel.clearSelection();
 
 		if(node == moveAbove)
@@ -142,11 +130,5 @@ class BookmarkMover extends Stage implements InitFinalized, EventHandler<ActionE
 		hide();
 		selectionModel.clearSelection();
 		selectionModel.select(list.get(0));
-	}
-
-	@Override
-	protected void finalize() throws Throwable {
-		finalized(); 
-		super.finalize();
 	}
 }

@@ -30,25 +30,27 @@ import sam.fx.alert.FxAlert;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.noter.ActionResult;
-import sam.noter.Utils.FileChooserType;
-import sam.noter.dao.Entry;
-import sam.noter.dao.RootEntry;
-import sam.noter.dao.RootEntryFactory;
+import sam.noter.EntryTreeItem;
+import sam.noter.Utils2.FileChooserType;
+import sam.noter.dao.RootIEntryFactory;
 import sam.noter.dao.Walker;
+import sam.noter.dao.api.IEntry;
+import sam.noter.dao.api.IRootEntry;
+import sam.noter.dao.api.IRootIEntry;
 
-public class Tab extends HBox implements RootEntry {
-	private RootEntry root;
+public class Tab extends HBox implements IRootEntry {
+	private IRootIEntry root;
 	private final Label title = new Label();
 	private final Button close = new Button("x");
 	private final Button open = new Button("o");
 
 	public static Tab load(Path path, Consumer<Tab> onSelect) throws Exception {
-		return new Tab(RootEntryFactory.getInstance().load(path), onSelect);
+		return new Tab(RootIEntryFactory.getInstance().load(path), onSelect);
 	}
 	public static Tab create(Path path, Consumer<Tab> onSelect) throws Exception {
-		return new Tab(RootEntryFactory.getInstance().create(path), onSelect);
+		return new Tab(RootIEntryFactory.getInstance().create(path), onSelect);
 	}
-	private Tab(RootEntry root, Consumer<Tab> onSelect) throws Exception {
+	private Tab(IRootIEntry root, Consumer<Tab> onSelect) throws Exception {
 		this.root = root;
 		init(onSelect);
 		setTabTitle(root.getJbookPath().getFileName().toString());
@@ -210,31 +212,31 @@ public class Tab extends HBox implements RootEntry {
 		toggleClass(this, "modified", root.isModified());
 	}
 
-	public Entry getRoot() { return (Entry)root; }
+	public IEntry getRoot() { return (IEntry)root; }
 
 	@Override public void close() throws Exception { root.close(); }
 	/**
 	 * add child to root
 	 * @param title
 	 */
-	public void addChild(String title) { addChild(title, (Entry)root); }
+	public void addChild(String title) { addChild(title, (IEntry)root); }
 
-	@Override public Entry addChild(String childTitle, Entry parent) { return root.addChild(childTitle, parent); }
-	@Override public Entry addChild(String title, Entry parent, int index) { return root.addChild(title, parent, index); }
-	@Override public Collection<Entry> getAllEntries() { return root.getAllEntries(); }
+	@Override public IEntry addChild(String childTitle, IEntry parent) { return root.addChild(childTitle, parent); }
+	@Override public IEntry addChild(String title, IEntry parent, int index) { return root.addChild(title, parent, index); }
+	@Override public Collection<IEntry> getAllEntries() { return root.getAllEntries(); }
 
 	@Override public void setOnModified(Runnable action) { throw new IllegalAccessError(); }
-	public void walkTree(Walker walker) { ((Entry)root).walkTree(walker); }
-	@Override public List<Entry> moveChild(List<Entry> childrenToMove, Entry newParent, int index) { return root.moveChild(childrenToMove, newParent, index); }
-	public void walk(Consumer<Entry> consumer) { ((Entry)root).walk(consumer); }
+	public void walkTree(Walker walker) { ((IEntry)root).walkTree(walker); }
+	@Override public List<IEntry> moveChild(List<EntryTreeItem> list, EntryTreeItem parent, int index) { return root.moveChild(list, parent, index); }
+	public void walk(Consumer<IEntry> consumer) { ((IEntry)root).walk(consumer); }
 
 	@Override public Path getJbookPath() { return root.getJbookPath(); }
 	@Override public boolean isModified() { return root.isModified(); }
 	@Override public void reload() throws Exception { root.reload(); }
 	@Override public void save(Path file) throws Exception { root.save(file); }
 	@Override public void save() throws Exception { root.save(); }
-	@Override public void addChild(Entry child, Entry parent, int index) { root.addChild(child, parent, index); }
-	@Override public void removeFromParent(Entry child) { root.removeFromParent(child); }
-	@Override public void setSelectedItem(Entry e) { root.setSelectedItem(e); }
-	@Override public Entry getSelectedItem() { return root.getSelectedItem(); }
+	@Override public void addChild(IEntry child, IEntry parent, int index) { root.addChild(child, parent, index); }
+	@Override public void removeFromParent(IEntry child) { root.removeFromParent(child); }
+	@Override public void setSelectedItem(IEntry entryTreeItem) { root.setSelectedItem(entryTreeItem); }
+	@Override public IEntry getSelectedItem() { return root.getSelectedItem(); }
 }

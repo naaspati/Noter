@@ -14,6 +14,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -38,8 +41,9 @@ import sam.myutils.Checker;
 import sam.noter.ActionResult;
 import sam.noter.BoundBooks;
 import sam.noter.Utils;
-import sam.noter.Utils.FileChooserType;
+import sam.noter.Utils2.FileChooserType;
 
+@Singleton
 public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 	private final HBox tabsBox = new HBox(2);
 	private final ReadOnlyIntegerWrapper tabsCount = new ReadOnlyIntegerWrapper();
@@ -52,6 +56,7 @@ public class TabContainer extends BorderPane implements ChangeListener<Tab> {
 
 	private double div = 0;
 
+	@Inject
 	public TabContainer(BoundBooks boundBooks) {
 		setId("tab-container");
 		onSelect = currentTab::set;

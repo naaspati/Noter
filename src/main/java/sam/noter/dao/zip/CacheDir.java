@@ -57,7 +57,7 @@ import sam.nopkg.SavedResource;
 import sam.nopkg.SimpleSavedResource;
 import sam.nopkg.StringResources;
 import sam.noter.dao.RootEntry;
-import sam.string.StringUtils.StringSplitIterator;
+import sam.string.StringSplitIterator;
 
 class CacheDir implements AutoCloseable {
 

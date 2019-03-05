@@ -1,8 +1,6 @@
 package sam.noter.dao.dom;
 
 import static sam.myutils.Checker.isEmpty;
-import static sam.noter.Utils.TEMP_DIR;
-import static sam.noter.Utils.addOnStop;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,6 +15,7 @@ import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.inject.Inject;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
@@ -36,28 +35,17 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import sam.di.ConfigKey;
+import sam.di.ConfigManager;
+import sam.di.OnExitQueue;
 import sam.io.fileutils.FilesUtilsIO;
-import sam.io.serilizers.LongSerializer;
 import sam.noter.dao.Entry;
+import sam.noter.dao.ModifiedField;
 import sam.reference.WeakAndLazy;
 @SuppressWarnings("rawtypes")
 class DOMLoader {
+	private static boolean exitAdded;
 	private static final Logger logger = LogManager.getLogger(DOMLoader.class);
-	private static final Path BACKUP_DIR = TEMP_DIR.resolve(DOMLoader.class.getName()+"/"+LocalDate.now());
-	
-	static {
-		BACKUP_DIR.toFile().mkdirs();
-		Path path = BACKUP_DIR.resolveSibling("backup.schedule");
-		try {
-			if(Files.exists(path) && new LongSerializer().read(path) >= System.currentTimeMillis()) {
-				new LongSerializer().write(System.currentTimeMillis()+Duration.ofDays(7).toMillis(), path);
-				addOnStop(() -> backupClean());
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 
 	private static final String ID = "id";
 	private static final String TITLE = "title";
@@ -69,15 +57,37 @@ class DOMLoader {
 	private static final String ENTRY = "entry";
 	private static final String LAST_MODIFIED = "lastmodified";
 
-	private final Document doc;
+	private Document doc;
 
 	private int maxId;
 	private Node entriesNode, maxIdNode, docRootNode;
 
-	private final RootDOMEntry root;
-	
+	private RootDOMEntry root;
+	private static Path backupDir;
 
-	DOMLoader(RootDOMEntry root) throws ParserConfigurationException {
+	@Inject
+	DOMLoader(ConfigManager configManager, OnExitQueue exitQueue) throws ParserConfigurationException {
+		
+		if(!exitAdded) {
+			exitAdded = true;
+			
+			backupDir = configManager.backupDir();
+			backupDir.toFile().mkdirs();
+			
+			try {
+				long value = configManager.getLong(ConfigKey.BACKUP_SCHEDULE, -1);
+				
+				if(value >= System.currentTimeMillis()) {
+					configManager.put(ConfigKey.BACKUP_SCHEDULE, System.currentTimeMillis()+Duration.ofDays(7).toMillis());
+					exitQueue.runOnExist(() -> backupClean());
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
+	void init(RootDOMEntry root) throws ParserConfigurationException {
 		this.root = root;
 		this.doc = DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
@@ -173,7 +183,7 @@ class DOMLoader {
 			return;
 		
 		try {
-			Files.copy(file.toPath(), BACKUP_DIR.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')), StandardCopyOption.REPLACE_EXISTING);
+			Files.copy(file.toPath(), backupDir.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')), StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
 			logger.warn("failed to backup: {}",file, e);
 		}
@@ -181,7 +191,7 @@ class DOMLoader {
 
 
 	private static void backupClean() {
-		File backup = BACKUP_DIR.getParent().toFile();
+		File backup = backupDir.getParent().toFile();
 		if(!backup.exists()) return;
 		
 		LocalDateTime now = LocalDateTime.now();
@@ -278,6 +288,13 @@ class DOMLoader {
 			content = append(CONTENT, entry.getContent(), rootNode);
 			children = setChildren(entry.getChildren(), this);
 		}
+
+		public boolean isModified(ModifiedField field) {
+			return root.isModified(this.id(), field);
+		}
+		public void setModified(ModifiedField field, boolean value) {
+			root.setModified(this.id(), field, value);
+		}
 	}
 
 	private DOMEntry newDOMEntry(Node source) {
@@ -351,33 +368,33 @@ class DOMLoader {
 
 	private Node update(Object s) {
 		DOMEntry d = (DOMEntry)s;
-		if(!d.isModified()) return d.dom().rootNode;
+		if(!d.isModified(ModifiedField.ANY)) return d.dom().rootNode;
 		logModification(d);
 
 		DomEntryInit dom = d.dom();
 
 		if(dom.rootNode == null) {
 			dom.createRootNode(d);
-			d.clearModified();
+			d.setModified(ModifiedField.ALL, false);
 			logger.debug(() -> "NEW: "+d);
 			return dom.rootNode;
 		}
-		if(d.isModified()){
+		if(d.isModified(ModifiedField.ANY)){
 			updateNode(LAST_MODIFIED, String.valueOf(d.getLastModified()), dom, dom.lastModified);
 			logger.debug(() -> "UPDATE LAST_MODIFIED: "+d);
 		}
-		if(d.isTitleModified()) {
+		if(d.isModified(ModifiedField.TITLE)) {
 			updateNode(TITLE, d.getTitle(), dom, dom.title);
 			logger.debug(() -> "UPDATE TITLE: "+d);
-		} if(d.isContentModified()){ 
+		} if(d.isModified(ModifiedField.CONTENT)){ 
 			updateNode(CONTENT, d.getContent(), dom, dom.content);
 			logger.debug(() -> "UPDATE CONTENT: "+d);
-		} if(d.isChildrenModified()) {
+		} if(d.isModified(ModifiedField.CHILDREN)) {
 			updateChildren(d, d.dom().rootNode, d.dom().children, d.getChildren());
 			logger.debug(() -> "UPDATE CHILDREN: "+d);
 		}
-		d.clearModified();
-
+		
+		d.setModified(ModifiedField.ALL, false);
 		return dom.rootNode;
 	}
 	private void updateChildren(Object owner, Node ownerNode, Node currentChildrenNode, List children) {
@@ -452,11 +469,11 @@ class DOMLoader {
 				sb.setLength(0);
 
 				sb.append(e).append(" [");
-				if(e.isTitleModified())
+				if(e.isModified(ModifiedField.TITLE))
 					sb.append("TITLE, ");
-				if(e.isContentModified())
+				if(e.isModified(ModifiedField.CONTENT))
 					sb.append("CONTENT, ");
-				if(e.isChildrenModified())
+				if(e.isModified(ModifiedField.CHILDREN))
 					sb.append("CHILDREN, ");
 				sb.append(']');
 				

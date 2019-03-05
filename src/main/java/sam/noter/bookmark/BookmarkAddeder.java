@@ -1,13 +1,14 @@
 package sam.noter.bookmark;
 
-import static sam.noter.Utils.fx;
+import static sam.noter.Utils2.fx;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
+import java.io.IOException;
 import java.util.Collection;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javax.inject.Provider;
+
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -19,48 +20,42 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import sam.config.Session;
+import sam.di.Injector;
 import sam.fx.helpers.FxCell;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.myutils.Checker;
-import sam.myutils.MyUtilsException;
-import sam.noter.InitFinalized;
-import sam.noter.dao.Entry;
+import sam.noter.Utils2;
+import sam.noter.dao.api.IEntry;
 import sam.noter.tabs.Tab;
 
-class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<String> {
+class BookmarkAddeder {
 	
 	@FXML private Label header;
 	@FXML private VBox center;
 	@FXML private TextField titleTf;
-	@FXML private ListView<Entry> similar;
+	@FXML private ListView<IEntry> similar;
 	@FXML private TextArea entryPath;
 	
 	private final TitleSearch search = new TitleSearch();
+	private final WeakChangeListener<String> searcher = new WeakChangeListener<>((p, o, n) -> search.addSearch(n));
 	private Tab tab;
-	private final WeakChangeListener<Entry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : n.toTreeString(false)));
+	private final WeakChangeListener<IEntry> similarSelect = new WeakChangeListener<>((p, o, n) -> entryPath.setText(n == null ? null : Utils2.toTreeString(n)));
 	private BookmarkType bookMarkType;
-	private Entry item;
+	private IEntry item;
+	private final Provider<Injector> injector;
 
-	public BookmarkAddeder() {
-		super(StageStyle.UTILITY);
-		initModality(Modality.APPLICATION_MODAL);
-		initOwner(Session.global().get(Stage.class));
-		MyUtilsException.hideError(() -> FxFxml.load(this, true));
+	public BookmarkAddeder(Provider<Injector> injector) throws IOException {
+		this.injector = injector;
+		FxFxml.load(this, true);
 
-		similar.setCellFactory(FxCell.listCell(Entry::getTitle));
+		similar.setCellFactory(FxCell.listCell(IEntry::getTitle));
 		similar.getSelectionModel()
 		.selectedItemProperty()
 		.addListener(similarSelect);
-		
-		init();  
 	}
 	
-	private Entry result;
+	private IEntry result;
 	
 	@FXML
 	private void cancelAction(ActionEvent e) {
@@ -99,13 +94,13 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 	public void hide() {
 		super.hide();
 		similar.getItems().clear();
-		titleTf.textProperty().removeListener(this);
+		titleTf.textProperty().removeListener(searcher);
 		titleTf.clear();
 		search.stop();
 	}
 	
-	public Entry showDialog(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
-		this.item = (Entry)selectionModel.getSelectedItem();
+	public IEntry showDialog(BookmarkType bookMarkType, MultipleSelectionModel<TreeItem<String>> selectionModel, TreeView<String> tree, Tab tab) {
+		this.item = (IEntry)selectionModel.getSelectedItem();
 		this.tab = tab;
 
 		this.bookMarkType = bookMarkType == RELATIVE_TO_PARENT && item.getParent() == tree.getRoot() ? RELATIVE : bookMarkType;
@@ -113,9 +108,9 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 
 		fx(() -> titleTf.requestFocus());
 		titleTf.clear();
-		titleTf.textProperty().addListener(this);
+		titleTf.textProperty().addListener(searcher);
 		
-		Collection<Entry> list = tab.getAllEntries();
+		Collection<IEntry> list = tab.getAllEntries();
 		similar.getItems().setAll(list);
 		search.start(list);
 		search.setOnChange(() -> fx(()-> search.applyFilter(similar.getItems())));
@@ -133,23 +128,18 @@ class BookmarkAddeder extends Stage implements InitFinalized, ChangeListener<Str
 		if(item != null) {
 			switch (bookMarkType) {
 				case RELATIVE:
-					header += "\nRelative To: "+item.getValue();
+					header += "\nRelative To: "+item;
 					break;
 				case CHILD:
-					header += "\nChild To: "+item.getValue();
+					header += "\nChild To: "+item;
 					break;
 				case RELATIVE_TO_PARENT:
-					header += "\nRelative To: "+item.getParent().getValue();
+					header += "\nRelative To: "+item.getParent();
 					break;
 			}	
 		}
 		return header;
 	}
-	@Override
-	public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-		search.addSearch(newValue);
-	}
-
 	@Override
 	protected void finalize() throws Throwable {
 		search.completeStop();
