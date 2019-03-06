@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -20,6 +21,7 @@ import sam.myutils.Checker;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModHandler;
 import sam.noter.dao.ModifiedField;
+import sam.noter.dao.VisitResult;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
 
@@ -35,7 +37,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	private final Injector injector;
 
 	public RootDOMEntry(Injector injector) throws ParserConfigurationException {
-		
+
 		this.injector = injector;
 		createDom();
 	}
@@ -45,7 +47,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	}
 	public RootDOMEntry(Injector injector, Path jbookPath) throws IOException, ParserConfigurationException, SAXException {
 		this.injector = injector;
-		
+
 		Objects.requireNonNull(jbookPath, "Path to .jbook cannot be null");
 		if(Files.notExists(jbookPath)) throw new FileNotFoundException("Path not found: "+jbookPath);
 		if(Files.isDirectory(jbookPath)) throw new IOException("Not a Path:"+jbookPath);
@@ -76,7 +78,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		mods.clear();
 		entryMap.clear();
 		this.dom = new DOMLoader(jbookPath.toFile(), children, this);
-		walk(w -> entryMap.put(w.getId(), w));
+		walk(w -> {entryMap.put(w.getId(), w);});
 		notifyModified();
 		mods.clear();
 	}
@@ -107,12 +109,12 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		jbookPath = path;
 		this.title = jbookPath.getFileName().toString();
 	}
-	
+
 	@Override
 	protected void setModified(ModifiedField field, boolean value) {
 		//TODO
 	}
-	
+
 	@Override public void close() throws Exception {/* does nothing */}
 
 	@Override
@@ -221,5 +223,25 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		entryMap.remove(d.getId());
 		d.parent().getChildren().remove(e);
 	}
+
+	@Override
+	public void forEachOfAll(Consumer<IEntry> consumer) {
+		walk(consumer);
+	}
+	@Override
+	public IEntry getEntryById(int id) {
+		IEntry[] res = {null};
+		walk(e -> {
+			if(e.getId() == id) {
+				res[0] = e;
+				return VisitResult.TERMINATE;
+			}
+			Checker.assertIsNull(res[0]);
+			return VisitResult.CONTINUE;
+		});
+		
+		return res[0];
+	}
+	
 }
 

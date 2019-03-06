@@ -2,6 +2,9 @@ package sam.noter.dao;
 
 import static sam.noter.dao.ModifiedField.CONTENT;
 import static sam.noter.dao.ModifiedField.TITLE;
+import static sam.noter.dao.VisitResult.CONTINUE;
+import static sam.noter.dao.VisitResult.SKIP_SIBLINGS;
+import static sam.noter.dao.VisitResult.TERMINATE;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -88,6 +91,32 @@ public abstract class Entry implements IEntry {
 				c.walk(consumer);
 			});
 		}
+	}
+	@Override
+	public void walk(Walker<IEntry> walker) {
+		walk0(this, walker);
+	}
+	private VisitResult walk0(IEntry parent, Walker<IEntry> walker) {
+		if(parent.getChildren().isEmpty()) 
+			return CONTINUE;
+
+		for (IEntry item : parent.getChildren()) {
+			IEntry e = item;
+			VisitResult v = walker.accept(e);
+
+			switch (v) {
+				case CONTINUE:
+					v = walk0(e, walker);
+					if(v == TERMINATE) return TERMINATE;
+					if(v == SKIP_SIBLINGS) return CONTINUE;
+					break;
+
+				case SKIP_SIBLINGS: return CONTINUE;
+				case SKIP_SUBTREE: break;
+				case TERMINATE: return TERMINATE;
+			}
+		}
+		return CONTINUE;
 	}
 	@Override
 	public final int hashCode() {

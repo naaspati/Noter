@@ -1,5 +1,8 @@
 package sam.noter.app;
 
+import javafx.beans.value.ObservableValue;
+import sam.noter.dao.api.IRootEntry;
+
 public interface Observables {
-	//TODO
+	public ObservableValue<IRootEntry> currentRootEntryProperty();
 }

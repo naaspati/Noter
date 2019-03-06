@@ -1,5 +1,3 @@
-import sam.noter.bookmark.BookMarkTree
-
 package fxml
 
 import javafx.scene.layout.BorderPane
@@ -10,6 +8,7 @@ import javafx.scene.control.RadioButton
 import javafx.scene.layout.Pane
 import javafx.geometry.Insets
 import sam.noter.bookmark.BookMarkRoot
+import sam.noter.bookmark.BookMarkTree
 
 dynamic component BookmarksPane {
 	BorderPane {

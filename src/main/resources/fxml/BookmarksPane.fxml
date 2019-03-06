@@ -10,12 +10,12 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
 <?import sam.fxml.Button2?>
-<?import sam.noter.bookmark.BookMarkRoot?>
+<?import sam.noter.bookmark.BookMarkTree?>
 
 <fx:root xmlns:fx="http://javafx.com/fxml" type="BorderPane">
 
 	<center>
-		<BookMarkRoot fx:id="tree" showRoot="false" editable="true" onEditStart="#bookmarksEditStart"/> 
+		<BookMarkTree fx:id="tree" showRoot="false" editable="true" onEditStart="#bookmarksEditStart"/> 
 	</center>
 	<top>
 		<HBox spacing="3"> 

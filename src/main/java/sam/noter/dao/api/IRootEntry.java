@@ -48,4 +48,5 @@ public interface IRootEntry extends AutoCloseable {
 	IEntry getEntryById(int id);
 	void walk(Walker<IEntry> walker);
 	void forEachOfAll(Consumer<IEntry> consumer);
+	String getTitle();
 }

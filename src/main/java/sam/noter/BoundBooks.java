@@ -21,7 +21,7 @@ import sam.di.ParentWindow;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
 import sam.io.serilizers.StringWriter2;
-import sam.noter.tabs.Tab;
+import sam.noter.dao.api.IRootEntry;
 
 @Singleton
 public class BoundBooks {
@@ -47,12 +47,12 @@ public class BoundBooks {
 		});
 	}
 	
-	public String getBoundBookPath(Tab tab) {
+	public String getBoundBookPath(IRootEntry tab) {
 		if(tab.getJbookPath() == null)
 			return null;
 		return boundBooks.get(tab.getJbookPath().toString());
 	}
-	public void bindBook(Tab tab) {
+	public void bindBook(IRootEntry tab) {
 		FileChooser fc = new FileChooser();
 		String s = getBoundBookPath(tab);
 		File file;
@@ -69,8 +69,8 @@ public class BoundBooks {
 			fc.setInitialDirectory(file);
 
 		file = fc.showOpenDialog(parent);
-		if(tab.getTabTitle() != null)
-			fc.setTitle("Book for: "+tab.getTabTitle());
+		if(tab.getTitle() != null)
+			fc.setTitle("Book for: "+tab.getTitle());
 
 		if(file == null) 
 			FxPopupShop.showHidePopup("cancelled", 1500);
@@ -79,7 +79,8 @@ public class BoundBooks {
 			configManager.setConfig(ConfigKey.RECENT_DIR, file.getParent());
 			FileOpenerNE.openFile(file);
 			modified = true;
-			tab.setBoundBook(file);
+			// will be removed 
+			// tab.setBoundBook(file);
 		}
 	}
 	public void save() {

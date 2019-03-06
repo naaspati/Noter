@@ -21,7 +21,7 @@ dynamic component App {
 					BookmarksPane id bookmarks,
 					BorderPane {
 						center :  Editor id editor,
-						top : TabBox id tabsContainer
+						top : TabBox id tabsBox
 						
 					} 
 				}

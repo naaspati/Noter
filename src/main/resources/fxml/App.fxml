@@ -25,7 +25,7 @@
 								<Editor fx:id="editor"/> 
 							</center>
 							<top>
-								<TabBox fx:id="tabsContainer"/> 
+								<TabBox fx:id="tabsBox"/> 
 							</top>
 						</BorderPane>
 					</SplitPane>

@@ -1,10 +1,5 @@
 package sam.noter.app;
-import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.N;
 import static javafx.scene.input.KeyCode.O;
-import static javafx.scene.input.KeyCode.S;
-import static javafx.scene.input.KeyCode.W;
-import static javafx.scene.input.KeyCombination.ALT_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeUtils.combination;
@@ -32,6 +27,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -49,6 +45,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -65,9 +62,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeItem;
@@ -109,13 +104,14 @@ import sam.noter.DyanamiMenus;
 import sam.noter.EntryTreeItem;
 import sam.noter.FilesLookup;
 import sam.noter.bookmark.BookmarksPane;
+import sam.noter.dao.api.IRootEntry;
 import sam.noter.editor.Editor;
 import sam.thread.MyUtilsThread;
-public class App extends Application implements AppUtils {
+public class App extends Application implements AppUtils, Observables, ChangeListener<IRootEntry> {
 	private static final EnsureSingleton singleons = new EnsureSingleton();
-	
+
 	private final Logger logger = LogManager.getLogger(App.class);
-	
+
 	{
 		singleons.init();
 	}
@@ -127,7 +123,7 @@ public class App extends Application implements AppUtils {
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
 	@FXML private BookmarksPane bookmarks;
-	@FXML private TabBox tabsContainer;
+	@FXML private TabBox tabsBox;
 	@FXML private Editor editor;
 
 	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
@@ -136,26 +132,27 @@ public class App extends Application implements AppUtils {
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
 	private Stage stage;
 	private List<Runnable> onExit; 
-	
+
+	private final SimpleBooleanProperty currentTabNull = new SimpleBooleanProperty();
+	private IRootEntry currentRoot;
 	private BoundBooks boundBooks;
-	private BooleanBinding currentTabNull;
 	private Path appDataDir, backupDir; //FIXME init
 
 	static {
 		GRAYSCALE_EFFECT.setSaturation(-1);
 	}
-	
+
 	private final Tools injector = new Tools();
-	
+
 	private class Tools implements Injector, OnExitQueue, ConfigManager {
 		private final Feather feather;
 		private int configMod;
 		private EnumMap<ConfigKey, String> configs = new EnumMap<>(ConfigKey.class);
-		
+
 		public Tools() {
 			this.feather = Feather.with(this);
 		}
-		
+
 		@Override
 		public Path appDir() {
 			return appDataDir;
@@ -176,7 +173,7 @@ public class App extends Application implements AppUtils {
 				configMod++;
 			}
 		}
-		
+
 		@Override
 		public <E, A extends Annotation> E instance(Class<E> type, Class<A> qualifier) {
 			return feather.instance(Key.of(type, qualifier));
@@ -185,7 +182,7 @@ public class App extends Application implements AppUtils {
 		public <E> E instance(Class<E> type) {
 			return feather.instance(type);
 		}
-		
+
 		@Provides
 		public Injector injector( ) {
 			return this;
@@ -202,7 +199,7 @@ public class App extends Application implements AppUtils {
 		public AppUtils utils( ) {
 			return App.this;
 		}
-		
+
 		@ParentWindow
 		@Provides
 		public Stage stage( ) {
@@ -215,8 +212,8 @@ public class App extends Application implements AppUtils {
 				onExit = Collections.synchronizedList(new ArrayList<>());
 			onExit.add(runnable);
 		}
-		
-		
+
+
 	};
 
 	@Override
@@ -225,7 +222,7 @@ public class App extends Application implements AppUtils {
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
-		
+
 		boundBooks = injector.instance(BoundBooks.class);
 
 		FXMLLoader loader = new FXMLLoader(ClassLoader.getSystemResource("fxml/App.fxml"));
@@ -238,13 +235,12 @@ public class App extends Application implements AppUtils {
 		loader.setRoot(stage);
 		loader.setController(this);
 		loader.load();
-		
-		currentTab = tabsContainer.currentTabProperty();
-		currentTabNull = currentTab.isNull();
+
+		currentRootEntryProperty().addListener(this);
 
 		splitPane.setDividerPositions(0, 0.2);
 		splitPane.widthProperty().addListener((p, o, n) -> splitPane.setDividerPosition(0, 0.2));
-		currentTab.addListener(this);
+		currentRootEntryProperty().addListener(this);
 		root.setTop(getMenubar());
 
 		loadIcon(stage);
@@ -323,7 +319,7 @@ public class App extends Application implements AppUtils {
 				if(files.isEmpty()) return;
 				files.replaceAll(f -> f.normalize().toAbsolutePath());
 				List<Path> paths = new ArrayList<>();
-				tabsContainer.forEach(t -> paths.add(t.getJbookPath()));
+				tabsBox.forEach(t -> paths.add(t.getJbookPath()));
 				paths.removeIf(t -> t == null);
 				if(!paths.isEmpty()){
 					files.removeIf(paths::contains);
@@ -341,7 +337,7 @@ public class App extends Application implements AppUtils {
 						return;
 				}
 
-				tabsContainer.addTabs(files);
+				tabsBox.addTabs(files);
 				stage.toFront();
 
 			} catch (IOException e) {
@@ -412,20 +408,17 @@ public class App extends Application implements AppUtils {
 		});
 	}
 	private MenuItem recentsMenuItem(Path path) {
-		MenuItem mi =  menuitem(path.toString(), e -> tabsContainer.open(Collections.singletonList(path), recentsMenu));
+		MenuItem mi =  menuitem(path.toString(), e -> tabsBox.open(Collections.singletonList(path), recentsMenu));
 		mi.getStyleClass().add("recent-mi");
 		mi.setUserData(path);
 		return mi;
 	}
 
-	private Tab getCurrentTab() {
-		return currentTab.get();
-	}
 	private void exit() {
 		if(onExit != null)
 			onExit.forEach(Runnable::run);
-		
-		if(tabsContainer.closeAll()) {
+
+		if(tabsBox.closeAll()) {
 			try(FileChannel fc = FileChannel.open(stageSettingPath(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES * 4);
 
@@ -475,7 +468,7 @@ public class App extends Application implements AppUtils {
 
 	//TODO
 	private void combineEverything(ActionEvent e) {
-		Tab tab = currentTab.get();
+		IRootEntry tab = currentRoot;
 		StringBuilder sb = new StringBuilder(5000);
 		separator = new char[0];
 		walk(bookmarks.getRoot().getChildren(), sb, "");
@@ -501,7 +494,7 @@ public class App extends Application implements AppUtils {
 		}
 		Button save = new Button("save");
 		save.setOnAction(e1 -> {
-			File file = chooseFile("save in text", null, tab.getTabTitle().concat(".txt"), FileChooserType.SAVE);
+			File file = chooseFile("save in text", null, tab.getJbookPath().getFileName()+ ".txt", FileChooserType.SAVE);
 			if(file == null) {
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
@@ -563,7 +556,7 @@ public class App extends Application implements AppUtils {
 				menuitem("no content bookmarks", e_e -> {
 					StringBuilder sb = new StringBuilder();
 					/* TODO
-					 * getCurrentTab().walk(e -> {
+					 * currentRoot.walk(e -> {
 							if(e.getContent() == null || e.getContent().trim().isEmpty()) {
 								e.setExpanded(true);
 								sb.append(e.toTreeString(false));							
@@ -588,8 +581,8 @@ public class App extends Application implements AppUtils {
 				})
 				);
 	}
-/* TODO 
- * 	private Menu getSearchMenu() {
+	/* TODO 
+	 * 	private Menu getSearchMenu() {
 		Menu menu = new Menu("_Search", null, 
 				menuitem("Search", combination(F, SHORTCUT_DOWN), e -> {
 					tabsContainer.setDisable(true);
@@ -599,7 +592,7 @@ public class App extends Application implements AppUtils {
 					SearchBox sb = weakSearchBox.get();
 
 					if(sb == null) {
-						sb = new SearchBox(stage, bookmarks, getCurrentTab());
+						sb = new SearchBox(stage, bookmarks, currentRoot);
 						weakSearchBox = new WeakReference<>(sb);
 						sb.setOnHidden(e_e -> {
 							tabsContainer.setDisable(false);
@@ -607,7 +600,7 @@ public class App extends Application implements AppUtils {
 							searchActive.set(false);
 						});
 					} else { 
-						sb.start(getCurrentTab());
+						sb.start(currentRoot);
 					}
 
 				}, currentTabNull)
@@ -616,7 +609,7 @@ public class App extends Application implements AppUtils {
 		// TODO
 		return menu;
 	} 
- */
+	 */
 
 	private final Menu recentsMenu = new Menu("_Recents");
 	private Menu getFileMenu() {
@@ -624,62 +617,64 @@ public class App extends Application implements AppUtils {
 
 		BooleanBinding fileNull = currentFile.isNull().or(searchActive);
 		BooleanBinding tabNull = currentTabNull.or(searchActive);
-		BooleanBinding selectedZero = tabsContainer.tabsCountProperty().isEqualTo(0).or(searchActive);
+		BooleanBinding selectedZero = tabsBox.tabsCountProperty().isEqualTo(0).or(searchActive);
 
 		Menu closeSpecific = 
 				new Menu("Close specific", null,
-						menuitem("other tab(s)", e -> tabsContainer.closeExcept(getCurrentTab())),
-						menuitem("tab(s) to the right", e -> tabsContainer.closeRightLeft(getCurrentTab(), true)),
-						menuitem("tab(s) to the left", e -> tabsContainer.closeRightLeft(getCurrentTab(), false))
+						menuitem("other tab(s)", e -> tabsBox.closeExcept(currentRoot)),
+						menuitem("tab(s) to the right", e -> tabsBox.closeRightLeft(currentRoot, true)),
+						menuitem("tab(s) to the left", e -> tabsBox.closeRightLeft(currentRoot, false))
 						);
 
-		Menu menu = new Menu("_File", null, 
-				menuitem("_New", combination(N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsContainer.addBlankTab(), searchActive),
-				menuitem("_Open...", combination(O, SHORTCUT_DOWN), e -> tabsContainer.open(null, recentsMenu), searchActive),
+		Menu menu = new Menu("_File");/*
+		new Menu("_File", null, 
+				menuitem("_New", combination(N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsBox.addBlankTab(), searchActive),
+				menuitem("_Open...", combination(O, SHORTCUT_DOWN), e -> tabsBox.open(null, recentsMenu), searchActive),
 				recentsMenu,
-				menuitem("Open Containing Folder", e -> getCurrentTab().open_containing_folder(getHostServices()), fileNull),
-				menuitem("Reload From Disk", e -> getCurrentTab().reload_from_disk(), fileNull),
-				menuitem("_Save", combination(S, SHORTCUT_DOWN), e -> getCurrentTab().save(false), fileNull),
-				menuitem("Save _As", combination(S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {getCurrentTab().save_as(false);updateCurrentFile();}, tabNull),
-				menuitem("Sav_e All", combination(S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsContainer.saveAllTabs();updateCurrentFile();}, tabNull),
-				menuitem("Rename", e -> {getCurrentTab().rename(); updateCurrentFile();}, fileNull),
-				menuitem("Bind Book", e -> {boundBooks.bindBook(getCurrentTab());}, fileNull),
+				menuitem("Open Containing Folder", e -> currentRoot.open_containing_folder(getHostServices()), fileNull),
+				menuitem("Reload From Disk", e -> currentRoot.reload_from_disk(), fileNull),
+				menuitem("_Save", combination(S, SHORTCUT_DOWN), e -> currentRoot.save(false), fileNull),
+				menuitem("Save _As", combination(S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {currentRoot.save_as(false);updateCurrentFile();}, tabNull),
+				menuitem("Sav_e All", combination(S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsBox.saveAllTabs();updateCurrentFile();}, tabNull),
+				menuitem("Rename", e -> {currentRoot.rename(); updateCurrentFile();}, fileNull),
+				menuitem("Bind Book", e -> {boundBooks.bindBook(currentRoot);}, fileNull),
 				new SeparatorMenuItem(),
-				menuitem("_Close",combination(W, SHORTCUT_DOWN), e -> tabsContainer.closeTab(getCurrentTab()), selectedZero),
-				menuitem("Close All",combination(W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsContainer.closeAll(), selectedZero),
+				menuitem("_Close",combination(W, SHORTCUT_DOWN), e -> tabsBox.closeTab(currentRoot), selectedZero),
+				menuitem("Close All",combination(W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsBox.closeAll(), selectedZero),
 				closeSpecific,
 				new SeparatorMenuItem(),
 				menuitem("E_xit", combination(F4, ALT_DOWN), e -> exit())
 				);
+		*/
 
 		if(!OPEN_CMD_ENABLE)
 			menu.getItems().add(2,  menuitem("Open By Cmd", combination(O, SHORTCUT_DOWN, SHIFT_DOWN), e -> openByCmd(), searchActive));
 
-		closeSpecific.disableProperty().bind(tabsContainer.tabsCountProperty().lessThan(2).or(searchActive));
+		closeSpecific.disableProperty().bind(tabsBox.tabsCountProperty().lessThan(2).or(searchActive));
 		return menu;
 	}
 	private void updateCurrentFile() {
-		Tab t = getCurrentTab(); 
-		if(t == null)
+		if(currentRoot == null)
 			return;
 
-		currentFile.set(t.getJbookPath());
-		setTitle(t);
+		currentFile.set(currentRoot.getJbookPath());
+		setTitle(currentRoot);
 	}
-
-	private void setTitle(Tab t) {
-		stage.setTitle(t == null || t.getJbookPath() == null ? null : t.getJbookPath().toString());
+ 	private void setTitle(IRootEntry t) {
+		stage.setTitle(Optional.ofNullable(t).map(IRootEntry::getJbookPath).map(Path::toString).orElse(null));
 	}
 
 	public Editor editor() {
 		return editor;
 	}
 	@Override
-	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newTab) {
-		boolean b = newTab == null;
+	public void changed(ObservableValue<? extends IRootEntry> observable, IRootEntry oldValue, IRootEntry newValue) {
+		boolean b = newValue == null;
+		currentRoot = newValue;
+		currentTabNull.set(b);
 
-		setTitle(newTab);
-		currentFile.set(b ? null : newTab.getJbookPath());
+		setTitle(newValue);
+		currentFile.set(b ? null : newValue.getJbookPath());
 
 		if(oldValue == null) return;
 		Path p = oldValue.getJbookPath();
@@ -692,7 +687,7 @@ public class App extends Application implements AppUtils {
 		if(list.size() > 10)
 			list.subList(10, list.size()).clear();
 	}
-	
+
 	@Override
 	public File chooseFile(String title, File expectedDir, String expectedFilename, FileChooserType type) {
 		Objects.requireNonNull(type);
@@ -724,9 +719,7 @@ public class App extends Application implements AppUtils {
 	}
 
 	@Override
-	public ObservableValue<Tab> currentTabProperty() {
-		// TODO Auto-generated method stub
-		return null;
+	public ObservableValue<IRootEntry> currentRootEntryProperty() {
+		return tabsBox.selectedItemProperty();
 	}
-
 }
