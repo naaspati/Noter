@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Consumer;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -39,8 +40,7 @@ import sam.myutils.Checker;
 import sam.nopkg.Junk;
 import sam.noter.EntryTreeItem;
 import sam.noter.Utils;
-import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabBox;
+import sam.noter.app.Observables;
 import sam.reference.WeakAndLazy;
 import sam.thread.DelayedQueueThread;
 
@@ -67,22 +67,15 @@ public class Editor extends BorderPane {
 		return font;
 	}
 
-	public Editor(ConfigManager configManager, ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty, TabBox container) throws IOException {
+	@Inject
+	public Editor(ConfigManager configManager, Observables observables) throws IOException {
 		FxFxml.load(this, true);
 		this.configManager = configManager;
 		
-			Objects.requireNonNull(selectedItemProperty);
-			selectedItemProperty.addListener((p, o, n) -> changed((EntryTreeItem)n, PREVIOUS));
-			disableProperty().bind(selectedItemProperty.isNull());
-			container.currentTabProperty().addListener((p, o, n) -> {tab = n;});
-			container.addOnTabClosing(tab -> {
-				if(tab == this.tab)
-					centerEditor.commit();
-			});
+		observables.currentItemProperty()
+		.addListener((p, o, n) -> changed(n, PREVIOUS));
 	}
-	
-	private Tab tab;
-	
+
 	@FXML
 	private void changeEntryTreeItem(ActionEvent e) {
 		ViewType t = e.getSource() == combineContentBtn ? COMBINED_TEXT : COMBINED_CHILDREN;
@@ -94,7 +87,7 @@ public class Editor extends BorderPane {
 		Stack<ViewType> stack = history(currentItem(), false);
 		if(Checker.isNotEmpty(stack))
 			stack.pop();
-		
+
 		changed(currentItem(), PREVIOUS);
 	}
 
@@ -124,8 +117,10 @@ public class Editor extends BorderPane {
 	}
 	private DelayedQueueThread<Object> delay;
 	private static final Object SKIP_CHANGE = new Object();
-	
+
 	private void changed(EntryTreeItem item, ViewType view) {
+		setDisable(item == null);
+		
 		if(item != null && item.isContentLoaded()) {
 			if(delay != null)
 				delay.add(SKIP_CHANGE);
@@ -150,19 +145,19 @@ public class Editor extends BorderPane {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);
 			centerEditor.setItem(null);
-			
+
 			maintitle.setText(null);
 			super.setCenter(null);
 			backBtn.setVisible(false);
 			combineChildrenBtn.setVisible(false);
 			combineContentBtn.setVisible(false);
-			
+
 			currentItem.set(null);
 			return;
 		}
 
 		Objects.requireNonNull(view);
-		
+
 		if(view == PREVIOUS) {
 			Stack<ViewType> stack = history(item,false);
 			if(Checker.isEmpty(stack))

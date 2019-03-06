@@ -20,7 +20,6 @@ public interface IRootEntry extends AutoCloseable {
 	default void save() throws Exception {
 		save(getJbookPath());
 	};
-	void setOnModified(Runnable action);
 	
 	default IEntry addChild(String childTitle, IEntry parent, IEntry relativeToChild) {
 		int index = relativeToChild == null ? Integer.MAX_VALUE  : parent.getChildren().indexOf(relativeToChild);

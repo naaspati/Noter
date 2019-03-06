@@ -14,7 +14,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
 import sam.noter.EntryTreeItem;
-import sam.noter.tabs.Tab;
 import sam.reference.ReferenceUtils;
 
 class CenterEditor extends UnitEditor implements ChangeListener<String> {
@@ -30,7 +29,6 @@ class CenterEditor extends UnitEditor implements ChangeListener<String> {
 		}
 	}
 	private IdentityHashMap<EntryTreeItem, WeakReference<Save>> cache = new IdentityHashMap<>();
-	protected Tab tab;
 
 	public CenterEditor() {
 		super();

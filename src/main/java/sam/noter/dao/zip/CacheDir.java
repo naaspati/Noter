@@ -4,7 +4,6 @@ package sam.noter.dao.zip;
 import static java.nio.charset.CodingErrorAction.REPORT;
 import static sam.myutils.Checker.anyMatch;
 import static sam.myutils.Checker.notExists;
-import static sam.noter.Utils.subpathWithPrefix;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -56,15 +55,12 @@ import sam.nopkg.SavedAsStringResource;
 import sam.nopkg.SavedResource;
 import sam.nopkg.SimpleSavedResource;
 import sam.nopkg.StringResources;
-import sam.noter.dao.RootEntry;
+import sam.noter.dao.ModifiedField;
 import sam.string.StringSplitIterator;
 
 class CacheDir implements AutoCloseable {
-
-
 	private static final int MAX_ID = 0;
 	private static final int LAST_MODIFIED = 1;
-	private static final int SELECTED_ITEM = 2;
 	private static final int MOD = 3;
 
 	private static final int SIZE = 4;
@@ -80,7 +76,7 @@ class CacheDir implements AutoCloseable {
 
 	private IndexedMap<EntryCache> entries;
 	private final SavedAsStringResource<Path> savedSourceLoc;
-	private final SavedAsStringResource<long[]> _cacheMeta;
+	private final SavedResource<long[]> _cacheMeta;
 	private final long[] cacheMeta;
 
 	private TextInFile contentTextfile;
@@ -263,11 +259,11 @@ class CacheDir implements AutoCloseable {
 	}
 
 	public String readContent(EntryZ e) throws IOException {
-		return read(e.id, CONTENT);
+		return read(e.getId(), CONTENT);
 	}
 	public void writeContent(EntryZ e) throws IOException {
-		write(e.id, e.getContent(), CONTENT);
-		e.setContentModified(false);
+		write(e.getId(), e.getContent(), CONTENT);
+		//FIXME e.setContentModified(false);
 	}
 
 	public void save(RootEntryZ root, Path file) throws IOException {
@@ -295,21 +291,21 @@ class CacheDir implements AutoCloseable {
 		for (Object ti : list) {
 			EntryZ e = (EntryZ) ti;
 
-			sink.append(e.id).append(' ')
+			sink.append(e.getId()).append(' ')
 			.append(parentId).append(' ')
 			.append(order++).append(' ')
 			.append(e.getLastModified()).append(' ')
 			.append(e.getTitle());
 
-			if(e.isModified()) {
-				if(e.isContentModified()) 
+			if(e.isModified(ModifiedField.ANY)) {
+				if(e.isModified(ModifiedField.CONTENT)) 
 					writeContent(e);
 
 				if(logger.isDebugEnabled())
 					logModification(e);
 			}
 
-			entryCaches.add(entries.get(e.id)); //FIXME get from entryz
+			entryCaches.add(entries.get(e.getId())); //FIXME get from entryz
 			writeIndex(out, e, r, entryCaches, sink, maxSinkSize);
 
 			if(sink.length() >= maxSinkSize) {
@@ -339,17 +335,17 @@ class CacheDir implements AutoCloseable {
 
 	private void logModification(EntryZ e) {
 		logger.debug(() -> {
-			if(newEntries.get(e.id))
+			if(newEntries.get(e.getId()))
 				return "NEW "+e;
 
 			StringBuilder sb = new StringBuilder();
 
 			sb.append("UPDATED ").append(e).append(" [");
-			if(e.isTitleModified())
+			if(e.isModified(ModifiedField.TITLE))
 				sb.append("TITLE, ");
-			if(e.isContentModified())
+			if(e.isModified(ModifiedField.CONTENT))
 				sb.append("CONTENT, ");
-			if(e.isChildrenModified())
+			if(e.isModified(ModifiedField.CHILDREN))
 				sb.append("CHILDREN, ");
 			sb.append(']');
 
@@ -362,7 +358,7 @@ class CacheDir implements AutoCloseable {
 	}
 	public EntryZ newEntry(String title, RootEntryZ root) {
 		EntryZ e = new EntryZ(root, nextId(), title, true);
-		newEntries.set(e.id);
+		newEntries.set(e.getId());
 		return e;
 
 	}
@@ -442,10 +438,12 @@ class CacheDir implements AutoCloseable {
 	}
 
 	private void init(long[] meta) throws FileNotFoundException, IOException {
-		if(meta == null || anyMatch(Checker::notExists, source, content(), index2()) || source.toFile().lastModified() != meta[LAST_MODIFIED]) 
+		/** FIXME
+		 * if(meta == null || anyMatch(Checker::notExists, source, content(), index2()) || source.toFile().lastModified() != meta[LAST_MODIFIED]) 
 			_prepareCache();	
 		else  
 			logger.debug("CACHE LOADED: {}",() -> subpath(cacheDir));
+		 */
 	}
 
 	// TODO
@@ -562,17 +560,17 @@ class CacheDir implements AutoCloseable {
 			ArrayList<EntryZ> temp = new ArrayList<>();
 
 			grouped.forEach((parent_id, list) -> {
-				if(parent_id == RootEntry.ROOT_ENTRY_ID) return;
+				if(parent_id == RootEntryZ.ROOT_ENTRY_ID) return;
 
 				Temp t = map.get(parent_id);
 				list.sort(comparator);
 				temp.clear();
 				list.forEach(x -> temp.add(x.entry));
-				t.entry.setItems(temp);
+				//FIXME t.entry.setItems(temp);
 			});
 
 			temp.clear();
-			Optional.ofNullable(grouped.get(RootEntry.ROOT_ENTRY_ID))
+			Optional.ofNullable(grouped.get(RootEntryZ.ROOT_ENTRY_ID))
 			.ifPresent(list -> list.forEach(x -> temp.add(x.entry)));
 
 			return dmMap;
@@ -594,22 +592,12 @@ class CacheDir implements AutoCloseable {
 	}
 
 	private String subpath(Path p) {
-		return subpathWithPrefix(p);
+		return Junk.notYetImplemented();//FIXME return subpathWithPrefix(p);
 	}
 	private void saveCache(RootEntryZ root) throws IOException {
 		if(mod == 0)
 			return;
 
-		int n = root.getSelectedItem().id;
-		if(n != this.cacheMeta[SELECTED_ITEM]) {
-			this.cacheMeta[SELECTED_ITEM] = n;
-			mod++;
-		}
-
-		if(mod == 0)
-			logger.debug("saving skipped: mod == 0, {}", this);
-
-		this.cacheMeta[SELECTED_ITEM] = n;
 		_cacheMeta.set(cacheMeta);
 		_cacheMeta.close();
 
@@ -623,9 +611,6 @@ class CacheDir implements AutoCloseable {
 		if(contentTextfile != null)
 			contentTextfile.close();
 		contentTextfile = null;
-	}
-	public int getSelectedItem() {
-		return (int) cacheMeta[SELECTED_ITEM];
 	}
 }
 

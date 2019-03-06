@@ -7,9 +7,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import sam.myutils.Checker;
+import sam.nopkg.Junk;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
@@ -211,17 +213,6 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		return cacheDir;
 	}
 
-	private Entry selecteditem;
-
-	@Override
-	public void setSelectedItem(Entry e) {
-		this.selecteditem = e;
-	}
-	@Override
-	public Entry getSelectedItem() {
-		return selecteditem;
-	}
-
 	@Override
 	public IEntry addChild(String title, IEntry parent, int index) {
 		// TODO Auto-generated method stub
@@ -242,6 +233,23 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 	@Override
 	public void removeFromParent(IEntry child) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public boolean isEmpty() {
+		// TODO Auto-generated method stub
+		return Junk.notYetImplemented();
+	}
+
+	@Override
+	public IEntry getEntryById(int id) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void forEachOfAll(Consumer<IEntry> consumer) {
 		// TODO Auto-generated method stub
 		
 	}
