@@ -1,5 +1,4 @@
 package sam.noter.app;
-import static javafx.scene.input.KeyCode.F;
 import static javafx.scene.input.KeyCode.F4;
 import static javafx.scene.input.KeyCode.N;
 import static javafx.scene.input.KeyCode.O;
@@ -18,7 +17,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.management.ManagementFactory;
-import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -49,10 +47,8 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -71,6 +67,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeItem;
@@ -113,10 +110,8 @@ import sam.noter.EntryTreeItem;
 import sam.noter.FilesLookup;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.editor.Editor;
-import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabBox;
 import sam.thread.MyUtilsThread;
-public class App extends Application implements ChangeListener<Tab>, AppUtils {
+public class App extends Application implements AppUtils {
 	private static final EnsureSingleton singleons = new EnsureSingleton();
 	
 	private final Logger logger = LogManager.getLogger(App.class);
@@ -141,8 +136,6 @@ public class App extends Application implements ChangeListener<Tab>, AppUtils {
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
 	private Stage stage;
 	private List<Runnable> onExit; 
-
-	private ReadOnlyObjectProperty<Tab> currentTab;
 	
 	private BoundBooks boundBooks;
 	private BooleanBinding currentTabNull;

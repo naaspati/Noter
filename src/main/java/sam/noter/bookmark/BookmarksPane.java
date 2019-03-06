@@ -4,32 +4,30 @@ import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
-import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.CHILD;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Menu;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextInputDialog;
@@ -37,7 +35,6 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView.EditEvent;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -52,55 +49,35 @@ import sam.myutils.MyUtilsException;
 import sam.nopkg.EnsureSingleton;
 import sam.noter.EntryTreeItem;
 import sam.noter.app.AppUtils;
-import sam.noter.dao.api.IEntry;
-import sam.noter.tabs.Tab;
-import sam.noter.tabs.TabBox;
+import sam.noter.dao.api.IRootEntry;
 import sam.reference.WeakAndLazy;
 
 @Singleton
-public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
+public class BookmarksPane extends BorderPane {
 	private static final EnsureSingleton singleton = new EnsureSingleton();
 	{
 		singleton.init();
 	}
 
-	@FXML
-	private BookMarkTree tree;
-	private final MultipleSelectionModel<TreeItem<String>> selectionModel;
-	private final BooleanBinding selectedItemNull;
-
+	@FXML private BookMarkTree tree;
 	@FXML private Button2 addButton;           
 	@FXML private Button2 addChildButton;      
 	@FXML private Button2 removeButton;        
 	@FXML private RadioButton expandCollpase;  
-	@FXML private Button2 showHideButton;      
+	@FXML private Button2 showHideButton;
+	private final Map<Path, Integer> selectedEntry = new HashMap<>();
+	
+	private BooleanBinding selectedItemNull;
 
 	private final Button2 show = new Button2("show","Chevron Right_20px.png", null) ;
 	private final VBox showBox = new VBox(show);
 	private final Injector injector;
-	private Tab tab;
 	private SimpleBooleanProperty tabIsNull = new SimpleBooleanProperty();
 
 	@Inject
 	public BookmarksPane(Injector injector) throws IOException {
 		FxFxml.load(this, true);
 		this.injector = injector;
-
-		this.selectionModel = tree.getSelectionModel();
-		selectionModel.selectedItemProperty()
-		.addListener((p, o, n) -> {
-			if(n != null)
-				n.getChildren();
-		});
-		this.selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
-		this.selectedItemNull = selectionModel.selectedItemProperty().isNull();
-
-		tree.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-			if(e.getClickCount() > 1) {
-				e.consume();
-				return;
-			}
-		});
 
 		showBox.setMaxWidth(20);
 		showBox.setPadding(new Insets(5, 0, 0, 0));
@@ -119,18 +96,6 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		addButton.effectProperty().bind(new When(addButton.disableProperty()).then(GRAYSCALE_EFFECT).otherwise((ColorAdjust)null));
 		 */
 		
-	}
-	
-	public void setTab(Tab t) {
-		if(tab != null)  
-			tab.setSelectedItem(((EntryTreeItem) selectionModel.getSelectedItem()).getEntry());
-		
-		tab = t;
-		
-		tabIsNull.set(tab == null);
-		setDisable(tab == null);
-		// addButton.setDisable(tab == null);
-		// expandCollpase.setDisable(tab == null);
 	}
 	
 	public EntryTreeItem getRoot() {
@@ -168,16 +133,12 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 		});
 	}
 
-	public MultipleSelectionModel<TreeItem<String>> getSelectionModel() {
-		return selectionModel;
-	}
-
 	@FXML
 	public void expandCollpaseAction(ActionEvent e) {
-		TreeItem<String> ti = selectionModel.getSelectedItem();
+		TreeItem<String> ti = tree.getSelectedItem();
 		expandBookmarks(tree.getRoot().getChildren(), expandCollpase.isSelected());
 		if(ti != null)
-			selectionModel.select(ti);
+			tree.model().select(ti);
 	}
 
 	@FXML
@@ -215,17 +176,17 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 				menuitem("Add Bookmark Relative to Parent", combination(KeyCode.N, ALT_DOWN, SHIFT_DOWN), e -> addNewBookmark(RELATIVE_TO_PARENT), selectedItemNull),
 				new SeparatorMenuItem(),
 				menuitem("Remove bookmark", this::removeAction, selectedItemNull),
-				menuitem("Undo Removed bookmark", e -> remover().undoRemoveBookmark(tab), undoDeleteSize.isEqualTo(0)),
-				new SeparatorMenuItem(),
-				menuitem("Move bookmark", e -> mover().moveBookmarks(selectionModel), selectedItemNull)
+				//FIXME menuitem("Undo Removed bookmark", e -> remover().undoRemoveBookmark(tab), undoDeleteSize.isEqualTo(0)),
+				new SeparatorMenuItem()
+				//FIXME , menuitem("Move bookmark", e -> mover().moveBookmarks(tree.model()), selectedItemNull)
 				);
 	}
 	@FXML
 	private void removeAction(ActionEvent e) {
-		remover().removeAction(selectionModel, tab);
+		//FIXME remover().removeAction(tree.model(), tab);
 	}
-
-	private BookmarkRemover remover; 
+	/** FIXME
+	 * 	private BookmarkRemover remover; 
 	private final SimpleIntegerProperty undoDeleteSize = new SimpleIntegerProperty();
 
 	private BookmarkRemover remover() {
@@ -241,44 +202,29 @@ public class BookmarksPane extends BorderPane implements ChangeListener<Tab> {
 			mover = injector.instance(BookmarkMover.class);
 		return mover;
 	}
+	 * @param root
+	 */
 
-	@Override
-	public void changed(ObservableValue<? extends Tab> observable, Tab oldValue, Tab newValue) {
-		if(remover != null) {
-			remover.tabClosed(oldValue);
-			remover.switchTab(newValue);
-		}
-
-		if(oldValue != null && tree.getRoot() != null)
-			oldValue.setSelectedItem(((EntryTreeItem) selectionModel.getSelectedItem()).getEntry());
-
-		selectionModel.clearSelection();
-		IEntry root = newValue == null ?  null : newValue.getRoot();
+	public void set(IRootEntry root) {
+		tabIsNull.set(root == null);
 		
-		
-		if(root == null) {
-			this.tree.set(root);
-		} else {
-			fx(() -> {
-				this.tree.set(root);
-
-				if(root != null){
-					IEntry item = newValue.getSelectedItem();
-
-					if(item != null) 
-						selectionModel.select(this.tree.itemFor(item));
-					else if(!root.getChildren().isEmpty()) 
-						tree.clearAndSelect(this.tree.getRoot().getChildren().get(0));
-				}
-			});
+		/* FIXME
+		 * if(remover != null) {
+			remover.tabClosed(this.rootEntry);
+			remover.switchTab(root);
 		}
-	}
-	public ReadOnlyObjectProperty<TreeItem<String>> selectedItemProperty() {
-		return selectionModel.selectedItemProperty();
-	}
-
-	void clearAndSelect(EntryTreeItem entry) {
-		selectionModel.clearSelection();
-		selectionModel.select(entry);
+		 */
+		
+		IRootEntry old = tree.getRootEntry();
+		if(old != null)
+			selectedEntry.put(old.getJbookPath(), Optional.ofNullable(tree.getSelectedItem()).map(e -> e.getId()).orElse(null));
+		
+		this.tree.setRootEntry(root);
+		
+		if(root != null) {
+			Integer id = selectedEntry.remove(root.getJbookPath());
+			if(id != null)
+				this.tree.selectById(id);
+		}
 	}
 }

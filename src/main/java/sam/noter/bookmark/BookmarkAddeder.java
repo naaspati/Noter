@@ -5,21 +5,15 @@ import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Consumer;
 
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
 import sam.fx.helpers.FxCell;
 import sam.fx.popup.FxPopupShop;
@@ -28,7 +22,6 @@ import sam.noter.EntryTreeItem;
 import sam.noter.Utils;
 import sam.noter.app.AppUtils;
 import sam.noter.dao.api.IEntry;
-import sam.noter.tabs.Tab;
 
 class BookmarkAddeder extends VBox {
 
@@ -115,7 +108,7 @@ class BookmarkAddeder extends VBox {
 
 		List<IEntry> list =  similar.getItems();
 		list.clear();
-		tree.getEntry().walk(list::add);
+		tree.getRootEntry().forEachOfAll(list::add);
 		
 		close = utils.showDialog(this);
 	}

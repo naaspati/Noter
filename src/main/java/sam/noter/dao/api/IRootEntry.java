@@ -3,8 +3,10 @@ package sam.noter.dao.api;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 
 import sam.myutils.Checker;
+import sam.noter.dao.Walker;
 
 public interface IRootEntry extends AutoCloseable {
 	Path getJbookPath();
@@ -42,4 +44,8 @@ public interface IRootEntry extends AutoCloseable {
 	Collection<IEntry> getAllEntries();
 	void addChild(IEntry child, IEntry parent, int index);
 	void removeFromParent(IEntry child);
+	List<IEntry> getChildren();
+	IEntry getEntryById(int id);
+	void walk(Walker<IEntry> walker);
+	void forEachOfAll(Consumer<IEntry> consumer);
 }

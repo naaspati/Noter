@@ -1,5 +1,3 @@
-import sam.noter.tabs.TabBox
-
 package fxml
 
 import javafx.scene.layout.AnchorPane
@@ -12,6 +10,7 @@ import javafx.scene.control.TreeView
 import sam.noter.editor.Editor
 import sam.noter.tabs.TabContainer
 import sam.noter.bookmark.BookmarksPane
+import sam.noter.app.TabBox
 
 dynamic component App {
 	Stage {

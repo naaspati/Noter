@@ -96,6 +96,12 @@ public class EntryTreeItem extends TreeItem<String> {
 	public IEntry getEntry() {
 		return entry;
 	}
+	public void setEntry(IEntry iEntry) {
+		// TODO Auto-generated method stub
+		Junk.notYetImplemented();
+		//FIXME 
+		
+	}
 	public void setContent(String content) {
 		entry.setContent(content);
 	}
