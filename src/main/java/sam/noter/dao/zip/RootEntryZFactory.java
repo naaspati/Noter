@@ -1,62 +1,86 @@
 package sam.noter.dao.zip;
 
-import static sam.noter.Utils.TEMP_DIR;
+import static java.nio.file.StandardOpenOption.*;
+import static java.nio.charset.CodingErrorAction.*;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import sam.noter.dao.RootEntry;
+import sam.di.ConfigManager;
+import sam.io.BufferConsumer;
+import sam.io.BufferSupplier;
+import sam.io.IOUtils;
+import sam.io.infile.DataMeta;
+import sam.io.infile.TextInFile;
+import sam.io.serilizers.StringIOUtils;
+import sam.myutils.Checker;
+import sam.nopkg.EnsureSingleton;
+import sam.nopkg.StringResources;
 import sam.noter.dao.RootEntryFactory;
-public class RootEntryZFactory implements RootEntryFactory {
-	private static volatile RootEntryZFactory INSTANCE;
-	private static final Logger logger = LogManager.getLogger(RootEntryZFactory.class);
+import sam.noter.dao.api.IRootEntry;
+import sam.string.StringSplitIterator;
 
-	public static RootEntryZFactory getInstance() throws IOException {
-		if (INSTANCE != null)
-			return INSTANCE;
+@Singleton
+public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
+	private static final EnsureSingleton singleton = new EnsureSingleton();
+	private final Logger logger;
+	private final Path mydir;
+	private final TextInFile index;
+	private final TextInFile content;
+	private final MetaHandler metas;
 
-		synchronized (RootEntryZFactory.class) {
-			if (INSTANCE != null)
-				return INSTANCE;
+	@Inject
+	public RootEntryZFactory(ConfigManager config) throws IOException {
+		singleton.init();
 
-			INSTANCE = new RootEntryZFactory();
-			return INSTANCE;
+		this.logger = LogManager.getLogger(getClass());
+		this.mydir = config.tempDir().resolve(getClass().getName());
+		Files.createDirectories(mydir);
+
+		Path meta = mydir.resolve("meta");
+		Path index = mydir.resolve("index");
+		Path content = mydir.resolve("content");
+
+		Path[] paths = {meta, index, content};
+		if(Checker.anyMatch(Files::notExists, paths)) {
+			for (Path p : paths) 
+				Files.deleteIfExists(p);
 		}
-	}
 
-	private final Path temp_dir = TEMP_DIR.resolve(RootEntryZFactory.class.getSimpleName());
-	// path -> cacheDir dirName
-	private Map<Path, String> map = new HashMap<>();
-	private final Path path = temp_dir.resolve("pathCacheDirnameMap"); 
-	private int mod = 0;
+		boolean b = Files.exists(index);
 
-	private RootEntryZFactory() throws IOException {
-		if(Files.notExists(temp_dir)) {
-			Files.createDirectories(temp_dir);
-			logger.debug("DIR CREATED: {}", temp_dir);
-		}
-		if(Files.exists(path)) {
-			Files.lines(path).forEach(s -> {
-				int n = s.indexOf('\t');
-				if(n > 0)
-					map.put(Paths.get(s.substring(0, n)), s.substring(n+1));
-			});
-		}
+		this.metas = new MetaHandler(meta);
+		this.content = new TextInFile(content, !b);
+		this.index = new TextInFile(index, !b);
+
 	}
 
 	@Override
-	public RootEntry create(Path path) throws Exception {
+	public void close() throws Exception {
+		metas.close();
+
+	}
+
+	@Override
+	public RootEntryZ create(Path path) throws Exception {
 		return new RootEntryZ(cacheFile(path));
 	}
 	@Override
-	public RootEntry load(Path file) throws Exception {
+	public RootEntryZ load(Path file) throws Exception {
 		return new RootEntryZ(cacheFile(file));
 	}
 	private CacheDir cacheFile(Path file) throws IOException {

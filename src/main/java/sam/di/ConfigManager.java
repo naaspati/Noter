@@ -4,8 +4,10 @@ import java.nio.file.Path;
 import java.util.function.Function;
 
 public interface ConfigManager {
+	Path tempDir();
 	Path appDir();
 	Path backupDir();
+	
 	String getConfig(ConfigKey key);
 	default <E> E getConfig(ConfigKey key, E defaultValue, Function<String, E> mapper) {
 		String s = getConfig(key);
