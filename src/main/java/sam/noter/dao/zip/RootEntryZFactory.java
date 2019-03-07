@@ -29,6 +29,7 @@ import sam.io.infile.TextInFile;
 import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
+import sam.nopkg.Junk;
 import sam.nopkg.StringResources;
 import sam.noter.dao.RootEntryFactory;
 import sam.noter.dao.api.IRootEntry;
@@ -42,6 +43,21 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 	private final TextInFile index;
 	private final TextInFile content;
 	private final MetaHandler metas;
+	
+	class Meta {
+		static final int BYTES = DataMeta.BYTES + Integer.BYTES;
+
+		public final int id;
+		private DataMeta meta;
+		private boolean isNew;
+		private long lastModified;
+		private DataMeta[] contents;
+
+		private Meta(int id, DataMeta meta) {
+			this.id = id;
+			this.meta = meta;
+		}
+	}
 
 	@Inject
 	public RootEntryZFactory(ConfigManager config) throws IOException {
@@ -63,50 +79,65 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 
 		boolean b = Files.exists(index);
 
-		this.metas = new MetaHandler(meta);
+		this.metas = new MetaHandler(meta) {
+			@Override
+			protected DataMeta getMeta(Meta meta) {
+				return meta.meta;
+			}
+			@Override
+			protected void setMeta(Meta meta, DataMeta dm) {
+				meta.meta = dm;
+			}
+			@Override
+			protected Meta newMeta(int id, DataMeta dm) {
+				return new Meta(id, dm);
+			}
+		};
+		
 		this.content = new TextInFile(content, !b);
 		this.index = new TextInFile(index, !b);
-
 	}
 
 	@Override
 	public void close() throws Exception {
 		metas.close();
-
 	}
 
 	@Override
 	public RootEntryZ create(Path path) throws Exception {
-		return new RootEntryZ(cacheFile(path));
+		if(Files.exists(path))
+			throw new IOException("file already exists: "+path);
+		
+		return create0(path.normalize().toAbsolutePath());
 	}
+	private RootEntryZ create0(Path path) throws Exception {
+		Meta m = metas.put(path);
+		m.isNew = true;
+		
+		return new RootEntryZ(m, path, this);
+	}
+
 	@Override
-	public RootEntryZ load(Path file) throws Exception {
-		return new RootEntryZ(cacheFile(file));
-	}
-	private CacheDir cacheFile(Path file) throws IOException {
-		file =  file.normalize().toAbsolutePath();
-		String str = map.get(file);
-		Path cache;
-		if(str == null) { 
-			cache = newCacheDir(file);
-			map.put(cache, cache.getFileName().toString());
-		} else {
-			cache = temp_dir.resolve(str);
+	public RootEntryZ load(Path path) throws Exception {
+		if(!Files.isRegularFile(path))
+			throw new IOException("file not found: "+path);
+		
+		path =  path.normalize().toAbsolutePath();
+		Meta meta = metas.get(path);
+		
+		if(meta == null)
+			return create0(path);
+		
+		if(meta.lastModified != path.toFile().lastModified()) {
+			logger.debug("RESET CACHE: because: meta.lastModified({}) != path.toFile().lastModified({}),  path: {}", meta.lastModified, path.toFile().lastModified(), path);
+			return create0(path);
 		}
-		CacheDir d = new CacheDir(file, cache);
-		return d;
-	}
-	private Path newCacheDir(Path file) throws IOException {
-		String s = "-"+file.getFileName().toString(); 
-		Path p = temp_dir.resolve(System.currentTimeMillis()+s);
-		while(Files.exists(p))
-			p = temp_dir.resolve(System.currentTimeMillis()+"-"+(int)(Math.random()*100)+s);
-		return p;
+		
+		return new RootEntryZ(meta, path, this);
 	}
 
 	public void close(RootEntryZ root) {
 		// TODO Auto-generated method stub
-		
 	}
 
 	public EntryZ[] getEntries(RootEntryZ root, EntryZ[] sink) {
@@ -116,13 +147,25 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 
 	public void save(RootEntryZ root, Path file) {
 		// TODO Auto-generated method stub
+
+	}
+
+	public String readContent(RootEntryZ root, EntryZ e) throws IOException {
+		if(root.meta.isNew)
+			return "";
+		
+		if(e.getId() >= root.meta.contents.length)
+			return "";
+		
+		DataMeta dm = root.meta.contents[e.getId()];
+		if(dm == null || dm.size == 0)
+			return "";
+		try(StringResources r = StringResources.get()) {
+			StringBuilder sb = r.sb();
+			content.readText(dm, r.buffer, r.chars, r.decoder, sb, REPORT, REPORT);
+			
+			return sb.toString();
+		}
 		
 	}
-
-	public String readContent(RootEntryZ rootEntryZ, EntryZ e) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-
 }

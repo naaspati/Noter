@@ -22,9 +22,10 @@ import sam.io.infile.DataMeta;
 import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
 import sam.nopkg.StringResources;
+import sam.noter.dao.zip.RootEntryZFactory.Meta;
 import sam.string.StringSplitIterator;
 
-class MetaHandler implements AutoCloseable {
+abstract class MetaHandler implements AutoCloseable {
 	private final static int PATH_ID_LOC = 0;
 	private final static int META_DATAMETA = 1;
 
@@ -64,16 +65,16 @@ class MetaHandler implements AutoCloseable {
 
 					Iterator<String> itr = new StringSplitIterator(sb, '\t');
 					while (itr.hasNext()) 
-						this.meta.put(Paths.get(itr.next()), new Meta(Integer.parseInt(itr.next()), null));
+						this.meta.put(Paths.get(itr.next()), newMeta(Integer.parseInt(itr.next()), null));
 
 					IOUtils.setFilled(buffer);
 
 					d = metas[META_DATAMETA];
 					size = d.size;
 					pos = d.position;
-					
+
 					Checker.assertTrue(d.size > 0);
-					
+
 					Map<Integer, DataMeta> map = new HashMap<>();
 
 					while(true) {
@@ -90,8 +91,8 @@ class MetaHandler implements AutoCloseable {
 					}
 
 					this.meta.forEach((p, meta) -> {
-						meta.meta = map.get(meta.id);
-						if(meta.meta == null)
+						setMeta(meta, map.get(meta.id));
+						if(getMeta(meta) == null)
 							throw new IllegalStateException("no meta found for: "+meta.id+": "+p);
 					});
 				}
@@ -99,6 +100,10 @@ class MetaHandler implements AutoCloseable {
 		}
 	}
 
+	protected abstract Meta newMeta(int id, DataMeta dm);
+	protected abstract DataMeta getMeta(Meta meta);
+	protected abstract void setMeta(Meta meta, DataMeta dm);
+	
 	@Override
 	public void close() throws Exception {
 		if(metaMod != 0) {
@@ -124,15 +129,16 @@ class MetaHandler implements AutoCloseable {
 					if(buffer.remaining() < Meta.BYTES)
 						pos[0] += IOUtils.write(buffer, pos[0], fc, true);
 
+					DataMeta dm = getMeta(m);
 					buffer.putInt(m.id)
-					.putLong(m.meta.position)
-					.putInt(m.meta.size);
+					.putLong(dm.position)
+					.putInt(dm.size);
 				}
 
 				pos[0] += IOUtils.write(buffer, pos[0], fc, true);
 
 				metas[META_DATAMETA] = new DataMeta(initpos, (int) (pos[0] - initpos));
-				
+
 				pos[0] = 0;
 				buffer.clear();
 
@@ -144,9 +150,20 @@ class MetaHandler implements AutoCloseable {
 					.putLong(m.position)
 					.putInt(m.size);
 				}
-				
+
 				pos[0] += IOUtils.write(buffer, pos[0], fc, true);
 			}
 		}
+	}
+
+	public Meta get(Path file) {
+		return meta.get(file);
+	}
+	public Meta put(Path file) {
+		metaMod++;
+		Meta mt = newMeta(meta.values().stream().mapToInt(m -> m.id).max().getAsInt() + 1, null);
+		meta.put(file, mt);
+
+		return mt;
 	}
 }

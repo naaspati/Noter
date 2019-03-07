@@ -1,5 +1,6 @@
 package sam.noter.dao.zip;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,6 +18,7 @@ import sam.noter.dao.ModHandler;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
+import sam.noter.dao.zip.RootEntryZFactory.Meta;
 
 class RootEntryZ extends EntryZ implements IRootEntry {
 	private static final Logger logger = LogManager.getLogger(RootEntryZ.class);
@@ -31,12 +33,11 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	private String title;
 	private boolean modified;
 	private int nextId;
+	public final Meta meta;
 
-	final int id;
-
-	public RootEntryZ(int id, Path source, RootEntryZFactory root) throws Exception {
+	public RootEntryZ(Meta meta, Path source, RootEntryZFactory root) throws Exception {
 		super(null, -1, -1, null);
-		this.id = id;
+		this.meta = meta;
 		this.root = root;
 		this.source = source;
 		reload();
@@ -285,7 +286,7 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		else
 			return null;
 	}
-	public String readContent(EntryZ e) {
+	public String readContent(EntryZ e) throws IOException {
 		return root.readContent(this, e);
 	}
 
