@@ -1,17 +1,10 @@
 package sam.noter.dao.zip;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.List;
-import java.util.function.Consumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javafx.scene.control.TreeItem;
-import sam.nopkg.Junk;
-import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
@@ -35,9 +28,9 @@ class EntryZ extends Entry {
 		}
 	}
 
-	public EntryZ(int id, Entry from) {
+	public EntryZ(RootEntryZ root, int id, Entry from) {
 		super(id, from);
-		root = null;
+		this.root = root;
 	}
 	@Override
 	public String getContent() {
@@ -49,11 +42,14 @@ class EntryZ extends Entry {
 	public RootEntryZ getRoot() {
 		return root;
 	}
-
+	
 	@Override
 	public boolean isModified(ModifiedField field) {
-		// TODO Auto-generated method stub
-		return false;
+		return root.isModified(id, field);
+	}
+	@Override
+	protected void setModified(ModifiedField field, boolean value) {
+		root.setModified(id, field, value);
 	}
 	@Override
 	public IRootEntry root() {
@@ -66,14 +62,11 @@ class EntryZ extends Entry {
 	}
 
 	@Override
-	protected void setModified(ModifiedField field, boolean value) {
-		// TODO Auto-generated method stub
-		
+	protected Logger logger() {
+		return logger;
 	}
 
-	@Override
-	protected Logger logger() {
-		// TODO Auto-generated method stub
-		return null;
+	List<IEntry> children() {
+		return children;
 	}
 }

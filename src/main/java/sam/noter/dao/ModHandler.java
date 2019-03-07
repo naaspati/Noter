@@ -8,22 +8,16 @@ public class ModHandler {
 	private static final int CHILDREN = 2;
 	
 	private static final int size = 3;
-
 	private BitSet mod = new BitSet();
-	private int add;
-
-	public ModHandler(int minimumValue) {
-		this.add = 0 - minimumValue;
-	}
 
 	private int index(int id) {
-		return (id + add) * size;
+		return id * size;
 	}
 	private void check(ModifiedField field) {
 		if(field == null)
 			throw new NullPointerException();
 	}
-
+	
 	public boolean isModified(int id, ModifiedField field) {
 		check(field);
 		

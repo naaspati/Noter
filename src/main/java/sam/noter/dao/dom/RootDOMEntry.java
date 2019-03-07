@@ -33,7 +33,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	private Runnable onModified;
 	private DOMLoader dom;
 	private final HashMap<Integer, IEntry> entryMap = new HashMap<>();
-	private final ModHandler mods = new ModHandler(ROOT_ENTRY_ID);
+	private final ModHandler mods = new ModHandler();
 	private final Injector injector;
 
 	public RootDOMEntry(Injector injector) throws ParserConfigurationException {

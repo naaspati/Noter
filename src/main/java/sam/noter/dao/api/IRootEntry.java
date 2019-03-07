@@ -40,12 +40,11 @@ public interface IRootEntry extends AutoCloseable {
 	 * @return
 	 */
 	List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index);
-	Collection<IEntry> getAllEntries();
 	void addChild(IEntry child, IEntry parent, int index);
 	void removeFromParent(IEntry child);
 	List<IEntry> getChildren();
 	IEntry getEntryById(int id);
 	void walk(Walker<IEntry> walker);
-	void forEachOfAll(Consumer<IEntry> consumer);
+	void walk(Consumer<IEntry> walker);
 	String getTitle();
 }

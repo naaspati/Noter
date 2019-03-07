@@ -104,5 +104,25 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 		return p;
 	}
 
+	public void close(RootEntryZ root) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public EntryZ[] getEntries(RootEntryZ root, EntryZ[] sink) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void save(RootEntryZ root, Path file) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public String readContent(RootEntryZ rootEntryZ, EntryZ e) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }
