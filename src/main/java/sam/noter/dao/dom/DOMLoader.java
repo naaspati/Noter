@@ -27,8 +27,7 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -40,13 +39,15 @@ import sam.di.ConfigKey;
 import sam.di.ConfigManager;
 import sam.di.OnExitQueue;
 import sam.io.fileutils.FilesUtilsIO;
+import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.reference.WeakAndLazy;
 @SuppressWarnings("rawtypes")
 class DOMLoader {
 	private static boolean exitAdded;
-	private static final Logger logger = LogManager.getLogger(DOMLoader.class);
+	private static final Logger logger = Utils.logger(DOMLoader.class);
+	private static final boolean DEBUG  = logger.isDebugEnabled();
 
 	private static final String ID = "id";
 	private static final String TITLE = "title";
@@ -68,16 +69,16 @@ class DOMLoader {
 
 	@Inject
 	DOMLoader(ConfigManager configManager, OnExitQueue exitQueue) throws ParserConfigurationException {
-		
+
 		if(!exitAdded) {
 			exitAdded = true;
-			
+
 			backupDir = configManager.backupDir();
 			backupDir.toFile().mkdirs();
-			
+
 			try {
 				Long value = Optional.ofNullable(configManager.getConfig(ConfigKey.BACKUP_SCHEDULE)).map(Long::parseLong).orElse(null);
-				
+
 				if(value == null || value >= System.currentTimeMillis()) {
 					configManager.setConfig(ConfigKey.BACKUP_SCHEDULE, String.valueOf(System.currentTimeMillis()+Duration.ofDays(7).toMillis()));
 					exitQueue.runOnExist(() -> backupClean());
@@ -86,7 +87,7 @@ class DOMLoader {
 				e.printStackTrace();
 			}
 		}
-		
+
 	}
 	void init(RootDOMEntry root) throws ParserConfigurationException {
 		this.root = root;
@@ -177,12 +178,12 @@ class DOMLoader {
 		createBackup(target);
 		write(doc, target);
 	}
-	
+
 
 	public static void createBackup(File file) {
 		if(file == null || !file.exists())
 			return;
-		
+
 		try {
 			Files.copy(file.toPath(), backupDir.resolve(file.getName()+"_SAVED_ON_"+LocalDateTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(':', '_')), StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
@@ -194,9 +195,9 @@ class DOMLoader {
 	private static void backupClean() {
 		File backup = backupDir.getParent().toFile();
 		if(!backup.exists()) return;
-		
+
 		LocalDateTime now = LocalDateTime.now();
-		
+
 		for (String s : backup.list()) {
 			LocalDate date = LocalDate.parse(s);
 			if(Duration.between(date.atStartOfDay(), now).toDays() > 3){
@@ -205,7 +206,7 @@ class DOMLoader {
 			}
 		}
 	}
-	
+
 
 	private void write(Document doc, File target) throws TransformerFactoryConfigurationError, TransformerException, IOException {	
 		Transformer transformer = 
@@ -326,7 +327,8 @@ class DOMLoader {
 
 		if(t.id == null) {
 			t.id = append(ID, String.valueOf(t.id()), source);
-			logger.debug("SET ID TO OLD DATA: {} ({})", t.title(), t.id());
+			if(DEBUG)
+				logger.debug("SET ID TO OLD DATA: {} ({})", t.title(), t.id());
 		}
 
 		return new DOMEntry(t); 
@@ -377,24 +379,24 @@ class DOMLoader {
 		if(dom.rootNode == null) {
 			dom.createRootNode(d);
 			d.setModified(ModifiedField.ALL, false);
-			logger.debug(() -> "NEW: "+d);
+			logger.debug("NEW: {}", d);
 			return dom.rootNode;
 		}
 		if(d.isModified(ModifiedField.ANY)){
 			updateNode(LAST_MODIFIED, String.valueOf(d.getLastModified()), dom, dom.lastModified);
-			logger.debug(() -> "UPDATE LAST_MODIFIED: "+d);
+			logger.debug("UPDATE LAST_MODIFIED: {}",d);
 		}
 		if(d.isModified(ModifiedField.TITLE)) {
 			updateNode(TITLE, d.getTitle(), dom, dom.title);
-			logger.debug(() -> "UPDATE TITLE: "+d);
+			logger.debug("UPDATE TITLE: {}", d);
 		} if(d.isModified(ModifiedField.CONTENT)){ 
 			updateNode(CONTENT, d.getContent(), dom, dom.content);
-			logger.debug(() -> "UPDATE CONTENT: "+d);
+			logger.debug( "UPDATE CONTENT: {}", d);
 		} if(d.isModified(ModifiedField.CHILDREN)) {
 			updateChildren(d, d.dom().rootNode, d.dom().children, d.getChildren());
-			logger.debug(() -> "UPDATE CHILDREN: "+d);
+			logger.debug("UPDATE CHILDREN: {}", d);
 		}
-		
+
 		d.setModified(ModifiedField.ALL, false);
 		return dom.rootNode;
 	}
@@ -419,13 +421,14 @@ class DOMLoader {
 						break;
 					update(e);					
 				}
-				
+
 				if(nodeN < nodesSize){
 					Node[] remove = new Node[nodesSize - nodeN];
 					int k = nodeN;
-					int cn = childN; 
-					logger.debug(() -> "RELOCATE/REMOVE CHILDREN: "+owner+" STARTING AT:"+" -> ["+k+"("+children.get(cn)+"),"+nodesSize+")");
-					
+					int cn = childN;
+					if(DEBUG)
+						logger.debug( "RELOCATE/REMOVE CHILDREN: {} STARTING AT: -> [{}({}),{})", owner,k,children.get(cn),nodesSize);
+
 					int n = 0;
 					for (int j = nodeN; j < nodesSize; j++)
 						remove[n++] = nodes.item(j);
@@ -435,7 +438,8 @@ class DOMLoader {
 				}
 				if(childN < children.size()){
 					int k = childN;
-					logger.debug(() -> "ADDED CHILDREN: "+owner+" -> "+(children.size() - k));
+					if(DEBUG)
+						logger.debug("ADDED CHILDREN: {} -> {}", owner, (children.size() - k));
 					for (int j = childN; j < children.size(); j++)
 						currentChildrenNode.appendChild(update(children.get(j)));
 				}
@@ -460,11 +464,11 @@ class DOMLoader {
 
 		return currentChildrenNode;
 	}
-	
+
 	private static WeakAndLazy<StringBuilder> logSB = new WeakAndLazy<>(StringBuilder::new);
-	
+
 	private void logModification(Entry e) {
-		logger.info(() -> {
+		if(logger.isInfoEnabled()) {
 			synchronized(logSB) {	
 				StringBuilder sb = logSB.get();
 				sb.setLength(0);
@@ -477,11 +481,12 @@ class DOMLoader {
 				if(e.isModified(ModifiedField.CHILDREN))
 					sb.append("CHILDREN, ");
 				sb.append(']');
-				
-				return sb.toString();
+
+				logger.info(sb.toString());
 			}
-		});
-		
+		}
+
+
 	}
 	public DOMEntry newEntry(String title) {
 		return new DOMEntry(new DomEntryInit(), title);

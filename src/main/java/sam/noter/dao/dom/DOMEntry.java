@@ -2,19 +2,20 @@ package sam.noter.dao.dom;
 
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import sam.nopkg.Junk;
+import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.dom.DOMLoader.DomEntryInit;
 
 class DOMEntry extends Entry {
-	private static final Logger logger = LogManager.getLogger(DOMEntry.class);
+	private static final Logger logger = Utils.logger(DOMEntry.class);
 	
 	private final DomEntryInit dom;
+	protected List<IEntry> children;
 	
 	protected DOMEntry() {
 		super(RootDOMEntry.ROOT_ENTRY_ID);
@@ -74,7 +75,8 @@ class DOMEntry extends Entry {
 	protected Logger logger() {
 		return logger;
 	}
-	public List getChildren() {
+	@Override
+	public List<IEntry> getChildren() {
 		return children;
 	}
 

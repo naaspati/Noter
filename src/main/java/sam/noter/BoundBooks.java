@@ -10,8 +10,7 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -88,10 +87,10 @@ public class BoundBooks {
 			logger().debug("modified: ",path);
 			modified = false;
 		} catch (IOException e) {
-			logger().fatal( "failed to save: ",path, e);
+			logger().error( "failed to save: ",path, e);
 		}
 	}
 	private Logger logger() {
-		return LogManager.getLogger(getClass());
+		return Utils.logger(getClass());
 	}
 }

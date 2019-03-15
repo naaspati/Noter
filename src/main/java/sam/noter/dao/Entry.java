@@ -6,10 +6,7 @@ import static sam.noter.dao.VisitResult.CONTINUE;
 import static sam.noter.dao.VisitResult.SKIP_SIBLINGS;
 import static sam.noter.dao.VisitResult.TERMINATE;
 
-import java.util.List;
-import java.util.function.Consumer;
-
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import sam.noter.dao.api.IEntry;
 
@@ -21,22 +18,22 @@ public abstract class Entry implements IEntry {
 	protected String title; 
 	protected String content;
 	protected long lastModified = -1;
-	protected List<IEntry> children;
 
-	protected Entry(int id) {
-		this.id = id;
+	protected Entry(int id, Entry parent) {
+		this(id, (String)null, parent);
 	}
-	protected Entry(int id, String title, String content, long lastModified) {
-		this(id, title);
+	protected Entry(int id, Entry parent, String title, String content, long lastModified) {
+		this(id, title, parent);
 		this.content = content;
 		this.lastModified = lastModified;
 	}
-	public Entry(int id, String title) {
+	public Entry(int id, String title, Entry parent) {
 		this.id = id;
 		this.title = title;
+		this.parent = parent;
 	}
-	protected Entry(int id, Entry from) {
-		this(id, from.getTitle(), from.getContent(), from.getLastModified());
+	protected Entry(int id, Entry from, Entry parent) {
+		this(id, parent, from.getTitle(), from.getContent(), from.getLastModified());
 	}
 	
 	protected abstract void setModified(ModifiedField field, boolean value);
@@ -79,19 +76,10 @@ public abstract class Entry implements IEntry {
 	public String toString() {
 		return getClass().getSimpleName()+" {id:"+id+", title:\""+title+"\"}";
 	}
-	public Entry parent() {
+	public IEntry getParent() {
 		return (Entry)parent;
 	}
-
-	public void walk(Consumer<IEntry> consumer) {
-		List<IEntry> list = getChildren();
-		if(!list.isEmpty()) {
-			list.forEach(c -> {
-				consumer.accept(c);
-				c.walk(consumer);
-			});
-		}
-	}
+	
 	@Override
 	public void walk(Walker<IEntry> walker) {
 		walk0(this, walker);
@@ -131,9 +119,4 @@ public abstract class Entry implements IEntry {
 			throw new IllegalStateException("two different entry have same id"+this+", "+obj);
 		return false;
 	}
-	@Override
-	public List<IEntry> getChildren() {
-		return children;
-	}
-	
 }

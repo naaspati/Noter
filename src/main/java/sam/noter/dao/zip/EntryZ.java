@@ -3,25 +3,25 @@ package sam.noter.dao.zip;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
+import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
 
 class EntryZ extends Entry {
-	private static final Logger logger = LogManager.getLogger(EntryZ.class); 
+	private static final Logger logger = Utils.logger(EntryZ.class); 
 	private final RootEntryZ root;
 
-	public EntryZ(RootEntryZ dir, int id, long lastModified, String title) {
-		super(id, title, null, lastModified);
+	public EntryZ(RootEntryZ dir, EntryZ parent, int id, long lastModified, String title) {
+		super(id, parent, title, null, lastModified);
 		this.root = dir;
 	}
 
-	public EntryZ(RootEntryZ dir, int id, String title, boolean isNew) {
-		super(id, title);
+	public EntryZ(RootEntryZ dir, EntryZ parent, int id, String title, boolean isNew) {
+		super(id, title, parent);
 		this.root = dir;
 		if(isNew) {
 			lastModified = System.currentTimeMillis();
@@ -61,18 +61,12 @@ class EntryZ extends Entry {
 	public IRootEntry root() {
 		return root;
 	}
-
-	@Override
-	public IEntry getParent() {
-		return null;
-	}
-
 	@Override
 	protected Logger logger() {
 		return logger;
 	}
-
-	List<IEntry> children() {
-		return children;
+	@Override
+	public java.util.List<IEntry> getChildren() {
+		return root.getChildren(this);
 	}
 }

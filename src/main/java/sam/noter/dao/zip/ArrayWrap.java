@@ -1,13 +1,15 @@
 package sam.noter.dao.zip;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+
+import sam.noter.Utils;
 
 class ArrayWrap<E> {
-	private static final Logger logger = LogManager.getLogger(ArrayWrap.class);
+	private static final Logger logger = Utils.logger(ArrayWrap.class);
 
 	private int size;
 	private final IntFunction<E[]> arraymaker;
@@ -67,5 +69,19 @@ class ArrayWrap<E> {
 
 	public int nextId() {
 		return size++;
+	}
+
+	public void forEach(Consumer<E> consumer) {
+		for (E e : data) {
+			if(e != null)
+				consumer.accept(e);
+		}
+		if(new_data != null) {
+			for (E e : new_data) {
+				if(e != null)
+					consumer.accept(e);
+			}	
+		}
+		
 	}
 }

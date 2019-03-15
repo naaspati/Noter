@@ -1,5 +1,5 @@
 package sam.noter.plugins;
 
-public class Utils {
+class Utils {
 
 }

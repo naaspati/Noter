@@ -1,9 +1,9 @@
 package sam.noter.bookmark;
 
+import static sam.fx.helpers.FxClassHelper.addClass;
 import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
-import static sam.fx.helpers.FxClassHelper.*;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -161,7 +161,7 @@ class BookmarkAddeder extends BorderPane {
 			this.mod = root.modCount();
 			
 			index = 0;
-			root.walk(e -> {
+			root.forEachFlattened(e -> {
 				int n = index++;
 				if(n >= allData.size())
 					allData.add(new Wrap(e));

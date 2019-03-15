@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import javafx.beans.binding.Bindings;
-import javafx.beans.binding.BooleanExpression;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ChoiceBox;

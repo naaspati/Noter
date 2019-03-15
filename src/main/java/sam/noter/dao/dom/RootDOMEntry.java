@@ -21,6 +21,7 @@ import sam.noter.dao.Entry;
 import sam.noter.dao.ModBitSet;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.VisitResult;
+import sam.noter.dao.Walker;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
 
@@ -74,7 +75,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		mods.clear();
 		entryMap.clear();
 		this.dom = new DOMLoader(jbookPath.toFile(), children, this);
-		walk(w -> {entryMap.put(w.getId(), w);});
+		walk(Walker.of(w -> entryMap.put(w.getId(), w)));
 		mods.clear();
 	}
 
@@ -130,7 +131,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		}
 
 		for (IEntry c : childrenToMove) {
-			if(c.parent() != null)
+			if(c.getParent() != null)
 				castNonNull(c).root().removeFromParent(c);
 		}
 
@@ -198,7 +199,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	public void removeFromParent(IEntry e) {
 		DOMEntry d = check(e);
 		entryMap.remove(d.getId());
-		d.parent().getChildren().remove(e);
+		d.getParent().getChildren().remove(e);
 	}
 	
 	@Override
@@ -216,8 +217,8 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		return res[0];
 	}
 	@Override
-	public void walk(Consumer<IEntry> consumer) {
+	public void forEachFlattened(Consumer<IEntry> consumer) {
 		entryMap.forEach((s,t) -> consumer.accept(t));
-	} 
+	}
 }
 

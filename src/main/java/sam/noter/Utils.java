@@ -3,6 +3,9 @@ package sam.noter;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javafx.application.Platform;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
@@ -11,6 +14,9 @@ import sam.io.serilizers.StringWriter2;
 import sam.noter.dao.api.IEntry;
 
 public interface Utils {
+	public static Logger logger(Class cls) {
+		return LoggerFactory.getLogger(cls);
+	}
 
 	public static void copyToClipboard(String s) {
 		FxClipboard.setString(s);

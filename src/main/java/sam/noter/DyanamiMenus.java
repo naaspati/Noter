@@ -11,10 +11,9 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
 
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -28,7 +27,7 @@ import sam.fx.alert.FxAlert;
 import sam.myutils.System2;
 import sam.noter.editor.Editor;
 public class DyanamiMenus {
-	private final Logger logger = LogManager.getLogger(DyanamiMenus.class);
+	private final Logger logger = Utils.logger(DyanamiMenus.class);
 	private MenuBar bar;
 	private Editor editor;
 
@@ -43,7 +42,7 @@ public class DyanamiMenus {
 
 		Path p = Paths.get(s);
 		if(Files.notExists(p)) {
-			logger.fatal("{} not found: {}", DYNAMIC_MENUS_FILE, s);
+			logger.error("{} not found: {}", DYNAMIC_MENUS_FILE, s);
 			return;
 		}
 		JSONObject json = new JSONObject(Files.lines(p).collect(Collectors.joining()));
@@ -63,7 +62,7 @@ public class DyanamiMenus {
 		}).findFirst().orElse(null);
 
 		if(menu == null) {
-			logger.fatal("no menu found with name: {}", key);
+			logger.error("no menu found with name: {}", key);
 			return;
 		}
 
@@ -104,7 +103,7 @@ public class DyanamiMenus {
 				consume2(mi, clsName, w);
 			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | ClassCastException e1) {
 				FxAlert.showErrorDialog(null, "failed to load class: "+clsName, e1);
-				logger.fatal( "failed to load class: "+clsName, e1);
+				logger.error( "failed to load class: "+clsName, e1);
 				mi.setDisable(true);
 			}
 		});
@@ -112,7 +111,7 @@ public class DyanamiMenus {
 	private void consume2(MenuItem mi, String clsName, WeakReference<Consumer<TextArea>> weak) {
 		Consumer<TextArea> c = weak.get();
 		if(c == null) { 
-			logger.debug(() -> clsName+": gabaged");
+			logger.debug(clsName+": gabaged");
 			consume(mi, clsName);
 		} else {
 			editor.consume(c);			
@@ -124,7 +123,7 @@ public class DyanamiMenus {
 			E e = (E)Class.forName(clsName).newInstance();
 			consumer.accept(e);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-			logger.fatal( "failed to load class: "+clsName, e); 	
+			logger.error( "failed to load class: "+clsName, e); 	
 		}
 	}
 }

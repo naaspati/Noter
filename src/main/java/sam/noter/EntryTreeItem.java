@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 import sam.nopkg.Junk;
 import sam.noter.dao.VisitResult;

@@ -19,8 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import sam.di.ConfigKey;
 import sam.di.ConfigManager;
@@ -28,7 +27,7 @@ import sam.myutils.Checker;
 import sam.myutils.System2;
 
 public class FilesLookup {
-	private final Logger logger = LogManager.getLogger(FilesLookup.class);
+	private final Logger logger = Utils.logger(FilesLookup.class);
 	private ConfigManager config;
 
 	public List<Path> parse(ConfigManager config, Path appdataDir, List<String> args) throws IOException {
@@ -50,7 +49,7 @@ public class FilesLookup {
 
 			File f = find(s);
 			if(f == null)
-				logger.fatal("file not found for: {}", s);
+				logger.error("file not found for: {}", s);
 			else
 				files.add(f.toPath());
 		}
@@ -77,7 +76,7 @@ public class FilesLookup {
 			Path dd = defaultDir();
 			if(Checker.notExists(dd)) {
 				files = Collections.emptyMap();
-				logger.fatal("default dir, not found: {}", dd);
+				logger.error("default dir, not found: {}", dd);
 			} else {
 				files = new HashMap<>();
 				Files.walk(dd)

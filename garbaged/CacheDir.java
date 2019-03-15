@@ -2,7 +2,6 @@ package sam.noter.dao.zip;
 
 
 import static java.nio.charset.CodingErrorAction.REPORT;
-import static sam.myutils.Checker.anyMatch;
 import static sam.myutils.Checker.notExists;
 
 import java.io.BufferedInputStream;
@@ -36,8 +35,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import sam.collection.IndexedMap;
 import sam.functions.IOExceptionBiConsumer;
@@ -54,6 +52,7 @@ import sam.nopkg.Junk;
 import sam.nopkg.SavedAsStringResource;
 import sam.nopkg.SavedResource;
 import sam.nopkg.SimpleSavedResource;
+import sam.noter.Utils;
 import sam.noter.dao.ModifiedField;
 import sam.string.StringSplitIterator;
 
@@ -71,7 +70,7 @@ class CacheDir implements AutoCloseable {
 	private static final String CONTENT_PREFIX = "content/";
 	private static final String CONTENT_PREFIX_2 = "content\\";
 
-	private static final Logger logger = LogManager.getLogger(CacheDir.class);
+	private static final Logger logger = Utils.logger(CacheDir.class);
 
 	private IndexedMap<EntryCache> entries;
 	private final SavedAsStringResource<Path> savedSourceLoc;

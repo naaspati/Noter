@@ -32,12 +32,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.codejargon.feather.Feather;
 import org.codejargon.feather.Key;
 import org.codejargon.feather.Provides;
 import org.json.JSONException;
+import org.slf4j.Logger;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -110,7 +109,7 @@ import sam.thread.MyUtilsThread;
 public class App extends Application implements AppUtils, Observables, ChangeListener<IRootEntry> {
 	private static final EnsureSingleton singleons = new EnsureSingleton();
 
-	private final Logger logger = LogManager.getLogger(App.class);
+	private final Logger logger = Utils.logger(App.class);
 
 	{
 		singleons.init();
@@ -430,7 +429,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 
 				fc.write(buffer);
 			} catch (IOException e) {
-				logger.fatal("failed to write: {}", stageSettingPath(), e);
+				logger.error("failed to write: {}", stageSettingPath(), e);
 			}
 
 			try {
@@ -440,7 +439,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 						.map(s -> s.replace('\\', '/'))
 						.collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			} catch (IOException e) {
-				logger.fatal("failed to save: recents.txt  ", e);   
+				logger.error("failed to save: recents.txt  ", e);   
 			}
 			Platform.exit();
 		}

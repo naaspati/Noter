@@ -7,8 +7,7 @@ import java.nio.file.Path;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import sam.di.ConfigManager;
 import sam.io.infile.DataMeta;
@@ -16,6 +15,7 @@ import sam.io.infile.TextInFile;
 import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
 import sam.nopkg.Resources;
+import sam.noter.Utils;
 import sam.noter.dao.RootEntryFactory;
 
 @Singleton
@@ -23,9 +23,6 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 	private static final EnsureSingleton singleton = new EnsureSingleton();
 	private final Logger logger;
 	private final Path mydir;
-	private final TextInFile index;
-	private final TextInFile content;
-	private final MetaHandler metas;
 	
 	class Meta {
 		static final int BYTES = DataMeta.BYTES + Integer.BYTES;
@@ -46,7 +43,7 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 	public RootEntryZFactory(ConfigManager config) throws IOException {
 		singleton.init();
 
-		this.logger = LogManager.getLogger(getClass());
+		this.logger = Utils.logger(getClass());
 		this.mydir = config.tempDir().resolve(getClass().getName());
 		Files.createDirectories(mydir);
 
@@ -62,7 +59,7 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 
 		boolean b = Files.exists(index);
 
-		this.metas = new MetaHandler(meta) {
+		this.metas = new Cache(meta) {
 			@Override
 			protected DataMeta getMeta(Meta meta) {
 				return meta.meta;
@@ -83,7 +80,7 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 
 	@Override
 	public void close() throws Exception {
-		metas.close();
+		//FIXME metas.close();
 	}
 
 	@Override
@@ -130,23 +127,5 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 
 	public void save(RootEntryZ root, Path file) {
 		// TODO Auto-generated method stub
-	}
-
-	public String readContent(RootEntryZ root, EntryZ e) throws IOException {
-		if(root.meta.isNew)
-			return "";
-		
-		if(e.getId() >= root.meta.contents.length)
-			return "";
-		
-		DataMeta dm = root.meta.contents[e.getId()];
-		if(dm == null || dm.size == 0)
-			return "";
-		try(Resources r = Resources.get()) {
-			StringBuilder sb = r.sb();
-			content.readText(dm, r.buffer(), r.chars(), r.decoder(), sb);
-			return sb.toString();
-		}
-		
 	}
 }

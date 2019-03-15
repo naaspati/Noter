@@ -1,6 +1,5 @@
 package sam.noter.dao.zip;
 
-import static java.nio.charset.CodingErrorAction.REPORT;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
@@ -19,13 +18,14 @@ import java.util.Map;
 import sam.io.BufferSupplier;
 import sam.io.IOUtils;
 import sam.io.infile.DataMeta;
+import sam.io.infile.TextInFile;
 import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
-import sam.nopkg.StringResources;
+import sam.nopkg.Resources;
 import sam.noter.dao.zip.RootEntryZFactory.Meta;
 import sam.string.StringSplitIterator;
 
-abstract class MetaHandler implements AutoCloseable {
+class Cache implements AutoCloseable {
 	private final static int PATH_ID_LOC = 0;
 	private final static int META_DATAMETA = 1;
 
@@ -34,15 +34,17 @@ abstract class MetaHandler implements AutoCloseable {
 	private final Map<Path, Meta> meta = new HashMap<>();
 	private int metaMod;
 	private Path path;
+	private final TextInFile index;
+	private final TextInFile content;
 
-	public MetaHandler(Path path) throws IOException {
+	public Cache(Path path) throws IOException {
 		this.path = path;
 
 		if(Files.exists(path)) {
 			try(FileChannel fc = FileChannel.open(path, READ);
-					StringResources r = StringResources.get()) {
+					Resources r = Resources.get()) {
 
-				ByteBuffer buffer = r.buffer;
+				ByteBuffer buffer = r.buffer();
 				buffer.limit(metas.length * DataMeta.BYTES);
 				fc.read(buffer, 0);
 
@@ -108,17 +110,17 @@ abstract class MetaHandler implements AutoCloseable {
 	public void close() throws Exception {
 		if(metaMod != 0) {
 			try(FileChannel fc = FileChannel.open(path, WRITE, CREATE, TRUNCATE_EXISTING);
-					StringResources r = StringResources.get()) {
+					Resources r = Resources.get()) {
 
 				long initpos = (metas.length + 1) * DataMeta.BYTES;
 				long pos[] = {initpos};
 
-				ByteBuffer buffer = r.buffer;
+				ByteBuffer buffer = r.buffer();
 
 				StringBuilder sb = r.sb();
 				this.meta.forEach((s, t) -> sb.append(s).append('\t').append(t.id).append('\t'));
 
-				StringIOUtils.write(b -> pos[0] += IOUtils.write(b, pos[0], fc, false), sb, r.encoder, buffer, REPORT, REPORT);
+				StringIOUtils.write(b -> pos[0] += IOUtils.write(b, pos[0], fc, false), sb, r.encoder(), buffer);
 
 				metas[PATH_ID_LOC] = new DataMeta(initpos, (int) (pos[0] - initpos));
 
@@ -165,5 +167,37 @@ abstract class MetaHandler implements AutoCloseable {
 		meta.put(file, mt);
 
 		return mt;
+	}
+
+	public ArrayWrap<EntryZ> getEntries(RootEntryZ rootEntryZ) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Path source() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public void save(Path file) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public String readContent(RootEntryZ root, EntryZ e) throws IOException {
+		if(root.meta.isNew)
+			return "";
+		
+		if(e.getId() >= root.meta.contents.length)
+			return "";
+		
+		DataMeta dm = root.meta.contents[e.getId()];
+		if(dm == null || dm.size == 0)
+			return "";
+		try(Resources r = Resources.get()) {
+			StringBuilder sb = r.sb();
+			content.readText(dm, r.buffer(), r.chars(), r.decoder(), sb);
+			return sb.toString();
+		}
 	}
 }

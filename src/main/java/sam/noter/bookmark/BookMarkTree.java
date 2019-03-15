@@ -6,8 +6,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import javafx.collections.ObservableList;
 import javafx.scene.control.MultipleSelectionModel;
@@ -16,12 +15,13 @@ import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseEvent;
 import sam.myutils.Checker;
 import sam.noter.EntryTreeItem;
+import sam.noter.Utils;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
 import sam.reference.ReferenceUtils;
 
 class BookMarkTree extends TreeView<String> {
-	private static final Logger logger = LogManager.getLogger(BookMarkTree.class);
+	private static final Logger logger = Utils.logger(BookMarkTree.class);
 
 	private final MultipleSelectionModel<TreeItem<String>> model;
 	private final EntryTreeItem root = new EntryTreeItem();
@@ -93,7 +93,7 @@ class BookMarkTree extends TreeView<String> {
 		setRoot(this.root);
 
 		cache.forEach(e -> EntryTreeItem.cast(e).setEntry(null));
-		logger.debug(() -> "created EntryTreeItem: "+createdCount);
+		logger.debug("created EntryTreeItem: {}", createdCount);
 	}
 	private void set(Collection<? extends IEntry> children, TreeItem<String> target, LinkedList<TreeItem<String>> cache) {
 		ObservableList<TreeItem<String>> items = target.getChildren();

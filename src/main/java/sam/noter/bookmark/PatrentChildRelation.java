@@ -8,7 +8,7 @@ class PatrentChildRelation {
 	int index;
 	
 	PatrentChildRelation(Entry child) {
-		this.parent = child.parent();
+		this.parent = child.getParent();
 		this.child = child;
 	}
 	public void setIndex(int index) {

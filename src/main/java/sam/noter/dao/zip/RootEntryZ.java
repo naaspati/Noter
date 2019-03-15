@@ -2,19 +2,17 @@ package sam.noter.dao.zip;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
-import sam.io.infile.TextInFile;
 import sam.myutils.Checker;
 import sam.nopkg.Junk;
+import sam.noter.Utils;
 import sam.noter.dao.ModBitSet;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
@@ -22,22 +20,18 @@ import sam.noter.dao.api.IRootEntry;
 import sam.noter.dao.zip.RootEntryZFactory.Meta;
 
 class RootEntryZ extends EntryZ implements IRootEntry {
-	private static final Logger logger = LogManager.getLogger(RootEntryZ.class);
+	private static final Logger logger = Utils.logger(RootEntryZ.class);
+	private static final boolean DEBUG  = logger.isDebugEnabled();
 
-	private final RootEntryZFactory root;
 	private ArrayWrap<EntryZ> entries;
 	private ModBitSet mods = new ModBitSet();
-	private RootEntryZFactory factory;
-	private Path source;
+	private Cache cache;
 	private String title;
 	private boolean modified;
-	public final Meta meta;
-
-	public RootEntryZ(Meta meta, Path source, RootEntryZFactory root) throws Exception {
-		super(null, -1, -1, null);
-		this.meta = meta;
-		this.root = root;
-		this.source = source;
+	
+	public RootEntryZ(Cache cache) throws Exception {
+		super(null, null, -1, -1, null);
+		this.cache = cache;
 		reload();
 	}
 	@Override
@@ -68,11 +62,11 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 	@Override 
 	public void close() throws Exception {
-		root.close(this); 
+		cache.close(); 
 	}
 	@Override
 	public Path getJbookPath() {
-		return source;
+		return cache.source();
 	}
 	@Override
 	public void setJbookPath(Path path) {
@@ -89,18 +83,18 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		if(entries != null)
 			entries.clear();
 		
-		if(this.source == null) {
+		if(cache.source() == null) {
 			entries = null;
 			title = null;
 		} else {
-			entries = root.getEntries(this);
-			this.title = source.getFileName().toString();
+			entries = cache.getEntries(this);
+			this.title = cache.source().getFileName().toString();
 		}
 	}
 	@Override
 	public void save(Path file) throws Exception {
-		root.save(this, file);
-		if(source.equals(file))
+		cache.save(file);
+		if(cache.source().equals(file))
 			mods.clear();
 	}
 	private EntryZ cast(IEntry e) {
@@ -109,7 +103,7 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 	@Override
 	public IEntry addChild(String title, IEntry parent, int index) {
-		EntryZ entry = new EntryZ(this, entries.nextId(), title, true);
+		EntryZ entry = new EntryZ(this, (EntryZ)parent, entries.nextId(), title, true);
 		put(entry);
 
 		addChild(entry, parent, index);
@@ -125,14 +119,14 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		if(childrenToMove.stream().allMatch(c -> castNonNull(c).getRoot() == this)) {
 			childrenToMove.stream()
 			.peek(e -> checkIfSame(parent, e))
-			.collect(Collectors.groupingBy(IEntry::parent))
+			.collect(Collectors.groupingBy(IEntry::getParent))
 			.forEach((p, children) -> {
 				EntryZ e = cast(p); 
-				e.children().removeAll(children);
+				e.getChildren().removeAll(children);
 				e.setModified(ModifiedField.CHILDREN, true);
 			} );
 
-			parent.children().addAll(index, childrenToMove);
+			parent.getChildren().addAll(index, childrenToMove);
 			parent.setModified(ModifiedField.CHILDREN, true);
 			return childrenToMove;
 		}
@@ -143,10 +137,10 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		.forEach((root, children) -> children.forEach(root::remove));
 
 		childrenToMove.stream()
-		.collect(Collectors.groupingBy(IEntry::parent))
+		.collect(Collectors.groupingBy(IEntry::getParent))
 		.forEach((p, childrn) -> {
 			EntryZ e = castNonNull(p); 
-			e.children().removeAll(childrn);
+			e.getChildren().removeAll(childrn);
 			e.setModified(ModifiedField.CHILDREN, true);
 		});
 
@@ -154,7 +148,7 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 		childrenToMove = null;
 		EntryZ e = cast(newParent); 
-		e.children().addAll(index, list);
+		e.getChildren().addAll(index, list);
 		e.setModified(ModifiedField.CHILDREN, true);
 		return list;
 	}
@@ -169,17 +163,14 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		RootEntryZ root = cast(d).getRoot(); 
 		if(root == this) return d;
 
-		EntryZ result = new EntryZ(this, nextId++, d);
+		EntryZ result = new EntryZ(this, entries.nextId(), d);
 		root.remove(d);
 		put(result);
-		
-		TextInFile f;
-		f.rea
 
 		if(d.getChildren().isEmpty()) 
 			return result;
 
-		result.children().addAll(changeRoot(d.getChildren()));
+		result.getChildren().addAll(changeRoot(d.getChildren()));
 		result.setModified(ModifiedField.CHILDREN, true);
 		return result;
 	}
@@ -202,7 +193,7 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		checkIfSame(p, c);
 
 		put(c);
-		p.children().add(index, c);
+		p.getChildren().add(index, c);
 		p.setModified(ModifiedField.CHILDREN, true);
 	}
 	private EntryZ castNonNull(Object object) {
@@ -228,37 +219,32 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	public void removeFromParent(IEntry child) {
 		EntryZ d = check(child);
 		remove(d);
-		EntryZ p = castNonNull(d.parent()); 
-		p.children().remove(d);
+		EntryZ p = castNonNull(d.getParent()); 
+		p.getChildren().remove(d);
 		p.setModified(ModifiedField.CHILDREN, true);
 
 	}
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
-	public void walk(Consumer<IEntry> consumer) {
-		for (EntryZ e : old_entries) {
-			if(e != null)
-				consumer.accept(e);
-		}
-		for (EntryZ e : new_entries) {
-			if(e != null)
-				consumer.accept(e);
-		}
+	public void forEachFlattened(Consumer<IEntry> consumer) {
+		Consumer c = consumer;
+		entries.forEach(c);
 	}
+	
 	@Override
 	public String getTitle() {
 		return title;
 	}
 	@Override
 	public IEntry getEntryById(int id) {
-		if(id < old_entries.length)
-			return old_entries[id];
-		else if(id - old_entries.length < new_entries.length)
-			return new_entries[id - old_entries.length];
-		else
-			return null;
+		return entries.get(id);
 	}
 	public String readContent(EntryZ e) throws IOException {
-		return root.readContent(this, e);
+		return cache.readContent(e);
+	}
+	public List<IEntry> getChildren(EntryZ entryZ) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }
