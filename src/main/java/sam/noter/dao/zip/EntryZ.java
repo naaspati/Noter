@@ -1,5 +1,6 @@
 package sam.noter.dao.zip;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
@@ -34,15 +35,20 @@ class EntryZ extends Entry {
 	}
 	@Override
 	public String getContent() {
-		if(content == null)
-			return content = root.readContent(this);
+		if(content == null) {
+			try {
+				return content = root.readContent(this);
+			} catch (IOException e) {
+				logger.error("failed to load content: {}", this, e);
+			}
+		}
 		return content;
 	}
-	
+
 	public RootEntryZ getRoot() {
 		return root;
 	}
-	
+
 	@Override
 	public boolean isModified(ModifiedField field) {
 		return root.isModified(id, field);
@@ -55,7 +61,7 @@ class EntryZ extends Entry {
 	public IRootEntry root() {
 		return root;
 	}
-	
+
 	@Override
 	public IEntry getParent() {
 		return null;

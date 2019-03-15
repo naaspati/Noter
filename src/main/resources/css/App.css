@@ -94,3 +94,13 @@
 	-fx-text-fill:white;
 	-fx-fill:white;
 }
+
+#bookmark-addeder .header {
+	-fx-padding: 10;
+	-fx-font-family: 'Consolas';
+	-fx-font-size: 1.3em;
+	-fx-background-color: white;
+}
+#bookmark-addeder .similar, #bookmark-addeder .entryPath {
+	-fx-font-size:0.9em;
+}

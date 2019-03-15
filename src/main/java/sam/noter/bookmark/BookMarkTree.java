@@ -1,6 +1,8 @@
 package sam.noter.bookmark;
 
 import java.lang.ref.WeakReference;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -93,7 +95,7 @@ class BookMarkTree extends TreeView<String> {
 		cache.forEach(e -> EntryTreeItem.cast(e).setEntry(null));
 		logger.debug(() -> "created EntryTreeItem: "+createdCount);
 	}
-	private void set(List<IEntry> children, TreeItem<String> target, LinkedList<TreeItem<String>> cache) {
+	private void set(Collection<? extends IEntry> children, TreeItem<String> target, LinkedList<TreeItem<String>> cache) {
 		ObservableList<TreeItem<String>> items = target.getChildren();
 
 		if(Checker.isEmpty(children)) {
@@ -110,9 +112,11 @@ class BookMarkTree extends TreeView<String> {
 				cache.add(item);
 			}
 
+			Iterator<? extends IEntry> entries = children.iterator();
+			
 			for (int i = 0; i < children.size(); i++) {
 				EntryTreeItem item = EntryTreeItem.cast(items.get(i));
-				IEntry child = children.get(i);
+				IEntry child = entries.next();
 				item.setEntry(child);
 
 				set(child.getChildren(), item, cache);

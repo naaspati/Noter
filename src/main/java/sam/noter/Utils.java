@@ -1,8 +1,13 @@
 package sam.noter;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 import javafx.application.Platform;
+import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
+import sam.io.serilizers.StringWriter2;
 import sam.noter.dao.api.IEntry;
 
 public interface Utils {
@@ -25,5 +30,12 @@ public interface Utils {
 		StringBuilder sb = new StringBuilder(); //TODO
 		toTreeString(e.getEntry(), sb);
 		return sb.toString();
+	}
+	public static void writeTextHandled(String text, Path path) {
+		try {
+			new StringWriter2().write(text, path);	
+		} catch (IOException e2) {
+			FxAlert.showErrorDialog(path, "failed to save", e2);
+		}
 	}
 }

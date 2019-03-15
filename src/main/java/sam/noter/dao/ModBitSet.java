@@ -2,13 +2,15 @@ package sam.noter.dao;
 
 import java.util.BitSet;
 
-public class ModHandler {
+public class ModBitSet {
 	private static final int TITLE = 0;
 	private static final int CONTENT = 1;
 	private static final int CHILDREN = 2;
 	
 	private static final int size = 3;
+	
 	private BitSet mod = new BitSet();
+	private int modCount = 0;
 
 	private int index(int id) {
 		return id * size;
@@ -32,7 +34,10 @@ public class ModHandler {
 			default:       throw new IllegalArgumentException();
 		}
 	}
-
+	
+	public int modCount() {
+		return modCount;
+	}
 	public void setModified(int id, ModifiedField field, boolean value) {
 		check(field);
 		
@@ -56,15 +61,16 @@ public class ModHandler {
 				break;
 			default:     
 				throw new IllegalArgumentException();
-		}	
+		}
+		
+		modCount++;
 	}
 
 	public void clear() {
 		mod.clear();
+		modCount = 0;
 	}
 	public boolean isEmpty() {
 		return mod.isEmpty();
 	}
-	
-
 }

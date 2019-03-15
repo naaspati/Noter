@@ -1,18 +1,8 @@
 package sam.noter.dao.zip;
 
-import static java.nio.file.StandardOpenOption.*;
-import static java.nio.charset.CodingErrorAction.*;
-
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -21,19 +11,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import sam.di.ConfigManager;
-import sam.io.BufferConsumer;
-import sam.io.BufferSupplier;
-import sam.io.IOUtils;
 import sam.io.infile.DataMeta;
 import sam.io.infile.TextInFile;
-import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
-import sam.nopkg.Junk;
-import sam.nopkg.StringResources;
+import sam.nopkg.Resources;
 import sam.noter.dao.RootEntryFactory;
-import sam.noter.dao.api.IRootEntry;
-import sam.string.StringSplitIterator;
 
 @Singleton
 public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
@@ -140,14 +123,13 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 		// TODO Auto-generated method stub
 	}
 
-	public EntryZ[] getEntries(RootEntryZ root, EntryZ[] sink) {
+	public ArrayWrap<EntryZ> getEntries(RootEntryZ root) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	public void save(RootEntryZ root, Path file) {
 		// TODO Auto-generated method stub
-
 	}
 
 	public String readContent(RootEntryZ root, EntryZ e) throws IOException {
@@ -160,10 +142,9 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 		DataMeta dm = root.meta.contents[e.getId()];
 		if(dm == null || dm.size == 0)
 			return "";
-		try(StringResources r = StringResources.get()) {
+		try(Resources r = Resources.get()) {
 			StringBuilder sb = r.sb();
-			content.readText(dm, r.buffer, r.chars, r.decoder, sb, REPORT, REPORT);
-			
+			content.readText(dm, r.buffer(), r.chars(), r.decoder(), sb);
 			return sb.toString();
 		}
 		

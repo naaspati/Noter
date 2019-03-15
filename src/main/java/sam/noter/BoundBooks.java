@@ -5,7 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -20,12 +20,12 @@ import sam.di.ConfigManager;
 import sam.di.ParentWindow;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
-import sam.io.serilizers.StringWriter2;
 import sam.noter.dao.api.IRootEntry;
+import sam.tsv.TsvMap;
 
 @Singleton
 public class BoundBooks {
-	private final HashMap<String, String> boundBooks = new HashMap<>();
+	private Map<String, String> boundBooks;
 	private boolean modified;
 	private final ConfigManager configManager;
 	private final Window parent;
@@ -39,12 +39,9 @@ public class BoundBooks {
 		
 		if(Files.notExists(path)) 
 			return;
-
-		Files.lines(path).forEach(s -> {
-			int n = s.indexOf('\t');
-			if(n < 0) return;
-			boundBooks.put(s.substring(0, n), s.substring(n+1));
-		});
+		
+		if(Files.exists(path))
+			boundBooks = TsvMap.parse(path);
 	}
 	
 	public String getBoundBookPath(IRootEntry tab) {
@@ -85,15 +82,11 @@ public class BoundBooks {
 	}
 	public void save() {
 		if(!modified) return;
-		StringBuilder sb = new StringBuilder();
-		boundBooks.forEach((s,t) -> {
-			if(s == null || t == null) return;
-			sb.append(s).append('\t').append(t).append('\n');
-		});
 
 		try {
-			StringWriter2.setText(path, sb);
+			TsvMap.save(path, boundBooks);
 			logger().debug("modified: ",path);
+			modified = false;
 		} catch (IOException e) {
 			logger().fatal( "failed to save: ",path, e);
 		}

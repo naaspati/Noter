@@ -4,7 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +18,7 @@ import org.xml.sax.SAXException;
 import sam.di.Injector;
 import sam.myutils.Checker;
 import sam.noter.dao.Entry;
-import sam.noter.dao.ModHandler;
+import sam.noter.dao.ModBitSet;
 import sam.noter.dao.ModifiedField;
 import sam.noter.dao.VisitResult;
 import sam.noter.dao.api.IEntry;
@@ -30,14 +29,17 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	public static final int ROOT_ENTRY_ID = -1;
 
 	private Path jbookPath;
-	private Runnable onModified;
 	private DOMLoader dom;
 	private final HashMap<Integer, IEntry> entryMap = new HashMap<>();
-	private final ModHandler mods = new ModHandler();
+	private final ModBitSet mods = new ModBitSet();
 	private final Injector injector;
 
+	@Override
+	public int modCount() {
+		return mods.modCount();
+	}
+	
 	public RootDOMEntry(Injector injector) throws ParserConfigurationException {
-
 		this.injector = injector;
 		createDom();
 	}
@@ -56,17 +58,11 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		reload();
 	}
 	public boolean isModified(int id, ModifiedField field) {
-		return mods.isModified(id, field);
+		return mods.isModified(id + 1, field);
 	}
 	public void setModified(int id, ModifiedField field, boolean value) {
-		mods.setModified(id, field, value);
-		notifyModified();
+		mods.setModified(id + 1, field, value);
 	}
-	@Override
-	public boolean isModified() {
-		return !mods.isEmpty();
-	}
-
 	@Override
 	public void reload() throws IOException, ParserConfigurationException, SAXException {
 		getChildren().clear();
@@ -79,28 +75,18 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		entryMap.clear();
 		this.dom = new DOMLoader(jbookPath.toFile(), children, this);
 		walk(w -> {entryMap.put(w.getId(), w);});
-		notifyModified();
 		mods.clear();
-	}
-	@Override
-	public void setOnModified(Runnable action) {
-		this.onModified = action;
-	}
-	protected void notifyModified() {
-		if(onModified != null)
-			onModified.run();
 	}
 
 	@Override
 	public void save(Path path) throws Exception {
-		if(!isModified() && jbookPath != null)
+		if(mods.isEmpty() && jbookPath != null)
 			return;
 
 		dom.save(getChildren(), path.toFile());
 		clearModified();
 		setJbookPath(path);
 		mods.clear();
-		notifyModified();
 	}
 
 	@Override public Path getJbookPath() { return jbookPath; }
@@ -108,11 +94,6 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	public void setJbookPath(Path path) { 
 		jbookPath = path;
 		this.title = jbookPath.getFileName().toString();
-	}
-
-	@Override
-	protected void setModified(ModifiedField field, boolean value) {
-		//TODO
 	}
 
 	@Override public void close() throws Exception {/* does nothing */}
@@ -188,10 +169,6 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		addAll(result, changeRoot(list), Integer.MAX_VALUE);
 		return result;
 	}
-	@Override
-	public Collection<IEntry> getAllEntries() {
-		return Collections.unmodifiableCollection(entryMap.values());
-	}
 
 	private void addAll(IEntry parent, List child, int index) {
 		DOMEntry p = check(parent);
@@ -223,11 +200,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		entryMap.remove(d.getId());
 		d.parent().getChildren().remove(e);
 	}
-
-	@Override
-	public void forEachOfAll(Consumer<IEntry> consumer) {
-		walk(consumer);
-	}
+	
 	@Override
 	public IEntry getEntryById(int id) {
 		IEntry[] res = {null};
@@ -242,6 +215,9 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		
 		return res[0];
 	}
-	
+	@Override
+	public void walk(Consumer<IEntry> consumer) {
+		entryMap.forEach((s,t) -> consumer.accept(t));
+	} 
 }
 

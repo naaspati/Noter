@@ -9,6 +9,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,8 +24,6 @@ import org.apache.logging.log4j.Logger;
 
 import sam.di.ConfigKey;
 import sam.di.ConfigManager;
-import sam.io.serilizers.StringReader2;
-import sam.io.serilizers.StringWriter2;
 import sam.myutils.Checker;
 import sam.myutils.System2;
 
@@ -116,7 +115,7 @@ public class FilesLookup {
 			Arrays.sort(opencache, Comparator.naturalOrder());
 		}
 		if(Arrays.binarySearch(opencache, string) >= 0) {
-			f = new File(StringReader2.getText(openCacheDir.resolve( string)));
+			f = new File(new String(Files.readAllBytes(openCacheDir.resolve( string))));
 			if(f.exists()) {
 				logger.info("OPEN_CACHE: {} = {}", string, f);
 				return f;
@@ -142,6 +141,6 @@ public class FilesLookup {
 
 		Path p = openCacheDir.resolve( key);
 		Files.createDirectories(p.getParent());
-		StringWriter2.setText(p, path.toString());
+		Files.write(p, path.toString().getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 	}
 }

@@ -95,7 +95,6 @@ import sam.fx.popup.FxPopupShop;
 import sam.io.IOUtils;
 import sam.io.fileutils.DirWatcher;
 import sam.io.fileutils.FileOpenerNE;
-import sam.io.serilizers.StringWriter2;
 import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
 import sam.nopkg.Junk;
@@ -103,6 +102,7 @@ import sam.noter.BoundBooks;
 import sam.noter.DyanamiMenus;
 import sam.noter.EntryTreeItem;
 import sam.noter.FilesLookup;
+import sam.noter.Utils;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.dao.api.IRootEntry;
 import sam.noter.editor.Editor;
@@ -499,11 +499,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
 			} 
-			try {
-				StringWriter2.setText(file.toPath(), ta.getText());
-			} catch (IOException e2) {
-				FxAlert.showErrorDialog(file, "failed to save", e2);
-			}
+			Utils.writeTextHandled(ta.getText(), file.toPath());
 		});
 		Text t = new Text();
 		t.textProperty().bind(FxBindings.map(sp.vvalueProperty(), s -> String.valueOf((int)(s.doubleValue()*100))));

@@ -54,7 +54,6 @@ import sam.nopkg.Junk;
 import sam.nopkg.SavedAsStringResource;
 import sam.nopkg.SavedResource;
 import sam.nopkg.SimpleSavedResource;
-import sam.nopkg.StringResources;
 import sam.noter.dao.ModifiedField;
 import sam.string.StringSplitIterator;
 

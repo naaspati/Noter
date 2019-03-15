@@ -11,8 +11,8 @@ import sam.noter.dao.Walker;
 public interface IRootEntry extends AutoCloseable {
 	Path getJbookPath();
 	void setJbookPath(Path path);
-
-	boolean isModified();
+	
+	int modCount();
 
 	void reload() throws Exception;
 	void save(Path file) throws Exception;
@@ -42,7 +42,7 @@ public interface IRootEntry extends AutoCloseable {
 	List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index);
 	void addChild(IEntry child, IEntry parent, int index);
 	void removeFromParent(IEntry child);
-	List<IEntry> getChildren();
+	Collection<? extends IEntry> getChildren();
 	IEntry getEntryById(int id);
 	void walk(Walker<IEntry> walker);
 	void walk(Consumer<IEntry> walker);

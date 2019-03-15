@@ -19,7 +19,6 @@ import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -28,7 +27,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.TreeItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import sam.di.ConfigKey;
@@ -42,7 +40,7 @@ import sam.noter.EntryTreeItem;
 import sam.noter.Utils;
 import sam.noter.app.Observables;
 import sam.reference.WeakAndLazy;
-import sam.thread.DelayedQueueThread;
+import sam.thread.DelayedActionThread;
 
 @Singleton
 public class Editor extends BorderPane {
@@ -71,7 +69,7 @@ public class Editor extends BorderPane {
 	public Editor(ConfigManager configManager, Observables observables) throws IOException {
 		FxFxml.load(this, true);
 		this.configManager = configManager;
-		
+
 		observables.currentItemProperty()
 		.addListener((p, o, n) -> changed(n, PREVIOUS));
 	}
@@ -115,32 +113,36 @@ public class Editor extends BorderPane {
 		else
 			centerEditor.consume(e);
 	}
-	private DelayedQueueThread<Object> delay;
+	private DelayedActionThread<Object> delay;
 	private static final Object SKIP_CHANGE = new Object();
+	private static final Object CHANGE = new Object();
+	private volatile EntryTreeItem item;
+	private volatile ViewType view;
 
 	private void changed(EntryTreeItem item, ViewType view) {
 		setDisable(item == null);
-		
+		this.item = item;
+		this.view = view;
+
 		if(item != null && item.isContentLoaded()) {
 			if(delay != null)
-				delay.add(SKIP_CHANGE);
-			actual_changed(item, view);
-			return;
+				delay.queue(SKIP_CHANGE);
+			else
+				actual_changed();
+		} else {
+			if(delay == null)
+				delay = new DelayedActionThread<>(Optional.ofNullable(configManager.getConfig(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
+			
+			delay.queue(CHANGE);	
 		}
-		if(delay == null) {
-			delay = new DelayedQueueThread<>(Optional.ofNullable(configManager.getConfig(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
-			delay.start();
-		}
-		delay.add(new Object[]{item, view});
+		
 	}	
 	private void delayedChange(Object obj) {
-		if(obj == SKIP_CHANGE)
-			return;
-		Object[] oo = (Object[])obj;
-		fx(() -> actual_changed((EntryTreeItem)oo[0], (ViewType)oo[1]));
+		if(obj != SKIP_CHANGE)
+			fx(() -> actual_changed());
 	}
 
-	private void actual_changed(EntryTreeItem item, ViewType view) {
+	private void actual_changed() {
 		if(item == null) {
 			unitsContainerWL.ifPresent(UnitContainer::clear);
 			combinedTextWL.ifPresent(CombinedText::clear);
