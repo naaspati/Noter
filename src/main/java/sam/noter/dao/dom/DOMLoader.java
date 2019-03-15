@@ -95,7 +95,7 @@ class DOMLoader {
 				.newDocumentBuilder()
 				.newDocument();
 	}
-	DOMLoader(File path, List<?> items, RootDOMEntry root) throws SAXException, IOException, ParserConfigurationException {
+	DOMLoader(File path, List<?> items, RootDOMEntry root, DOMEntry parent) throws SAXException, IOException, ParserConfigurationException {
 		this.root = root;
 		this.doc = DocumentBuilderFactory.newInstance()
 				.newDocumentBuilder()
@@ -133,7 +133,7 @@ class DOMLoader {
 		});
 
 		if(entriesNode != null)
-			collectChildren(entriesNode.getChildNodes(), items);
+			collectChildren(entriesNode.getChildNodes(), items, parent);
 
 		if(maxIdNode != null) 
 			maxId = Integer.parseInt(maxIdNode.getTextContent());
@@ -222,16 +222,16 @@ class DOMLoader {
 	}
 
 
-	public void collectChildren(Node childrenNode, List sink) {
+	public void collectChildren(Node childrenNode, List sink, DOMEntry parent) {
 		if(childrenNode == null) return;
-		collectChildren(childrenNode.getChildNodes(), sink);
+		collectChildren(childrenNode.getChildNodes(), sink, parent);
 	}
 
 	@SuppressWarnings({ "unchecked"})
-	private void collectChildren(NodeList list, List sink) {
+	private void collectChildren(NodeList list, List sink, DOMEntry parent) {
 		each(list, node -> {
 			if(ENTRY.equals(node.getNodeName()))
-				sink.add(newDOMEntry(node));
+				sink.add(newDOMEntry(node, parent));
 		});
 	}
 
@@ -251,8 +251,8 @@ class DOMLoader {
 		public String title() {
 			return title == null ? null : title.getTextContent();
 		}
-		void collectChildren(List items) {
-			DOMLoader.this.collectChildren(children, items);
+		void collectChildren(List items, DOMEntry parent) {
+			DOMLoader.this.collectChildren(children, items, parent);
 		}
 
 		public String content() {
@@ -299,7 +299,7 @@ class DOMLoader {
 		}
 	}
 
-	private DOMEntry newDOMEntry(Node source) {
+	private DOMEntry newDOMEntry(Node source, DOMEntry parent) {
 		DomEntryInit t = new DomEntryInit();
 		t.rootNode = source;
 
@@ -331,7 +331,7 @@ class DOMLoader {
 				logger.debug("SET ID TO OLD DATA: {} ({})", t.title(), t.id());
 		}
 
-		return new DOMEntry(t); 
+		return new DOMEntry(t, parent); 
 	}
 
 	private Node append(String tag, String value, Node parent) {
@@ -488,10 +488,10 @@ class DOMLoader {
 
 
 	}
-	public DOMEntry newEntry(String title) {
-		return new DOMEntry(new DomEntryInit(), title);
+	public DOMEntry newEntry(String title, DOMEntry parent) {
+		return new DOMEntry(new DomEntryInit(), parent, title);
 	}
-	public DOMEntry newEntry(DOMEntry d) {
-		return new DOMEntry(new DomEntryInit(), d.getTitle(), d.getContent(), d.getLastModified());
+	public DOMEntry newEntry(DOMEntry d, DOMEntry parent) {
+		return new DOMEntry(new DomEntryInit(), parent, d.getTitle(), d.getContent(), d.getLastModified());
 	}
 }

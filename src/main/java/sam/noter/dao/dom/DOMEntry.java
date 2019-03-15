@@ -1,10 +1,10 @@
 package sam.noter.dao.dom;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
 
-import sam.nopkg.Junk;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
@@ -15,26 +15,30 @@ class DOMEntry extends Entry {
 	private static final Logger logger = Utils.logger(DOMEntry.class);
 	
 	private final DomEntryInit dom;
-	protected List<IEntry> children;
+	protected final List<IEntry> children = new ArrayList<>();
+	private final DOMEntry parent;
 	
 	protected DOMEntry() {
 		super(RootDOMEntry.ROOT_ENTRY_ID);
 		this.dom = null;
+		this.parent = null;
 		if(getClass() != RootDOMEntry.class)
 			throw new IllegalAccessError("can on be accessed by "+RootDOMEntry.class);
 	}
 
-	public DOMEntry(DomEntryInit init) {
+	public DOMEntry(DomEntryInit init, DOMEntry parent) {
 		super(init.id(), init.title());
+		this.parent = parent;
 		this.dom = init;
 	}
-	public DOMEntry(DomEntryInit dom, String title, String content, long modified) {
-		this(dom, title);
+	public DOMEntry(DomEntryInit dom, DOMEntry parent, String title, String content, long modified) {
+		this(dom, parent, title);
 		this.content = content;
 		this.lastModified = modified;
 	}
-	public DOMEntry(DomEntryInit dom, String title) {
+	public DOMEntry(DomEntryInit dom, DOMEntry parent, String title) {
 		super(dom.id(), title);
+		this.parent = parent;
 		this.dom = dom;
 		this.lastModified = System.currentTimeMillis();
 	}
@@ -82,7 +86,6 @@ class DOMEntry extends Entry {
 
 	@Override
 	public IEntry getParent() {
-		// TODO Auto-generated method stub
-		return Junk.notYetImplemented();
+		return parent;
 	}
 }

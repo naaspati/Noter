@@ -12,7 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import sam.io.BufferSupplier;
@@ -22,6 +24,7 @@ import sam.io.infile.TextInFile;
 import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
 import sam.nopkg.Resources;
+import sam.noter.dao.zip.RootEntryZ.EZ;
 import sam.noter.dao.zip.RootEntryZFactory.Meta;
 import sam.string.StringSplitIterator;
 
@@ -169,7 +172,7 @@ class Cache implements AutoCloseable {
 		return mt;
 	}
 
-	public ArrayWrap<EntryZ> getEntries(RootEntryZ rootEntryZ) {
+	public ArrayWrap<EZ> getEntries(RootEntryZ root, ArrayWrap<EZ> sink) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -184,20 +187,20 @@ class Cache implements AutoCloseable {
 		
 	}
 
-	public String readContent(RootEntryZ root, EntryZ e) throws IOException {
-		if(root.meta.isNew)
+	public String readContent(DataMeta meta) throws IOException {
+		if(meta == null || meta.size == 0)
 			return "";
 		
-		if(e.getId() >= root.meta.contents.length)
-			return "";
-		
-		DataMeta dm = root.meta.contents[e.getId()];
-		if(dm == null || dm.size == 0)
-			return "";
 		try(Resources r = Resources.get()) {
 			StringBuilder sb = r.sb();
-			content.readText(dm, r.buffer(), r.chars(), r.decoder(), sb);
+			content.readText(meta, r.buffer(), r.chars(), r.decoder(), sb);
 			return sb.toString();
 		}
+	}
+
+	public IdentityHashMap<DataMeta, DataMeta> transfer(Cache cache, List<DataMeta> dm) {
+		if(this == cache)
+			throw new IllegalArgumentException();
+		return cache.content.transferTo(dm, this.content);
 	}
 }

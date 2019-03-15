@@ -74,7 +74,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		}
 		mods.clear();
 		entryMap.clear();
-		this.dom = new DOMLoader(jbookPath.toFile(), children, this);
+		this.dom = new DOMLoader(jbookPath.toFile(), children, this, this);
 		walk(Walker.of(w -> entryMap.put(w.getId(), w)));
 		mods.clear();
 	}
@@ -104,7 +104,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		if(Checker.isEmptyTrimmed(title))
 			throw new IllegalArgumentException("bad title: "+title);
 
-		Entry e = dom.newEntry(title);
+		Entry e = dom.newEntry(title, (DOMEntry) parent);
 		addChild(e, parent, index);
 		entryMap.put(e.getId(), e);
 		return e;
@@ -123,7 +123,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		if(childrenToMove.stream().allMatch(c -> castNonNull(c).root() == this)) {
 			childrenToMove.stream()
 			.peek(e -> checkIfSame(parent, e))
-			.collect(Collectors.groupingBy(IEntry::parent))
+			.collect(Collectors.groupingBy(IEntry::getParent))
 			.forEach((p, children) -> p.getChildren().removeAll(children));
 
 			parent.getChildren().addAll(index, childrenToMove);
@@ -135,7 +135,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 				castNonNull(c).root().removeFromParent(c);
 		}
 
-		List<IEntry> list = changeRoot(childrenToMove);
+		List<IEntry> list = changeRoot(childrenToMove, (DOMEntry) newParent);
 
 		childrenToMove = null;
 		addAll(newParent, list, index);
@@ -153,21 +153,21 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 
 		return d;
 	}
-	private List<IEntry> changeRoot(List<?> list) {
+	private List<IEntry> changeRoot(List<?> list, DOMEntry parent) {
 		return list.stream()
-				.map(c -> changeRoot(castNonNull(c)))
+				.map(c -> changeRoot(castNonNull(c), parent))
 				.collect(Collectors.toList());
 	}
-	private DOMEntry changeRoot(DOMEntry d) {
+	private DOMEntry changeRoot(DOMEntry d, DOMEntry parent) {
 		RootDOMEntry root = d.root(); 
 		if(root == this) return d;
 
-		DOMEntry result = dom.newEntry(d);
+		DOMEntry result = dom.newEntry(d, parent);
 		root.entryMap.remove(d.getId());
 
 		List list = d.getChildren(); 
 		if(list.isEmpty()) return result;
-		addAll(result, changeRoot(list), Integer.MAX_VALUE);
+		addAll(result, changeRoot(list, result), Integer.MAX_VALUE);
 		return result;
 	}
 

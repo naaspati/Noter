@@ -43,8 +43,8 @@ public interface IRootEntry extends AutoCloseable {
 	void addChild(IEntry child, IEntry parent, int index);
 	void removeFromParent(IEntry child);
 	Collection<? extends IEntry> getChildren();
+	void forEachFlattened(Consumer<IEntry> consumer);
 	IEntry getEntryById(int id);
 	void walk(Walker<IEntry> walker);
-	void forEachFlattened(Consumer<IEntry> walker);
 	String getTitle();
 }

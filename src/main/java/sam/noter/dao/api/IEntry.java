@@ -1,5 +1,6 @@
 package sam.noter.dao.api;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,7 +13,7 @@ public interface IEntry {
 	boolean isModified(ModifiedField field);
 	int getId();
 	IRootEntry root();
-	List<IEntry> getChildren();
+	Collection<? extends IEntry> getChildren();
 	void walk(Walker<IEntry> consumer);
 	
 	void setTitle(String title);
