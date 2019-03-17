@@ -31,7 +31,7 @@ class MetaTest {
 			for (int i = 0; i < 500; i++) 
 				test(r, i, path);
 		} finally {
-			// Files.deleteIfExists(path);
+			Files.deleteIfExists(path);
 		}
 	}
 	
