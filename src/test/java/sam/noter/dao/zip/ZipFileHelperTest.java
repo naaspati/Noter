@@ -1,7 +1,7 @@
 package sam.noter.dao.zip;
 
 import static java.nio.file.StandardOpenOption.READ;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -18,12 +18,9 @@ import java.util.zip.ZipInputStream;
 
 import org.junit.jupiter.api.Test;
 
-import sam.io.BufferSupplier;
 import sam.io.IOUtils;
-import sam.io.infile.DataMeta;
 import sam.io.infile.TextInFile;
 import sam.nopkg.Resources;
-import sam.noter.dao.zip.ZipFileHelper.TempEntry;
 
 class ZipFileHelperTest {
 

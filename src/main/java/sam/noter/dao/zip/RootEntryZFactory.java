@@ -91,8 +91,15 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 			return create0(path);
 		}
 
-		return new RootEntryZ(new Cache(meta, mydir));
+		return new RootEntryZ(new CacheImpl(meta, mydir));
 	}
+	
+	private class CacheImpl extends Cache {
+		public CacheImpl(Meta meta, Path saveDir) throws IOException {
+			super(meta, saveDir);
+		}
+	}
+	
 	private Meta find(Path path) {
 		for (Meta meta : metas) {
 			if(path.equals(meta.path()))

@@ -3,6 +3,7 @@ package sam.noter.dao.zip;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.nio.file.StandardOpenOption.READ;
+import static sam.noter.dao.zip.Utils.ensureIndex;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -12,16 +13,14 @@ import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sam.functions.IOExceptionConsumer;
 import sam.io.BufferSupplier;
 import sam.io.infile.DataMeta;
 import sam.io.infile.TextInFile;
@@ -87,11 +86,6 @@ class ZipFileHelper {
 		}
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private final void ensureIndex(Collection col, int index) {
-		while(col.size() <= index) { col.add(null); }
-	}
-
 	private void setMetas(ArrayList<TempEntry> entries, ArrayList<DataMeta> metas) {
 		if(metas == null)
 			return;
@@ -106,7 +100,7 @@ class ZipFileHelper {
 		if(d != null) {
 			TempEntry t = entries.size() < index ? null : entries.get(index);
 			if(t != null)
-				t.meta = d;
+				t.setMeta(d);
 		}
 	}
 
@@ -122,37 +116,6 @@ class ZipFileHelper {
 		return Integer.MAX_VALUE;
 	}
 
-	public static class TempEntry {
-		private  DataMeta meta;
-		final int id, parent_id, order;
-		final long lastmodified;
-		final String title;
-
-		public TempEntry(int id, int parent_id, int order, long lastmodified, String title) {
-			this.id = id;
-			this.parent_id = parent_id;
-			this.order = order;
-			this.lastmodified = lastmodified;
-			this.title = title;
-		}
-
-		@Override
-		public String toString() {
-			return new JSONObject()
-					.put("id", id)
-					.put("parent_id", parent_id)
-					.put("order", order)
-					.put("lastmodified", lastmodified)
-					.put("title", title)
-					.put("meta", meta == null ? null : meta.toString())
-					.toString(4);
-		}
-
-		public DataMeta meta() {
-			return meta;
-		}
-	}
-
 	private ArrayList<TempEntry> readIndex(InputStream zis, Resources r) throws IOException {
 		StringBuilder sb = r.sb();
 		ByteBuffer buffer = r.buffer();
@@ -162,7 +125,7 @@ class ZipFileHelper {
 
 		ArrayList<TempEntry> entries = new ArrayList<>();
 
-		Consumer<StringBuilder> eater = new Consumer<StringBuilder>() {
+		IOExceptionConsumer<StringBuilder> eater = new IOExceptionConsumer<StringBuilder>() {
 			int line = 0;
 			@Override
 			public void accept(StringBuilder sb) {

@@ -13,9 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -24,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import sam.collection.CollectionUtils;
 import sam.collection.MappedIterator;
+import sam.functions.IOExceptionConsumer;
 import sam.io.BufferSupplier;
 import sam.io.IOUtils;
 import sam.io.serilizers.StringIOUtils;
@@ -69,7 +68,7 @@ final class MetaSerializer {
 
 			IOUtils.compactOrClear(buffer);
 			BufferSupplier supplier = BufferSupplier.of(gis, buffer);
-			Consumer<String> collector = new Consumer<String>() {
+			IOExceptionConsumer<String> collector = new IOExceptionConsumer<String>() {
 				int k = 0;
 				@Override
 				public void accept(String t) {
