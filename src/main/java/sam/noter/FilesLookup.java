@@ -22,15 +22,15 @@ import java.util.Optional;
 import org.slf4j.Logger;
 
 import sam.di.ConfigKey;
-import sam.di.ConfigManager;
+import sam.di.AppConfig;
 import sam.myutils.Checker;
 import sam.myutils.System2;
 
 public class FilesLookup {
 	private final Logger logger = Utils.logger(FilesLookup.class);
-	private ConfigManager config;
+	private AppConfig config;
 
-	public List<Path> parse(ConfigManager config, Path appdataDir, List<String> args) throws IOException {
+	public List<Path> parse(AppConfig config, Path appdataDir, List<String> args) throws IOException {
 		if(args.isEmpty()) 
 			return Collections.emptyList();
 		openCacheDir =  appdataDir.resolve("open_cache");

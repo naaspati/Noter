@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import sam.myutils.Checker;
+import sam.nopkg.Junk;
 import sam.noter.dao.Walker;
 
 public interface IRootEntry extends AutoCloseable {
@@ -22,7 +23,7 @@ public interface IRootEntry extends AutoCloseable {
 	};
 	
 	default IEntry addChild(String childTitle, IEntry parent, IEntry relativeToChild) {
-		int index = relativeToChild == null ? Integer.MAX_VALUE  : parent.getChildren().indexOf(relativeToChild);
+		int index = Junk.notYetImplemented();//FIXME relativeToChild == null ? Integer.MAX_VALUE  : parent.getChildren().indexOf(relativeToChild);
 		Checker.assertTrue(index >= 0, () -> new IllegalArgumentException(relativeToChild+" is not a child of "+parent));
 		return addChild(childTitle, parent, index+1);
 	}

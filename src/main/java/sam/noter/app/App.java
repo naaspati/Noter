@@ -80,7 +80,7 @@ import javafx.stage.Stage;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
 import sam.di.ConfigKey;
-import sam.di.ConfigManager;
+import sam.di.AppConfig;
 import sam.di.Injector;
 import sam.di.OnExitQueue;
 import sam.di.ParentWindow;
@@ -143,7 +143,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 
 	private final Tools injector = new Tools();
 
-	private class Tools implements Injector, OnExitQueue, ConfigManager {
+	private class Tools implements Injector, OnExitQueue, AppConfig {
 		private final Feather feather;
 		private int configMod;
 		private EnumMap<ConfigKey, String> configs = new EnumMap<>(ConfigKey.class);
@@ -191,7 +191,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 			return this;
 		}
 		@Provides
-		public ConfigManager cm( ) {
+		public AppConfig cm( ) {
 			return this;
 		}
 		@Provides
@@ -210,6 +210,12 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 			if(onExit == null)
 				onExit = Collections.synchronizedList(new ArrayList<>());
 			onExit.add(runnable);
+		}
+
+		@Override
+		public Path tempDir() {
+			// TODO Auto-generated method stub
+			return null;
 		}
 
 
@@ -254,7 +260,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 		if(!OPEN_CMD_ENABLE)
 			return;
 
-		logger.debug(() -> "INIT: OPEN_CMD_DIR watcher");
+		logger.debug("INIT: OPEN_CMD_DIR watcher");
 		Files.createDirectories(OPEN_CMD_DIR);
 		MyUtilsThread.runOnDeamonThread(new DirWatcher(OPEN_CMD_DIR, StandardWatchEventKinds.ENTRY_CREATE) {
 			@Override
@@ -716,5 +722,11 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 	@Override
 	public ObservableValue<IRootEntry> currentRootEntryProperty() {
 		return tabsBox.selectedItemProperty();
+	}
+
+	@Override
+	public ObservableValue<EntryTreeItem> currentItemProperty() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

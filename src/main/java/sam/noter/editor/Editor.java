@@ -30,7 +30,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import sam.di.ConfigKey;
-import sam.di.ConfigManager;
+import sam.di.AppConfig;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
@@ -57,7 +57,7 @@ public class Editor extends BorderPane {
 
 	private final SimpleObjectProperty<EntryTreeItem> currentItem = new SimpleObjectProperty<>();
 	private final IdentityHashMap<EntryTreeItem, Stack<ViewType>> history0 = new IdentityHashMap<>();
-	private final ConfigManager configManager;
+	private final AppConfig configManager;
 
 	private static Font font;
 
@@ -66,7 +66,7 @@ public class Editor extends BorderPane {
 	}
 
 	@Inject
-	public Editor(ConfigManager configManager, Observables observables) throws IOException {
+	public Editor(AppConfig configManager, Observables observables) throws IOException {
 		FxFxml.load(this, true);
 		this.configManager = configManager;
 

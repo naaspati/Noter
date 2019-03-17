@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import sam.di.ConfigKey;
-import sam.di.ConfigManager;
+import sam.di.AppConfig;
 import sam.di.ParentWindow;
 import sam.fx.popup.FxPopupShop;
 import sam.io.fileutils.FileOpenerNE;
@@ -26,12 +26,12 @@ import sam.tsv.TsvMap;
 public class BoundBooks {
 	private Map<String, String> boundBooks;
 	private boolean modified;
-	private final ConfigManager configManager;
+	private final AppConfig configManager;
 	private final Window parent;
 	private final Path path;
 
 	@Inject
-	public BoundBooks(ConfigManager configManager, @ParentWindow Window parent) throws IOException {
+	public BoundBooks(AppConfig configManager, @ParentWindow Window parent) throws IOException {
 		this.configManager = configManager;
 		this.parent = parent;
 		this.path = configManager.appDir().resolve("boundBooks.txt");

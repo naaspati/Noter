@@ -3,7 +3,7 @@ package sam.di;
 import java.nio.file.Path;
 import java.util.function.Function;
 
-public interface ConfigManager {
+public interface AppConfig {
 	Path tempDir();
 	Path appDir();
 	Path backupDir();

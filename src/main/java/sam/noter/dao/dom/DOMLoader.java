@@ -36,7 +36,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import sam.di.ConfigKey;
-import sam.di.ConfigManager;
+import sam.di.AppConfig;
 import sam.di.OnExitQueue;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.noter.Utils;
@@ -68,7 +68,7 @@ class DOMLoader {
 	private static Path backupDir;
 
 	@Inject
-	DOMLoader(ConfigManager configManager, OnExitQueue exitQueue) throws ParserConfigurationException {
+	DOMLoader(AppConfig configManager, OnExitQueue exitQueue) throws ParserConfigurationException {
 
 		if(!exitAdded) {
 			exitAdded = true;

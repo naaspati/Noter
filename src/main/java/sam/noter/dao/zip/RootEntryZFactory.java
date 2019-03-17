@@ -1,19 +1,33 @@
 package sam.noter.dao.zip;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.function.Consumer;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+import static java.nio.file.StandardOpenOption.*;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
-import sam.di.ConfigManager;
+import sam.collection.CollectionUtils;
+import sam.di.AppConfig;
+import sam.io.BufferSupplier;
+import sam.io.IOUtils;
+import sam.io.fileutils.FilesUtilsIO;
 import sam.io.infile.DataMeta;
-import sam.io.infile.TextInFile;
-import sam.myutils.Checker;
+import sam.io.serilizers.StringIOUtils;
 import sam.nopkg.EnsureSingleton;
+import sam.nopkg.Junk;
 import sam.nopkg.Resources;
 import sam.noter.Utils;
 import sam.noter.dao.RootEntryFactory;
@@ -21,63 +35,29 @@ import sam.noter.dao.RootEntryFactory;
 @Singleton
 public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 	private static final EnsureSingleton singleton = new EnsureSingleton();
+	
 	private final Logger logger;
 	private final Path mydir;
-	
-	class Meta {
-		static final int BYTES = DataMeta.BYTES + Integer.BYTES;
-
-		public final int id;
-		private DataMeta meta;
-		private boolean isNew;
-		private long lastModified;
-		private DataMeta[] contents;
-
-		private Meta(int id, DataMeta meta) {
-			this.id = id;
-			this.meta = meta;
-		}
-	}
+	private final Path metasPath;
+	private final ArrayList<Meta> metas;
 
 	@Inject
-	public RootEntryZFactory(ConfigManager config) throws IOException {
+	public RootEntryZFactory(AppConfig config) throws IOException {
 		singleton.init();
 
 		this.logger = Utils.logger(getClass());
 		this.mydir = config.tempDir().resolve(getClass().getName());
-		Files.createDirectories(mydir);
-
-		Path meta = mydir.resolve("meta");
-		Path index = mydir.resolve("index");
-		Path content = mydir.resolve("content");
-
-		Path[] paths = {meta, index, content};
-		if(Checker.anyMatch(Files::notExists, paths)) {
-			for (Path p : paths) 
-				Files.deleteIfExists(p);
-		}
-
-		boolean b = Files.exists(index);
-
-		this.metas = new Cache(meta) {
-			@Override
-			protected DataMeta getMeta(Meta meta) {
-				return meta.meta;
-			}
-			@Override
-			protected void setMeta(Meta meta, DataMeta dm) {
-				meta.meta = dm;
-			}
-			@Override
-			protected Meta newMeta(int id, DataMeta dm) {
-				return new Meta(id, dm);
-			}
-		};
+		this.metasPath = mydir.resolve("app.index");
+		this.metas = new ArrayList<>();
 		
-		this.content = new TextInFile(content, !b);
-		this.index = new TextInFile(index, !b);
+		if(Files.notExists(metasPath)) 
+			FilesUtilsIO.deleteDir(mydir);
+		
+		Files.createDirectories(mydir);
+		if(Files.exists(metasPath))
+			MetaSerializer.read(metas, metasPath);
+		
 	}
-
 	@Override
 	public void close() throws Exception {
 		//FIXME metas.close();
@@ -91,10 +71,8 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 		return create0(path.normalize().toAbsolutePath());
 	}
 	private RootEntryZ create0(Path path) throws Exception {
-		Meta m = metas.put(path);
-		m.isNew = true;
-		
-		return new RootEntryZ(m, path, this);
+		//TODO
+		return Junk.notYetImplemented(); // return new RootEntryZ(m, path, this);
 	}
 
 	@Override
@@ -103,17 +81,17 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 			throw new IOException("file not found: "+path);
 		
 		path =  path.normalize().toAbsolutePath();
-		Meta meta = metas.get(path);
+		Meta meta = Junk.notYetImplemented();  // TODO metas.get(path);
 		
 		if(meta == null)
 			return create0(path);
 		
-		if(meta.lastModified != path.toFile().lastModified()) {
-			logger.debug("RESET CACHE: because: meta.lastModified({}) != path.toFile().lastModified({}),  path: {}", meta.lastModified, path.toFile().lastModified(), path);
+		if(meta.lastModified() != path.toFile().lastModified()) {
+			logger.debug("RESET CACHE: because: meta.lastModified({}) != path.toFile().lastModified({}),  path: {}", meta.lastModified(), path.toFile().lastModified(), path);
 			return create0(path);
 		}
 		
-		return new RootEntryZ(meta, path, this);
+		return Junk.notYetImplemented(); //TODO return new RootEntryZ(meta, path, this);
 	}
 
 	public void close(RootEntryZ root) {
