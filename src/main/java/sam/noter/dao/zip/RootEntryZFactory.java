@@ -34,7 +34,7 @@ import sam.noter.Utils;
 import sam.noter.dao.RootEntryFactory;
 
 @Singleton
-public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
+public class RootEntryZFactory implements RootEntryFactory {
 	private static final EnsureSingleton singleton = new EnsureSingleton();
 
 	private final Logger logger;
@@ -58,10 +58,6 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 		if(Files.exists(metasPath))
 			MetaHelper.read(metas, metasPath);
 
-	}
-	@Override
-	public void close() throws Exception {
-		//FIXME metas.close();
 	}
 
 	@Override

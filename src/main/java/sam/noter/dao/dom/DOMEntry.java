@@ -83,9 +83,12 @@ class DOMEntry extends Entry {
 	public List<IEntry> getChildren() {
 		return children;
 	}
-
 	@Override
 	public IEntry getParent() {
 		return parent;
+	}
+	@Override
+	public int indexOf(IEntry child) {
+		return children.indexOf(child);
 	}
 }

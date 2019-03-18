@@ -12,9 +12,10 @@ import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.io.serilizers.StringWriter2;
 import sam.noter.dao.api.IEntry;
+import sam.reference.WeakAndLazy;
 
 public interface Utils {
-	public static Logger logger(Class cls) {
+	public static Logger logger(@SuppressWarnings("rawtypes") Class cls) {
 		return LoggerFactory.getLogger(cls);
 	}
 
@@ -32,8 +33,11 @@ public interface Utils {
 		if(n != null)
 			sb.append(n.getTitle()).append(" > ");
 	}
+	static final WeakAndLazy<StringBuilder> sb = new WeakAndLazy<>(StringBuilder::new);
 	public static String toTreeString(EntryTreeItem e, boolean b) {
-		StringBuilder sb = new StringBuilder(); //TODO
+		StringBuilder sb = Utils.sb.get();
+		sb.setLength(0);
+				
 		toTreeString(e.getEntry(), sb);
 		return sb.toString();
 	}

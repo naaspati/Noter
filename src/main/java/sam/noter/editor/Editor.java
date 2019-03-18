@@ -59,6 +59,12 @@ public class Editor extends BorderPane {
 	private final IdentityHashMap<EntryTreeItem, Stack<ViewType>> history0 = new IdentityHashMap<>();
 	private final AppConfig configManager;
 
+	private final DelayedActionThread<Object> delay;
+	private static final Object SKIP_CHANGE = new Object();
+	private static final Object CHANGE = new Object();
+	private volatile EntryTreeItem item;
+	private volatile ViewType view;
+
 	private static Font font;
 
 	public static Font getFont() {
@@ -72,6 +78,8 @@ public class Editor extends BorderPane {
 
 		observables.currentItemProperty()
 		.addListener((p, o, n) -> changed(n, PREVIOUS));
+
+		delay = new DelayedActionThread<>(Optional.ofNullable(configManager.getConfig(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
 	}
 
 	@FXML
@@ -113,29 +121,26 @@ public class Editor extends BorderPane {
 		else
 			centerEditor.consume(e);
 	}
-	private DelayedActionThread<Object> delay;
-	private static final Object SKIP_CHANGE = new Object();
-	private static final Object CHANGE = new Object();
-	private volatile EntryTreeItem item;
-	private volatile ViewType view;
 
 	private void changed(EntryTreeItem item, ViewType view) {
 		setDisable(item == null);
 		this.item = item;
 		this.view = view;
 
-		if(item != null && item.isContentLoaded()) {
+		/*
+		 * if(item != null && item.isContentLoaded()) {
 			if(delay != null)
 				delay.queue(SKIP_CHANGE);
 			else
 				actual_changed();
 		} else {
 			if(delay == null)
-				delay = new DelayedActionThread<>(Optional.ofNullable(configManager.getConfig(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
-			
-			delay.queue(CHANGE);	
+				delay = new DelayedActionThread<>();
 		}
-		
+		 */
+
+		delay.queue(CHANGE);
+
 	}	
 	private void delayedChange(Object obj) {
 		if(obj != SKIP_CHANGE)

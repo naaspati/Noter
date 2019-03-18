@@ -491,8 +491,7 @@ class MetaTest {
 			assertNotSame(e, a);
 			assertEquals(e.id, a.id);
 			assertEquals(e.lastModified(), a.lastModified());
-			assertEquals(e.path(), a.path());
+			assertEquals(e.source(), a.source());
 		}
 	}
-
 }

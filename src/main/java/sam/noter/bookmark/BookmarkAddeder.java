@@ -4,6 +4,7 @@ import static sam.fx.helpers.FxClassHelper.addClass;
 import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
+import static sam.noter.EntryTreeItem.cast;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -102,17 +103,20 @@ class BookmarkAddeder extends BorderPane {
 
 		String title = searchTF.getText();
 		if(item == null)
-			root.addChild( title);
+			root.addChild(title, cast(root.getRoot()), Integer.MAX_VALUE);
 		else {
+			EntryTreeItem parent;
 			switch (bookMarkType) {
 				case RELATIVE:
-					result =  root.addChild(title, item.getParent(), item);
+					parent = cast(item.getParent()); 
+					result =  root.addChild(title, parent, parent.indexOf(item));
 					break;
 				case CHILD: 
-					result =  root.addChild(title, item);
+					result =  root.addChild(title, item, Integer.MAX_VALUE);
 					break;
 				case RELATIVE_TO_PARENT:
-					result =  root.addChild(title,item.getParent().getParent(), item.getParent());
+					parent = (EntryTreeItem)item.getParent().getParent();
+					result =  root.addChild(title, parent, parent.indexOf((EntryTreeItem) item.getParent()));
 					break;
 			}
 		}

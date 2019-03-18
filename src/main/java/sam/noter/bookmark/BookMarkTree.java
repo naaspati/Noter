@@ -1,13 +1,15 @@
 package sam.noter.bookmark;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
@@ -22,10 +24,12 @@ import sam.reference.ReferenceUtils;
 
 class BookMarkTree extends TreeView<String> {
 	private static final Logger logger = Utils.logger(BookMarkTree.class);
+	private static int etm_count, cache_add, cache_remove;
 
 	private final MultipleSelectionModel<TreeItem<String>> model;
-	private final EntryTreeItem root = new EntryTreeItem();
+	private final ETM root = new ETM();
 	private IRootEntry rootEntry;
+	private final ArrayList<WeakReference<ETM>> cache = new ArrayList<>();
 
 	public BookMarkTree() {
 		super();
@@ -40,31 +44,47 @@ class BookMarkTree extends TreeView<String> {
 	}
 
 	public EntryTreeItem itemFor(IEntry item) {
-		// TODO Auto-generated method stub
+		if(item == null)
+			return null;
+
+		return itemFor(item, root.getChildren());
+	}
+
+	private EntryTreeItem itemFor(IEntry item, ObservableList<TreeItem<String>> children) {
+		if(Checker.isEmpty(children))
+			return null;
+
+		for (int i = 0; i < children.size(); i++) {
+			if(children.get(i) == item)
+				return (EntryTreeItem) children.get(i);
+		}
+
+		for (int i = 0; i < children.size(); i++) {
+			TreeItem<String> t = itemFor(item, children.get(i).getChildren()); 
+			if(t != null)
+				return (EntryTreeItem) t;
+		}
+
 		return null;
+
 	}
 
 	public EntryTreeItem getSelectedItem() {
 		return (EntryTreeItem) model.getSelectedItem();
 	}
+	public EntryTreeItem addChild(String title, EntryTreeItem parent, int index) {
+		ETM p = (ETM) parent;
+		IEntry pie = p.entry;
+		IEntry e = rootEntry.addChild(title, pie, index);
+		ETM child = newETM();
+		child.setEntry(e);
 
-	public void addChild(String title) {
-		// TODO Auto-generated method stub
-	}
+		if(index >= p.list.size())
+			p.list.add(child);
+		else 
+			p.list.add(index <= 0 ? 0 : index, child);
 
-	public EntryTreeItem addChild(String title, TreeItem<String> parent, EntryTreeItem item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public EntryTreeItem addChild(String title, EntryTreeItem item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public EntryTreeItem addChild(String title, TreeItem<String> parent, TreeItem<String> parent2) {
-		// TODO Auto-generated method stub
-		return null;
+		return child;
 	}
 
 	public void clearAndSelect(TreeItem<String> e) {
@@ -79,68 +99,82 @@ class BookMarkTree extends TreeView<String> {
 		return rootEntry;
 	}
 
-	private WeakReference<LinkedList<TreeItem<String>>> wcache = new WeakReference<LinkedList<TreeItem<String>>>(null);
 	private int createdCount = 0; 
 	void setRootEntry(IRootEntry root) {
 		setRoot(null);
 
 		createdCount = 0;
-		LinkedList<TreeItem<String>> cache = ReferenceUtils.get(wcache);
-		if(cache == null)
-			wcache = new WeakReference<>(cache = new LinkedList<>());
-
-		set(root.getChildren(), this.root, cache);
+		set(root.getChildren(), this.root);
 		setRoot(this.root);
 
-		cache.forEach(e -> EntryTreeItem.cast(e).setEntry(null));
+		cache.forEach(e -> etm(e).setEntry(null));
 		logger.debug("created EntryTreeItem: {}", createdCount);
 	}
-	private void set(Collection<? extends IEntry> children, TreeItem<String> target, LinkedList<TreeItem<String>> cache) {
-		ObservableList<TreeItem<String>> items = target.getChildren();
+	private void set(Collection<? extends IEntry> children, TreeItem<String> target) {
+		ObservableList<TreeItem<String>> items = children(target);
 
 		if(Checker.isEmpty(children)) {
 			if(!items.isEmpty()) {
-				cache.addAll(items);
-				items.clear();	
+				items.forEach(e -> addToCache(e));
+				items.clear();
 			}
 		} else {
 			while(items.size() < children.size())
-				items.add(newInstance(cache.removeLast()));
+				items.add(newETM());
 			while(items.size() > children.size()) {
 				TreeItem<String> item = items.remove(items.size() - 1); 
-				remove(cache, item);
-				cache.add(item);
+				remove(item);
+				addToCache(item);
 			}
 
 			Iterator<? extends IEntry> entries = children.iterator();
-			
+
 			for (int i = 0; i < children.size(); i++) {
-				EntryTreeItem item = EntryTreeItem.cast(items.get(i));
+				ETM item = etm(items.get(i));
 				IEntry child = entries.next();
 				item.setEntry(child);
 
-				set(child.getChildren(), item, cache);
+				set(child.getChildren(), item);
 			}
 		}
 	}
 
-	private void remove(LinkedList<TreeItem<String>> cache, TreeItem<String> item) {
-		List<TreeItem<String>> list = item.getChildren(); 
+	private ETM newETM() {
+		while(!cache.isEmpty()) {
+			cache_remove++;
+			
+			ETM e = ReferenceUtils.get(cache.remove(cache.size() - 1));
+			if(e != null)
+				return e;
+		}
+		return new ETM();
+	}
+
+	private void addToCache(Collection<TreeItem<String>> e) {
+		if(Checker.isNotEmpty(e))
+			e.forEach(this::addToCache);
+	}
+	private void addToCache(TreeItem<String> e) {
+		cache_add++;
+		
+		ETM f = (ETM)e;
+		f.setEntry(null);
+		cache.add(new WeakReference<>(f));
+	}
+
+	private void remove(TreeItem<String> item) {
+		List<TreeItem<String>> list = children(item);
 		if(list.isEmpty())
 			return;
 
-		cache.addAll(list);
-		list.forEach(e -> remove(cache, e));
+		addToCache(list);
+		list.forEach(this::remove);
 		list.clear();
 	}
 
-	private TreeItem<String> newInstance(TreeItem<String> e) {
-		if(e != null)
-			return e;
-		createdCount++;
-		return new EntryTreeItem();
+	private ObservableList<TreeItem<String>> children(TreeItem<String> item) {
+		return etm(item).list;
 	}
-
 	void selectById(int id) {
 		selectById(id, root.getChildren());
 	}
@@ -161,7 +195,49 @@ class BookMarkTree extends TreeView<String> {
 					return true;
 			}
 		}
-
 		return false;
+	}
+
+	static ETM etm(Object o) {
+		return (ETM)o;  
+	}
+
+	private class ETM extends EntryTreeItem {
+		private IEntry entry;
+		private final ObservableList<TreeItem<String>> list;
+		private final ObservableList<TreeItem<String>> unmod;
+
+		public ETM() {
+			etm_count++;
+
+			this.list = super.getChildren();
+			this.unmod = FXCollections.unmodifiableObservableList(list);
+		}
+		void setEntry(IEntry e) {
+			setValue(e == null ? null : e.getTitle());
+			this.entry = e;
+		}
+
+		@Override
+		public void setContentProxy(Supplier<String> proxy) {
+
+		}
+		@Override
+		public ObservableList<TreeItem<String>> getChildren() {
+			return unmod;
+		}
+		@Override
+		protected IEntry entry() {
+			return entry;
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return list.isEmpty();
+		}
+		@Override
+		public int indexOf(EntryTreeItem item) {
+			return list.indexOf(item);
+		}
 	}
 }

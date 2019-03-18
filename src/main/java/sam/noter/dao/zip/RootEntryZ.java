@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -34,11 +35,12 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	private String title;
 	private boolean modified;
 	private RootEntryZ root = this;
-	private final List<EZ> children = new ArrayList<>();
+	private EZ me;
 
 	public RootEntryZ(Cache cache) throws Exception {
 		super(0, null);
 		this.cache = cache;
+		this.me = new EZ(-1, null);
 		reload();
 	}
 	@Override
@@ -303,18 +305,24 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	@Override public String getContent() { return null; }
 	@Override public void setContent(String content) { }
 	@Override public IRootEntry root() { return this; }
-	@Override public List<? extends IEntry> getChildren() { return children; }
+	@Override public List<? extends IEntry> getChildren() { return me.getChildren(); }
 	@Override public IEntry getParent() { return null; }
 	@Override protected String readContent() { return null; }
+	@Override public int indexOf(IEntry child) { return me.indexOf(child); }
 
 	class EZ extends EntryZ {
 		private DataMeta meta;
 		private List<EZ> children;
 		private final EZ parent;
+		
+		public EZ(int id, String title) {
+			super(id, title);
+			this.parent = null;
+		}
 
 		public EZ(int id, String title, EZ parent, boolean isNew) {
 			super(id, title);
-			this.parent = parent;
+			this.parent = Objects.requireNonNull(parent);
 			this.lastModified = System.currentTimeMillis();
 
 			if(isNew) 
@@ -380,6 +388,9 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		public EZ getParent() {
 			return parent;
 		}
+		@Override
+		public int indexOf(IEntry child) {
+			return Checker.isEmpty(children) ? -1 : children.indexOf(child);
+		}
 	}
-
 }

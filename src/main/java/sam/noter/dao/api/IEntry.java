@@ -23,4 +23,5 @@ public interface IEntry {
 	String getContent();
 	long getLastModified();
 	IEntry getParent();
+	int indexOf(IEntry child);
 }

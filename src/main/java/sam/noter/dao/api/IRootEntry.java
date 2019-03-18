@@ -22,16 +22,19 @@ public interface IRootEntry {
 		save(getJbookPath());
 	};
 	
+	@Deprecated
 	default IEntry addChild(String childTitle, IEntry parent, IEntry relativeToChild) {
-		int index = Junk.notYetImplemented();//FIXME relativeToChild == null ? Integer.MAX_VALUE  : parent.getChildren().indexOf(relativeToChild);
+		int index = relativeToChild == null ? Integer.MAX_VALUE  : parent.indexOf(relativeToChild);
 		Checker.assertTrue(index >= 0, () -> new IllegalArgumentException(relativeToChild+" is not a child of "+parent));
 		return addChild(childTitle, parent, index+1);
 	}
+	@Deprecated
 	default IEntry addChild(String childTitle, IEntry parent) {
 		return addChild(childTitle, parent, Integer.MAX_VALUE);
 	}
 	
-	IEntry addChild(String title, IEntry parent,  int index);
+	
+	
 
 	/**
 	 * add given children to newParent, return added children (they might have been modified)
@@ -41,6 +44,7 @@ public interface IRootEntry {
 	 * @return
 	 */
 	List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index);
+	IEntry addChild(String title, IEntry parent, int index);
 	void addChild(IEntry child, IEntry parent, int index);
 	void removeFromParent(IEntry child);
 	Collection<? extends IEntry> getChildren();
