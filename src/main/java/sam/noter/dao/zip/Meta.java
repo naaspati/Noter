@@ -3,32 +3,34 @@ package sam.noter.dao.zip;
 import java.nio.file.Path;
 import java.util.Objects;
 
-import sam.myutils.ThrowException;
-
 class Meta {
 	public final int id;
 	private long lastModified;
-	private Path path;
+	private Path source;
+	
+	public Meta(Meta meta) {
+		this(meta.id, meta.lastModified);
+		this.source = Objects.requireNonNull(meta.source);
+	}
 	
 	public Meta(int id, long lasModified) {
 		this.id = id;
 		this.lastModified = lasModified;
 	}
-	public Meta(int id, long lasModified, Path p) {
+	public Meta(int id, long lasModified, Path jbook_path) {
 		this(id, lasModified);
-		this.path = Objects.requireNonNull(p);
+		this.source = Objects.requireNonNull(jbook_path);
 	}
 	public long lastModified() {
 		return lastModified;
 	}
-	public void setPath(Path path) {
-		if(this.path != null)
-			ThrowException.illegalAccessError();
-		
-		this.path = path;
-		
+	public Path source() {
+		return source;
 	}
-	public Path path() {
-		return path;
+	public void setSource(Path jbook_path) {
+		this.source = jbook_path;
+	}
+	protected void setLastModified(long lastModified) {
+		this.lastModified = lastModified;
 	}
 }

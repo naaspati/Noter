@@ -478,9 +478,9 @@ class MetaTest {
 			expected = Arrays.asList(metas);
 		}
 		
-		MetaSerializer.write(expected, path);
+		MetaHelper.write(expected, path);
 		ArrayList<Meta> actual = new ArrayList<>();
-		MetaSerializer.read(actual, path);
+		MetaHelper.read(actual, path);
 		
 		assertEquals(expected.size(), actual.size());
 		

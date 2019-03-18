@@ -96,9 +96,6 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 		jbookPath = path;
 		this.title = jbookPath.getFileName().toString();
 	}
-
-	@Override public void close() throws Exception {/* does nothing */}
-
 	@Override
 	public IEntry addChild(String title, IEntry parent,  int index) {
 		if(Checker.isEmptyTrimmed(title))

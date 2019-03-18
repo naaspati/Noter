@@ -66,11 +66,6 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	public int modCount() {
 		return mods.modCount();
 	}
-
-	@Override 
-	public void close() throws Exception {
-		cache.close(); 
-	}
 	@Override
 	public Path getJbookPath() {
 		return cache.source();
@@ -179,9 +174,13 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	}
 
 	private void transfer(RootEntryZ root, List<Pair<EZ, EZ>> list) {
-		List<DataMeta> dm = list.stream().map(e -> e.key.meta).filter(d -> !DataMeta.isEmpty(d)).collect(Collectors.toList());
-		IdentityHashMap<DataMeta, DataMeta> map = cache.transfer(root.cache, dm);
-		list.forEach(p -> p.value.meta = map.get(p.key.meta));
+		try {
+			List<DataMeta> dm = list.stream().map(e -> e.key.meta).filter(d -> !DataMeta.isEmpty(d)).collect(Collectors.toList());
+			IdentityHashMap<DataMeta, DataMeta> map = cache.transferFrom(root.cache, dm);
+			list.forEach(p -> p.value.meta = map.get(p.key.meta));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 	private EZ move(IEntry child, EZ parent, List<Pair<EZ, EZ>> transferQueue) {
 		if(child.getClass() == EZ.class) {

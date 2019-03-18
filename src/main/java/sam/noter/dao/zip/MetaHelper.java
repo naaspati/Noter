@@ -28,10 +28,10 @@ import sam.io.IOUtils;
 import sam.io.serilizers.StringIOUtils;
 import sam.nopkg.Resources;
 
-final class MetaSerializer {
-	private MetaSerializer() { }
+final class MetaHelper {
+	private MetaHelper() { }
 
-	private static final Logger logger = LoggerFactory.getLogger(MetaSerializer.class);
+	private static final Logger logger = LoggerFactory.getLogger(MetaHelper.class);
 	private static final int BYTES = Integer.BYTES + Long.BYTES;
 
 	public static void read(ArrayList<Meta> metas, Path path) throws IOException {
@@ -72,7 +72,7 @@ final class MetaSerializer {
 				int k = 0;
 				@Override
 				public void accept(String t) {
-					metas.get(k++).setPath(Paths.get(t));
+					metas.get(k++).setSource(Paths.get(t));
 				}
 			};
 			StringIOUtils.collect(supplier, '\n', collector, r.decoder(), r.chars(), r.sb());
@@ -102,7 +102,7 @@ final class MetaSerializer {
 			}
 
 			IOUtils.write(buffer, gis, true);
-			StringIOUtils.writeJoining(new MappedIterator<Meta, String>(metas.iterator(), m -> m.path().toString()), "\n", b -> IOUtils.write(b, gis, false), buffer, r.chars(), r.encoder());
+			StringIOUtils.writeJoining(new MappedIterator<Meta, String>(metas.iterator(), m -> m.source().toString()), "\n", b -> IOUtils.write(b, gis, false), buffer, r.chars(), r.encoder());
 		}	
 	}
 }

@@ -9,7 +9,7 @@ import sam.myutils.Checker;
 import sam.nopkg.Junk;
 import sam.noter.dao.Walker;
 
-public interface IRootEntry extends AutoCloseable {
+public interface IRootEntry {
 	Path getJbookPath();
 	void setJbookPath(Path path);
 	

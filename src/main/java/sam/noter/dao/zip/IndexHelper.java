@@ -19,6 +19,7 @@ import sam.io.BufferSupplier;
 import sam.io.IOUtils;
 import sam.io.infile.DataMeta;
 import sam.io.serilizers.StringIOUtils;
+import sam.myutils.Checker;
 import sam.nopkg.Resources;
 
 class IndexHelper {
@@ -120,6 +121,8 @@ class IndexHelper {
 
 			IOUtils.compactOrClear(buffer);
 			StringIOUtils.collect0(BufferSupplier.of(fc, buffer), '\n', eater, r.decoder(), r.chars(), r.sb());
+			
+			Checker.assertTrue(list.size() == count);
 			return list;
 		}
 	}

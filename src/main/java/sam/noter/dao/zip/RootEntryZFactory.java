@@ -26,6 +26,7 @@ import sam.io.IOUtils;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.io.infile.DataMeta;
 import sam.io.serilizers.StringIOUtils;
+import sam.myutils.ThrowException;
 import sam.nopkg.EnsureSingleton;
 import sam.nopkg.Junk;
 import sam.nopkg.Resources;
@@ -55,7 +56,7 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 
 		Files.createDirectories(mydir);
 		if(Files.exists(metasPath))
-			MetaSerializer.read(metas, metasPath);
+			MetaHelper.read(metas, metasPath);
 
 	}
 	@Override
@@ -81,30 +82,43 @@ public class RootEntryZFactory implements RootEntryFactory, AutoCloseable {
 			throw new IOException("file not found: "+path);
 
 		path =  path.normalize().toAbsolutePath();
-		Meta meta = find(path);
+		int index = find(path);
 
-		if(meta == null)
+		if(index < 0)
 			return create0(path);
 
-		if(meta.lastModified() != path.toFile().lastModified()) {
-			logger.debug("RESET CACHE: because: meta.lastModified({}) != path.toFile().lastModified({}),  path: {}", meta.lastModified(), path.toFile().lastModified(), path);
+		Meta m = metas.get(index);
+		
+		if(m instanceof Cache)
+			ThrowException.illegalAccessError();
+		
+		if(m.lastModified() != path.toFile().lastModified()) {
+			logger.debug("RESET CACHE: because: meta.lastModified({}) != path.toFile().lastModified({}),  path: {}", m.lastModified(), path.toFile().lastModified(), path);
 			return create0(path);
 		}
-
-		return new RootEntryZ(new CacheImpl(meta, mydir));
+		
+		CacheImpl c = new CacheImpl(m, mydir);
+		metas.set(index, c);
+		return new RootEntryZ(c);
 	}
 	
 	private class CacheImpl extends Cache {
 		public CacheImpl(Meta meta, Path saveDir) throws IOException {
 			super(meta, saveDir);
 		}
+
+		@Override
+		protected void saveMeta() throws IOException {
+			MetaHelper.write(metas, metasPath);
+		}
 	}
 	
-	private Meta find(Path path) {
-		for (Meta meta : metas) {
-			if(path.equals(meta.path()))
-				return meta;
+	private int find(Path path) {
+		for (int i = 0; i < metas.size(); i++) {
+			if(path.equals(metas.get(i).source()))
+				return i;
 		}
-		return null;
+		
+		return -1;
 	}
 }
