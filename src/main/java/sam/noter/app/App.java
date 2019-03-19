@@ -4,13 +4,10 @@ import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
-import static sam.noter.EnvKeys.OPEN_CMD_DIR;
-import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
 import static sam.noter.Utils.fx;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.management.ManagementFactory;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -24,17 +21,12 @@ import java.nio.file.WatchEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.codejargon.feather.Feather;
-import org.codejargon.feather.Key;
-import org.codejargon.feather.Provides;
 import org.json.JSONException;
 import org.slf4j.Logger;
 
@@ -73,17 +65,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
-import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
-import sam.di.ConfigKey;
 import sam.di.AppConfig;
-import sam.di.Injector;
-import sam.di.OnExitQueue;
-import sam.di.ParentWindow;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxBindings;
@@ -105,8 +93,10 @@ import sam.noter.Utils;
 import sam.noter.bookmark.BookmarksPane;
 import sam.noter.dao.api.IRootEntry;
 import sam.noter.editor.Editor;
+import sam.noter.tabs.TabBox;
+import sam.reference.WeakAndLazy;
 import sam.thread.MyUtilsThread;
-public class App extends Application implements AppUtils, Observables, ChangeListener<IRootEntry> {
+public class App extends Application implements AppUtilsImpl, DialogHelper, Observables, ChangeListener<IRootEntry> {
 	private static final EnsureSingleton singleons = new EnsureSingleton();
 
 	private final Logger logger = Utils.logger(App.class);
@@ -119,6 +109,18 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 		FxFxml.setFxmlDir(ClassLoader.getSystemResource("fxml"));
 	}
 
+	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
+	
+	private InjectorImpl injector;
+	private BoundBooks boundBooks;
+
+	@Override
+	public void init() throws Exception {
+		injector = new InjectorImpl(this);
+		boundBooks = injector.instance(BoundBooks.class);
+		GRAYSCALE_EFFECT.setSaturation(-1);
+	}
+
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
 	@FXML private BookmarksPane bookmarks;
@@ -127,99 +129,11 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 
 	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
-
-	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
+	
 	private Stage stage;
-	private List<Runnable> onExit; 
 
 	private final SimpleBooleanProperty currentTabNull = new SimpleBooleanProperty();
 	private IRootEntry currentRoot;
-	private BoundBooks boundBooks;
-	private Path appDataDir, backupDir; //FIXME init
-
-	static {
-		GRAYSCALE_EFFECT.setSaturation(-1);
-	}
-
-	private final Tools injector = new Tools();
-
-	private class Tools implements Injector, OnExitQueue, AppConfig {
-		private final Feather feather;
-		private int configMod;
-		private EnumMap<ConfigKey, String> configs = new EnumMap<>(ConfigKey.class);
-
-		public Tools() {
-			this.feather = Feather.with(this);
-		}
-
-		@Override
-		public Path appDir() {
-			return appDataDir;
-		}
-		@Override
-		public Path backupDir() {
-			return backupDir;
-		}
-		@Override
-		public String getConfig(ConfigKey key) {
-			return configs.get(key);
-		}
-		@Override
-		public void setConfig(ConfigKey key, String value) {
-			Objects.requireNonNull(key);
-			if(!Objects.equals(value, configs.get(key))) {
-				configs.put(key, value);
-				configMod++;
-			}
-		}
-
-		@Override
-		public <E, A extends Annotation> E instance(Class<E> type, Class<A> qualifier) {
-			return feather.instance(Key.of(type, qualifier));
-		}
-		@Override
-		public <E> E instance(Class<E> type) {
-			return feather.instance(type);
-		}
-
-		@Provides
-		public Injector injector( ) {
-			return this;
-		}
-		@Provides
-		public OnExitQueue onexit( ) {
-			return this;
-		}
-		@Provides
-		public AppConfig cm( ) {
-			return this;
-		}
-		@Provides
-		public AppUtils utils( ) {
-			return App.this;
-		}
-
-		@ParentWindow
-		@Provides
-		public Stage stage( ) {
-			return stage;
-		}
-
-		@Override
-		public void runOnExist(Runnable runnable) {
-			if(onExit == null)
-				onExit = Collections.synchronizedList(new ArrayList<>());
-			onExit.add(runnable);
-		}
-
-		@Override
-		public Path tempDir() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-
-	};
 
 	@Override
 	public void start(Stage stage) throws Exception {
@@ -227,8 +141,6 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 		FxAlert.setParent(stage);
 		FxPopupShop.setParent(stage);
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
-
-		boundBooks = injector.instance(BoundBooks.class);
 
 		FXMLLoader loader = new FXMLLoader(ClassLoader.getSystemResource("fxml/App.fxml"));
 		loader.setBuilderFactory(new BuilderFactory() {
@@ -250,19 +162,21 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 
 		loadIcon(stage);
 		showStage(stage);
-		readRecents();
+		readRecents(); //TODO 
 
 		addTabs(getParameters().getRaw());
 		watcher();
 	}
 
 	private void watcher() throws IOException {
-		if(!OPEN_CMD_ENABLE)
+		Path ocd = (Path) System.getProperties().get("OPEN_CMD_DIR");
+		if(ocd == null)
 			return;
 
-		logger.debug("INIT: OPEN_CMD_DIR watcher");
-		Files.createDirectories(OPEN_CMD_DIR);
-		MyUtilsThread.runOnDeamonThread(new DirWatcher(OPEN_CMD_DIR, StandardWatchEventKinds.ENTRY_CREATE) {
+		logger.debug("INIT: OPEN_CMD_DIR watcher: {}", ocd);
+		Files.createDirectories(ocd);
+		
+		MyUtilsThread.runOnDeamonThread(new DirWatcher(ocd, StandardWatchEventKinds.ENTRY_CREATE) {
 			@Override
 			protected void onEvent(Path context, WatchEvent<?> we) {
 				try {
@@ -320,7 +234,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 	private void addTabs(List<String> input) {
 		fx(() -> {
 			try {
-				List<Path> files = new FilesLookup().parse(injector, appDataDir, input);
+				List<Path> files = new FilesLookup().parse(injector, input);
 				if(files.isEmpty()) return;
 				files.replaceAll(f -> f.normalize().toAbsolutePath());
 				List<Path> paths = new ArrayList<>();
@@ -357,7 +271,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 			stage.getIcons().add(new Image(Files.newInputStream(p)));
 	}
 	private void readRecents() throws IOException, URISyntaxException {
-		Path p = appDataDir.resolve("recents.txt");
+		Path p = injector.appDir().resolve("recents.txt");
 		if(Files.notExists(p))
 			return;
 
@@ -420,8 +334,8 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 	}
 
 	private void exit() {
-		if(onExit != null)
-			onExit.forEach(Runnable::run);
+		if(injector.onExit != null)
+			injector.onExit.forEach(Runnable::run);
 
 		if(tabsBox.closeAll()) {
 			try(FileChannel fc = FileChannel.open(stageSettingPath(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
@@ -439,7 +353,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 			}
 
 			try {
-				Files.write(appDataDir.resolve("recents.txt"), recentsMenu.getItems().stream()
+				Files.write(injector.appDataDir.resolve("recents.txt"), recentsMenu.getItems().stream()
 						.map(MenuItem::getUserData)
 						.map(Object::toString)
 						.map(s -> s.replace('\\', '/'))
@@ -451,7 +365,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 		}
 	}
 	private Path stageSettingPath() {
-		return appDataDir.resolve("stage.settings");
+		return injector.appDataDir.resolve("stage.settings");
 	}
 
 	private MenuBar getMenubar() throws JSONException, IOException {
@@ -462,7 +376,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 				editorMenu()
 				);
 
-		new DyanamiMenus().load(bar, editor);
+		new DyanamiMenus().load(bar, editor, injector);
 		return bar;
 	}
 	private Menu editorMenu() {
@@ -499,7 +413,7 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 		}
 		Button save = new Button("save");
 		save.setOnAction(e1 -> {
-			File file = chooseFile("save in text", null, tab.getJbookPath().getFileName()+ ".txt", FileChooserType.SAVE);
+			File file = chooseFile("save in text", null, tab.getJbookPath().getFileName()+ ".txt", FileChooserHelper.Type.SAVE, null);
 			if(file == null) {
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
@@ -646,10 +560,10 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 				new SeparatorMenuItem(),
 				menuitem("E_xit", combination(F4, ALT_DOWN), e -> exit())
 				);
-		*/
-
-		if(!OPEN_CMD_ENABLE)
+				
+				if(!OPEN_CMD_ENABLE)
 			menu.getItems().add(2,  menuitem("Open By Cmd", combination(O, SHORTCUT_DOWN, SHIFT_DOWN), e -> openByCmd(), searchActive));
+		*/
 
 		closeSpecific.disableProperty().bind(tabsBox.tabsCountProperty().lessThan(2).or(searchActive));
 		return menu;
@@ -688,30 +602,12 @@ public class App extends Application implements AppUtils, Observables, ChangeLis
 		if(list.size() > 10)
 			list.subList(10, list.size()).clear();
 	}
-
-	@Override
-	public File chooseFile(String title, File expectedDir, String expectedFilename, FileChooserType type) {
-		Objects.requireNonNull(type);
-
-		FileChooser chooser = new FileChooser();
-		chooser.setTitle(title);
-		chooser.getExtensionFilters().add(new ExtensionFilter("jbook file", "*.jbook"));
-
-		if(expectedDir == null || !expectedDir.isDirectory())
-			expectedDir = new File(injector.getConfig(ConfigKey.LAST_VISITED));
-
-		if(expectedDir != null && expectedDir.isDirectory())
-			chooser.setInitialDirectory(expectedDir);
-
-		if(expectedFilename != null)
-			chooser.setInitialFileName(expectedFilename);
-
-		File file = type == FileChooserType.OPEN ? chooser.showOpenDialog(stage) : chooser.showSaveDialog(stage);
-
-		if(file != null)
-			injector.setConfig(ConfigKey.LAST_VISITED, file.getParent());
-		return file;
-	}
+	
+	@Override public Window stage() { return stage; }
+	@Override public AppConfig config() { return injector; }
+	
+	private final WeakAndLazy<FileChooser> fchooser = new WeakAndLazy<>(FileChooser::new);
+	@Override public FileChooser newFileChooser() { return fchooser.get(); }
 
 	@Override
 	public Runnable showDialog(Node view) {

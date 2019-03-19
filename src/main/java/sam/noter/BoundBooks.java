@@ -5,79 +5,91 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javafx.stage.FileChooser;
-import javafx.stage.Window;
-import sam.di.ConfigKey;
 import sam.di.AppConfig;
-import sam.di.ParentWindow;
-import sam.fx.popup.FxPopupShop;
+import sam.di.ConfigKey;
+import sam.di.Injector;
 import sam.io.fileutils.FileOpenerNE;
+import sam.myutils.Checker;
+import sam.nopkg.EnsureSingleton;
+import sam.noter.app.FileChooserHelper;
 import sam.noter.dao.api.IRootEntry;
 import sam.tsv.TsvMap;
 
 @Singleton
 public class BoundBooks {
+	private static final Logger logger = LoggerFactory.getLogger(BoundBooks.class);
+	
+	private static final EnsureSingleton singlton = new  EnsureSingleton();
+	{
+		singlton.init();
+	}
+
 	private Map<String, String> boundBooks;
-	private boolean modified;
-	private final AppConfig configManager;
-	private final Window parent;
-	private final Path path;
+	private boolean modified = false;
+	private Path path;
+	private final Injector injector;
 
 	@Inject
-	public BoundBooks(AppConfig configManager, @ParentWindow Window parent) throws IOException {
-		this.configManager = configManager;
-		this.parent = parent;
-		this.path = configManager.appDir().resolve("boundBooks.txt");
-		
+	public BoundBooks(Injector injector) throws IOException {
+		this.injector = injector;
+	}
+
+	private void load() {
+		if(path != null)
+			return;
+
+		AppConfig config = injector.instance(AppConfig.class);
+		this.path = config.appDir().resolve("boundBooks.txt");
+
 		if(Files.notExists(path)) 
 			return;
-		
-		if(Files.exists(path))
-			boundBooks = TsvMap.parse(path);
+
+		if(Files.exists(path)) {
+			try {
+				boundBooks = TsvMap.parse(path);
+				logger.debug("loaded: {}", path);
+			} catch (IOException e) {
+				logger.error("failed to load: {}", path, e);
+				boundBooks = new HashMap<>();
+			}	
+		}
 	}
-	
+
 	public String getBoundBookPath(IRootEntry tab) {
+		load();
+		
 		if(tab.getJbookPath() == null)
 			return null;
+		
 		return boundBooks.get(tab.getJbookPath().toString());
 	}
 	public void bindBook(IRootEntry tab) {
-		FileChooser fc = new FileChooser();
 		String s = getBoundBookPath(tab);
-		File file;
+		File file = s == null ? null : new File(s);
+		File parent = file == null ? null : file.getParentFile();
 
-		if(s != null) {
-			file = new File(s).getParentFile();
-			fc.setInitialFileName(file.getName());
-		} else {
-			s = configManager.getConfig(ConfigKey.RECENT_DIR);
-			file = s == null ? null : new File(s);
-		}
-
-		if(file != null && file.exists()) 
-			fc.setInitialDirectory(file);
-
-		file = fc.showOpenDialog(parent);
-		if(tab.getTitle() != null)
-			fc.setTitle("Book for: "+tab.getTitle());
-
-		if(file == null) 
-			FxPopupShop.showHidePopup("cancelled", 1500);
-		else {
-			boundBooks.put(tab.getJbookPath().toString(), file.toString());
-			configManager.setConfig(ConfigKey.RECENT_DIR, file.getParent());
-			FileOpenerNE.openFile(file);
-			modified = true;
-			// will be removed 
-			// tab.setBoundBook(file);
-		}
+		if(Checker.notExists(parent)) {
+			file =  null;
+			parent = null;
+		} 
+		
+		FileChooserHelper fc = injector.instance(FileChooserHelper.class);
+		fc.chooseFile("Book for: "+tab.getTitle(), parent, file == null ? null : file.getName(), FileChooserHelper.Type.OPEN, f -> {
+			boundBooks.put(tab.getJbookPath().toString(), f.toString());
+			injector.instance(AppConfig.class).setConfig(ConfigKey.RECENT_DIR, f.getParent());
+			FileOpenerNE.openFile(f);
+			modified = true;	
+		});
+		
 	}
 	public void save() {
 		if(!modified) return;

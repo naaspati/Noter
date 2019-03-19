@@ -1,4 +1,4 @@
-package sam.noter.app;
+package sam.noter.tabs;
 
 import java.nio.file.Path;
 import java.util.List;

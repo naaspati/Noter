@@ -79,7 +79,6 @@ abstract class Cache extends Meta {
  		}
 	}
 	public ArrayWrap<EZ> getEntries(RootEntryZ root, ArrayWrap<EZ> entries) {
-		
 		// TODO Auto-generated method stub
 		return null;
 	}

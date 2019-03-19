@@ -8,9 +8,9 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.stage.Stage?>
-<?import sam.noter.app.TabBox?>
 <?import sam.noter.bookmark.BookmarksPane?>
 <?import sam.noter.editor.Editor?>
+<?import sam.noter.tabs.TabBox?>
 
 <fx:root xmlns:fx="http://javafx.com/fxml" type="Stage">
 

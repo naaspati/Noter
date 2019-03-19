@@ -10,7 +10,7 @@ import javafx.scene.control.TreeView
 import sam.noter.editor.Editor
 import sam.noter.tabs.TabContainer
 import sam.noter.bookmark.BookmarksPane
-import sam.noter.app.TabBox
+import sam.noter.tabs.TabBox
 
 dynamic component App {
 	Stage {

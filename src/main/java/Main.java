@@ -1,31 +1,41 @@
-import static sam.noter.EnvKeys.APP_DATA;
-import static sam.noter.EnvKeys.OPEN_CMD_DIR;
-import static sam.noter.EnvKeys.OPEN_CMD_ENABLE;
+import static java.nio.file.StandardOpenOption.CREATE;
 
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 import javafx.application.Application;
 import sam.config.LoadConfig;
 import sam.fx.helpers.ErrorApp;
+import sam.myutils.System2;
 import sam.noter.app.App;
+
 public class Main {
 	public static void main( String[] args ) throws Exception {
 		LoadConfig.load();
+		
+		final Path appDir = Paths.get("app_data");
+		if(!Files.isDirectory(appDir)) {
+			error("app_data dir not found", null);
+			return;
+		}
+		
+		String opencmd = System2.lookup("noter.open.by.cmd.dir");
 
 		FileChannel fc;
 		try {
-			fc = FileChannel.open(APP_DATA.resolve("noter.lock"));
+			fc = FileChannel.open(appDir.resolve("noter.lock"));
 			FileLock lock = fc.tryLock();
 			if(lock == null) {
-				if(args.length == 0 || !OPEN_CMD_ENABLE) {
+				if(args.length == 0 || opencmd == null) {
 					error("Only One Instance Allowed", null);
 				} else {
-					Files.createDirectories(OPEN_CMD_DIR);
-					Files.write(OPEN_CMD_DIR.resolve(String.valueOf(System.currentTimeMillis())), Arrays.asList(args), StandardOpenOption.CREATE);
+					Path p = Paths.get(opencmd);
+					Files.createDirectories(p);
+					Files.write(p.resolve(String.valueOf(System.currentTimeMillis())), Arrays.asList(args), CREATE);
 				}
 				fc.close();
 				return;
@@ -34,8 +44,10 @@ public class Main {
 			error("Failed to accuire lock", e);
 			return;
 		}
-
-		Files.createDirectories(OPEN_CMD_DIR);
+		
+		if(opencmd != null)
+			System.getProperties().put("OPEN_CMD_DIR", Paths.get(opencmd));
+		System.getProperties().put("app_data", appDir);
 		Application.launch(App.class, args);
 	}
 

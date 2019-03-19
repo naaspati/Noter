@@ -1,6 +1,5 @@
 package sam.noter;
 
-import static sam.noter.EnvKeys.DYNAMIC_MENUS_FILE;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -23,26 +22,27 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCombination;
+import sam.di.AppConfig;
+import sam.di.ConfigKey;
 import sam.fx.alert.FxAlert;
-import sam.myutils.System2;
 import sam.noter.editor.Editor;
 public class DyanamiMenus {
 	private final Logger logger = Utils.logger(DyanamiMenus.class);
 	private MenuBar bar;
 	private Editor editor;
 
-	public void load(MenuBar bar, Editor editor) throws JSONException, IOException {
+	public void load(MenuBar bar, Editor editor, AppConfig config) throws JSONException, IOException {
 		this.bar = bar;
 		this.editor = editor;
-		String s = System2.lookup(DYNAMIC_MENUS_FILE);
+		String s = config.getConfig(ConfigKey.DYNAMIC_MENUS_FILE);
 		if(s == null) {
-			logger.warn("{} variable not set", DYNAMIC_MENUS_FILE);
+			logger.warn("{} variable not set", ConfigKey.DYNAMIC_MENUS_FILE);
 			return;
 		}
 
 		Path p = Paths.get(s);
 		if(Files.notExists(p)) {
-			logger.error("{} not found: {}", DYNAMIC_MENUS_FILE, s);
+			logger.error("{} not found: {}", ConfigKey.DYNAMIC_MENUS_FILE, s);
 			return;
 		}
 		JSONObject json = new JSONObject(Files.lines(p).collect(Collectors.joining()));

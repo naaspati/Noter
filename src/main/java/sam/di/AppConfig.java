@@ -18,5 +18,6 @@ public interface AppConfig {
 	}
 	
 	void setConfig(ConfigKey key, String value);
+	boolean getConfigBoolean(ConfigKey key);
 	
 }
