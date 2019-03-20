@@ -1,35 +1,22 @@
 package sam.noter.dao.zip;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.function.Consumer;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-import static java.nio.file.StandardOpenOption.*;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
-import sam.collection.CollectionUtils;
 import sam.di.AppConfig;
-import sam.io.BufferSupplier;
-import sam.io.IOUtils;
 import sam.io.fileutils.FilesUtilsIO;
-import sam.io.infile.DataMeta;
-import sam.io.serilizers.StringIOUtils;
 import sam.myutils.ThrowException;
 import sam.nopkg.EnsureSingleton;
 import sam.nopkg.Junk;
-import sam.nopkg.Resources;
 import sam.noter.Utils;
 import sam.noter.dao.RootEntryFactory;
 
@@ -69,6 +56,7 @@ public class RootEntryZFactory implements RootEntryFactory {
 	}
 	private RootEntryZ create0(Path path) throws Exception {
 		//TODO
+		// metas.set(0, cacheImpl);
 		return Junk.notYetImplemented(); // return new RootEntryZ(m, path, this);
 	}
 
@@ -94,7 +82,8 @@ public class RootEntryZFactory implements RootEntryFactory {
 		}
 		
 		CacheImpl c = new CacheImpl(m, mydir);
-		metas.set(index, c);
+		metas.remove(index);
+		metas.set(0, c);
 		return new RootEntryZ(c);
 	}
 	
@@ -114,7 +103,14 @@ public class RootEntryZFactory implements RootEntryFactory {
 			if(path.equals(metas.get(i).source()))
 				return i;
 		}
-		
 		return -1;
+	}
+	@Override
+	public List<Path> recentsFiles() {
+		Path[] array = new Path[metas.size()];
+		for (int i = 0; i < array.length; i++)
+			array[i] = metas.get(i).source();
+		
+		return Arrays.asList(array);
 	}
 }

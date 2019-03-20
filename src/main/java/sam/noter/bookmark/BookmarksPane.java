@@ -21,6 +21,7 @@ import javax.inject.Singleton;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -44,10 +45,8 @@ import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
-import sam.myutils.MyUtilsException;
 import sam.nopkg.EnsureSingleton;
 import sam.noter.EntryTreeItem;
-import sam.noter.app.AppUtils;
 import sam.noter.dao.api.IRootEntry;
 import sam.reference.WeakAndLazy;
 
@@ -151,9 +150,8 @@ public class BookmarksPane extends BorderPane {
 	private final WeakAndLazy<BookmarkAddeder> adder = new WeakAndLazy<>(() -> adderCreate());
 	
 	private BookmarkAddeder adderCreate() {
-		return MyUtilsException.noError(() -> new BookmarkAddeder(injector.instance(AppUtils.class)));
+		return injector.instance(BookmarkAddeder.class);
 	}
-
 	private void addNewBookmark(BookmarkType bookMarkType) {
 		adder.get().showDialog(bookMarkType, tree);
 	}
@@ -225,5 +223,11 @@ public class BookmarksPane extends BorderPane {
 			if(id != null)
 				this.tree.selectById(id);
 		}
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public ObservableValue<EntryTreeItem> selectedItemProperty() {
+		ObservableValue o = tree.getSelectionModel().selectedItemProperty();
+		return o;
 	}
 }

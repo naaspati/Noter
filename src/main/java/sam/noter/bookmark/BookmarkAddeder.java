@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import javafx.event.ActionEvent;
@@ -28,7 +29,7 @@ import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
 import sam.noter.EntryTreeItem;
 import sam.noter.Utils;
-import sam.noter.app.AppUtils;
+import sam.noter.app.DialogHelper;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
 
@@ -41,7 +42,7 @@ class BookmarkAddeder extends BorderPane {
 	private final ListView<Wrap> similar = new ListView<>();
 	private final TextArea entryPath = new TextArea();
 	
-	private final AppUtils utils;
+	private final DialogHelper dialog;
 	private final ArrayList<Wrap> allData = new ArrayList<>();
 	
 	private Runnable close;
@@ -52,9 +53,10 @@ class BookmarkAddeder extends BorderPane {
 	private WeakReference<IRootEntry> wroot = new WeakReference<>(null);
 	private final FxTextSearch<Wrap> search = new FxTextSearch<>(w -> w.string, 500, true);
 
-	public BookmarkAddeder(AppUtils utils) throws IOException {
+	@Inject
+	public BookmarkAddeder(DialogHelper dialog) throws IOException {
 		singleton.init();
-		this.utils = utils;
+		this.dialog = dialog;
 		
 		setTop(header);
 		setCenter(new VBox(5, similar, entryPath));
@@ -180,7 +182,7 @@ class BookmarkAddeder extends BorderPane {
 		similar.getItems().setAll(allData);
 		search.setAllData(allData);
 		search.enable();
-		close = utils.showDialog(this);
+		close = dialog.showDialog(this);
 	}
 	private String header() {
 		String header = "Add new Bookmark";

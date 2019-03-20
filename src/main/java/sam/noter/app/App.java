@@ -1,15 +1,10 @@
 package sam.noter.app;
-import static javafx.scene.input.KeyCode.O;
-import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
-import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.Utils.fx;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
@@ -22,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,11 +35,13 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
@@ -61,6 +59,7 @@ import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -91,6 +90,7 @@ import sam.noter.EntryTreeItem;
 import sam.noter.FilesLookup;
 import sam.noter.Utils;
 import sam.noter.bookmark.BookmarksPane;
+import sam.noter.dao.RootEntryFactory;
 import sam.noter.dao.api.IRootEntry;
 import sam.noter.editor.Editor;
 import sam.noter.tabs.TabBox;
@@ -110,7 +110,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 	}
 
 	public static final ColorAdjust GRAYSCALE_EFFECT = new ColorAdjust();
-	
+
 	private InjectorImpl injector;
 	private BoundBooks boundBooks;
 
@@ -121,6 +121,8 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		GRAYSCALE_EFFECT.setSaturation(-1);
 	}
 
+	private StackPane stacks;
+	
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
 	@FXML private BookmarksPane bookmarks;
@@ -129,7 +131,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
-	
+
 	private Stage stage;
 
 	private final SimpleBooleanProperty currentTabNull = new SimpleBooleanProperty();
@@ -162,7 +164,6 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 		loadIcon(stage);
 		showStage(stage);
-		readRecents(); //TODO 
 
 		addTabs(getParameters().getRaw());
 		watcher();
@@ -175,7 +176,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 		logger.debug("INIT: OPEN_CMD_DIR watcher: {}", ocd);
 		Files.createDirectories(ocd);
-		
+
 		MyUtilsThread.runOnDeamonThread(new DirWatcher(ocd, StandardWatchEventKinds.ENTRY_CREATE) {
 			@Override
 			protected void onEvent(Path context, WatchEvent<?> we) {
@@ -270,20 +271,6 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		if(Files.exists(p))
 			stage.getIcons().add(new Image(Files.newInputStream(p)));
 	}
-	private void readRecents() throws IOException, URISyntaxException {
-		Path p = injector.appDir().resolve("recents.txt");
-		if(Files.notExists(p))
-			return;
-
-		Files.lines(p)
-		.map(String::trim)
-		.filter(s -> !s.isEmpty())
-		.map(Paths::get)
-		.filter(Files::exists)
-		.distinct()
-		.map(this::recentsMenuItem)
-		.forEach(recentsMenu.getItems()::add);
-	}
 	private void showStage(Stage stage2) throws IOException {
 		Path p = stageSettingPath();
 
@@ -326,12 +313,6 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 			e.consume();
 		});
 	}
-	private MenuItem recentsMenuItem(Path path) {
-		MenuItem mi =  menuitem(path.toString(), e -> tabsBox.open(Collections.singletonList(path), recentsMenu));
-		mi.getStyleClass().add("recent-mi");
-		mi.setUserData(path);
-		return mi;
-	}
 
 	private void exit() {
 		if(injector.onExit != null)
@@ -350,16 +331,6 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 				fc.write(buffer);
 			} catch (IOException e) {
 				logger.error("failed to write: {}", stageSettingPath(), e);
-			}
-
-			try {
-				Files.write(injector.appDataDir.resolve("recents.txt"), recentsMenu.getItems().stream()
-						.map(MenuItem::getUserData)
-						.map(Object::toString)
-						.map(s -> s.replace('\\', '/'))
-						.collect(Collectors.toList()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-			} catch (IOException e) {
-				logger.error("failed to save: recents.txt  ", e);   
 			}
 			Platform.exit();
 		}
@@ -521,15 +492,12 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 				}, currentTabNull)
 				);
 		menu.setDisable(true);
-		// TODO
 		return menu;
 	} 
 	 */
 
-	private final Menu recentsMenu = new Menu("_Recents");
+	private final Menu recentsMenu = new Menu("_Recents", null, new MenuItem()); // first menuitem is needed to file onshowing event
 	private Menu getFileMenu() {
-		recentsMenu.disableProperty().bind(searchActive.or(Bindings.isEmpty(recentsMenu.getItems())));
-
 		BooleanBinding fileNull = currentFile.isNull().or(searchActive);
 		BooleanBinding tabNull = currentTabNull.or(searchActive);
 		BooleanBinding selectedZero = tabsBox.tabsCountProperty().isEqualTo(0).or(searchActive);
@@ -541,7 +509,15 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 						menuitem("tab(s) to the left", e -> tabsBox.closeRightLeft(currentRoot, false))
 						);
 
-		Menu menu = new Menu("_File");/*
+		Menu menu = new Menu("_File");
+		recentsMenu.disableProperty().bind(searchActive.or(Bindings.isEmpty(recentsMenu.getItems())));
+
+		recentsMenu.setOnShowing(e -> {
+			recentsMenu.setOnShowing(null);
+			loadRecents(recentsMenu);
+		});
+
+		/*
 		new Menu("_File", null, 
 				menuitem("_New", combination(N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsBox.addBlankTab(), searchActive),
 				menuitem("_Open...", combination(O, SHORTCUT_DOWN), e -> tabsBox.open(null, recentsMenu), searchActive),
@@ -560,14 +536,28 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 				new SeparatorMenuItem(),
 				menuitem("E_xit", combination(F4, ALT_DOWN), e -> exit())
 				);
-				
+
 				if(!OPEN_CMD_ENABLE)
 			menu.getItems().add(2,  menuitem("Open By Cmd", combination(O, SHORTCUT_DOWN, SHIFT_DOWN), e -> openByCmd(), searchActive));
-		*/
+		 */
 
 		closeSpecific.disableProperty().bind(tabsBox.tabsCountProperty().lessThan(2).or(searchActive));
 		return menu;
 	}
+	private void loadRecents(Menu m) {
+		List<Path> list = injector.instance(RootEntryFactory.class)
+				.recentsFiles(); 
+
+		m.getItems().clear();		
+		list.forEach(p -> m.getItems().add(recentsMenuItem(p)));
+	}
+	private MenuItem recentsMenuItem(Path path) {
+		MenuItem mi =  menuitem(path.toString(), e -> tabsBox.open(Collections.singletonList(path), (o, f) -> recentsMenu.getItems().remove(e.getSource())));
+		mi.getStyleClass().add("recent-mi");
+		mi.setUserData(path);
+		return mi;
+	}
+
 	private void updateCurrentFile() {
 		if(currentRoot == null)
 			return;
@@ -575,7 +565,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		currentFile.set(currentRoot.getJbookPath());
 		setTitle(currentRoot);
 	}
- 	private void setTitle(IRootEntry t) {
+	private void setTitle(IRootEntry t) {
 		stage.setTitle(Optional.ofNullable(t).map(IRootEntry::getJbookPath).map(Path::toString).orElse(null));
 	}
 
@@ -602,27 +592,70 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		if(list.size() > 10)
 			list.subList(10, list.size()).clear();
 	}
-	
+
 	@Override public Window stage() { return stage; }
 	@Override public AppConfig config() { return injector; }
-	
+
 	private final WeakAndLazy<FileChooser> fchooser = new WeakAndLazy<>(FileChooser::new);
 	@Override public FileChooser newFileChooser() { return fchooser.get(); }
+	
+	private class LayeredDialog implements Runnable {
+		private final BorderPane root = new BorderPane();
+		private final Group group = new Group(root);
+		private final Button close = new Button("close");
+		private final EventHandler<ActionEvent> event = e -> run(); 
+		
+		public LayeredDialog() {
+			root.setTop(close);
+		}
+		
+		@Override
+		public void run() {
+			close.setOnAction(null);
+			root.setCenter(null);
+			stacks.getChildren().remove(group);
+		}
+		boolean set(Node node) {
+			if(root.getCenter() != null)
+				return false;
+			
+			close.setOnAction(event);
+			root.setCenter(node);
+			stacks.getChildren().add(group);
+			return true;
+		}
+	}
 
+	private WeakAndLazy<LayeredDialog> wlayer = new WeakAndLazy<>(LayeredDialog::new); 
+	
 	@Override
 	public Runnable showDialog(Node view) {
-		// TODO Auto-generated method stub
-		return null;
+		Objects.requireNonNull(view);
+		
+		if(stacks == null) {
+			stacks = new StackPane();
+			
+			Node node = stage.getScene().getRoot();
+			stage.getScene().setRoot(stacks);
+			stacks.getChildren().add(node);
+			node.disableProperty().bind(Bindings.size(stacks.getChildren()).isNotEqualTo(1));
+		}
+		
+		LayeredDialog dialog = wlayer.get();
+		if(!dialog.set(view)) {
+			dialog = new LayeredDialog();
+			dialog.set(view);
+		}
+		
+		return dialog;
 	}
 
 	@Override
 	public ObservableValue<IRootEntry> currentRootEntryProperty() {
 		return tabsBox.selectedItemProperty();
 	}
-
 	@Override
 	public ObservableValue<EntryTreeItem> currentItemProperty() {
-		// TODO Auto-generated method stub
-		return null;
+		return bookmarks.selectedItemProperty();
 	}
 }

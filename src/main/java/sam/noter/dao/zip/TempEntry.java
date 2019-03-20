@@ -7,7 +7,7 @@ import org.json.JSONObject;
 import sam.io.infile.DataMeta;
 import sam.myutils.ThrowException;
 
-public class TempEntry {
+class TempEntry {
 	private DataMeta meta;
 	final int id, parent_id, order;
 	final long lastmodified;

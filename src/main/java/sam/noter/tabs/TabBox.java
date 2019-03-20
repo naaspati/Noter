@@ -2,6 +2,7 @@ package sam.noter.tabs;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javafx.beans.binding.Bindings;
@@ -29,9 +30,8 @@ public class TabBox extends HBox {
 		
 	}
 
-	public Object open(List<Path> singletonList, Menu recentsMenu) {
+	public void open(List<Path> list, BiConsumer<Path, IRootEntry> onSuccess) {
 		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public boolean closeAll() {
