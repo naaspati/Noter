@@ -47,6 +47,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -56,6 +57,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeItem;
 import javafx.scene.effect.ColorAdjust;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -74,6 +76,9 @@ import sam.di.AppConfig;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxBindings;
+import sam.fx.helpers.FxClassHelper;
+import sam.fx.helpers.FxConstants;
+import sam.fx.helpers.FxCss;
 import sam.fx.helpers.FxFxml;
 import sam.fx.helpers.FxHBox;
 import sam.fx.helpers.FxMenu;
@@ -602,11 +607,19 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 	private class LayeredDialog implements Runnable {
 		private final BorderPane root = new BorderPane();
 		private final Group group = new Group(root);
-		private final Button close = new Button("close");
+		private final Button close = new Button("x");
+		private final Label title = new Label();
 		private final EventHandler<ActionEvent> event = e -> run(); 
 		
 		public LayeredDialog() {
-			root.setTop(close);
+			HBox top = new HBox(title, FxHBox.maxPane(), close);
+			root.setTop(top);
+			
+			root.setEffect(new DropShadow());
+			
+			FxClassHelper.setClass(root, "layered-dialog");
+			FxClassHelper.setClass(close, "close-button");
+			FxClassHelper.setClass(top, "layered-dialog-top");
 		}
 		
 		@Override

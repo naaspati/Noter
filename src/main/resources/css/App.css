@@ -104,3 +104,18 @@
 #bookmark-addeder .similar, #bookmark-addeder .entryPath {
 	-fx-font-size:0.9em;
 }
+
+.layered-dialog {
+	-fx-background-color: white;
+	-fx-padding: 5;
+}
+.layered-dialog .close-button {
+	-fx-font-family: monospace ;
+	-fx-font-weight: bold;
+	-fx-text-fill: white;
+	-fx-background-color: red ;
+	-fx-padding: 1 3 1 3;
+}
+.layered-dialog .layered-dialog-top {
+	-fx-alignment: center-right ;
+}
