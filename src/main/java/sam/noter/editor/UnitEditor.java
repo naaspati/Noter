@@ -23,7 +23,6 @@ class UnitEditor extends BorderPane {
 	protected EntryTreeItem item;
 	
 	protected UnitEditor() {
-		updateFont();
 		setCenter(content);
 		content.setEditable(false);
 
@@ -56,11 +55,6 @@ class UnitEditor extends BorderPane {
 	}
 	private String coalesce(String s) {
 		return s == null ? "" : s;
-	}
-
-	public void updateFont() {
-		title.setFont(Editor.getFont());
-		content.setFont(Editor.getFont());
 	}
 	public String getItemTitle() {
 		return item.getTitle();

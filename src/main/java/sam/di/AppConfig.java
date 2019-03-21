@@ -3,6 +3,8 @@ package sam.di;
 import java.nio.file.Path;
 import java.util.function.Function;
 
+import javafx.scene.text.Font;
+
 public interface AppConfig {
 	Path tempDir();
 	Path appDir();
@@ -19,5 +21,4 @@ public interface AppConfig {
 	
 	void setConfig(ConfigKey key, String value);
 	boolean getConfigBoolean(ConfigKey key);
-	
 }

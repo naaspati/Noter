@@ -65,12 +65,6 @@ public class Editor extends BorderPane {
 	private volatile EntryTreeItem item;
 	private volatile ViewType view;
 
-	private static Font font;
-
-	public static Font getFont() {
-		return font;
-	}
-
 	@Inject
 	public Editor(AppConfig configManager, Observables observables) throws IOException {
 		FxFxml.load(this, true);
@@ -106,15 +100,6 @@ public class Editor extends BorderPane {
 		unitsContainerWL.ifPresent(u -> u.setWordWrap(wrap));
 		combinedTextWL.ifPresent(u -> u.setWrapText(wrap));
 	}
-	public void setFont() {
-		Font font = Junk.notYetImplemented() ;//FIXME new FontSetter(SESSION).getFont();
-		if(font == null) return;
-
-		centerEditor.updateFont();
-		unitsContainerWL.ifPresent(UnitContainer::updateFont);
-		combinedTextWL.ifPresent(t -> t.setFont(font));
-	}
-
 	public void consume(Consumer<TextArea> e) {
 		if(getCenter() != centerEditor)
 			FxPopupShop.showHidePopup("no text selected", 1500);

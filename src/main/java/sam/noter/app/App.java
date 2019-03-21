@@ -63,7 +63,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -77,8 +76,6 @@ import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxBindings;
 import sam.fx.helpers.FxClassHelper;
-import sam.fx.helpers.FxConstants;
-import sam.fx.helpers.FxCss;
 import sam.fx.helpers.FxFxml;
 import sam.fx.helpers.FxHBox;
 import sam.fx.helpers.FxMenu;
@@ -127,7 +124,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 	}
 
 	private StackPane stacks;
-	
+
 	@FXML private BorderPane root;
 	@FXML private SplitPane splitPane;
 	@FXML private BookmarksPane bookmarks;
@@ -361,85 +358,114 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		return menu;
 	}
 
-	//TODO
-	private void combineEverything(ActionEvent e) {
-		IRootEntry tab = currentRoot;
-		StringBuilder sb = new StringBuilder(5000);
-		separator = new char[0];
-		walk(bookmarks.getRoot().getChildren(), sb, "");
+	private class CombinedAll {
+		private final WeakAndLazy<StringBuilder> sb = new WeakAndLazy<>(StringBuilder::new);
+		private final Hyperlink link = new Hyperlink("<< BACK");
+		private final Text content = new Text();
+		private final Text scrollPercent = new Text();
+		private final Text lines = new Text();
+		private final Scene myScene;
+		
+		private Scene previous;
+		private IRootEntry tab;
+		private int linesCount;
 
-		Scene previous = stage.getScene();
-		Hyperlink link = new Hyperlink("<< BACK");
+		public CombinedAll() {
+			link.setOnAction(e1 -> stop());
 
-		link.setOnAction(e1 -> {
-			stage.hide();
-			stage.setScene(previous);
-			stage.show();
-		});
+			ScrollPane sp = new ScrollPane(content);
+			sp.setPadding(new Insets(0, 0, 0, 5));
+			sp.setStyle("-fx-background:white");
 
-		Text ta = new Text(sb.toString());
-		ScrollPane sp = new ScrollPane(ta);
-		sp.setPadding(new Insets(0, 0, 0, 5));
-		sp.setStyle("-fx-background:white");
+			Button save = new Button("save");
+			save.setOnAction(e1 -> save());
+			
+			scrollPercent.textProperty().bind(FxBindings.map(sp.vvalueProperty(), s -> String.valueOf((int)(s.doubleValue()*100))));
+			HBox box = new HBox(10,link, FxHBox.maxPane(), save, lines, scrollPercent, new Text());
+			box.setAlignment(Pos.CENTER_RIGHT);
+			box.setId("combined-all-top");
 
-		int lines = 0;
-		for (int i = 0; i < sb.length(); i++) {
-			if(sb.charAt(i) == '\n')
-				lines++;
+			BorderPane root = new BorderPane(sp, box, null, null, null);
+			this.myScene  = new Scene(root, Color.WHITE);
+			root.setId("combined-all");
 		}
-		Button save = new Button("save");
-		save.setOnAction(e1 -> {
+
+		private void save() {
 			File file = chooseFile("save in text", null, tab.getJbookPath().getFileName()+ ".txt", FileChooserHelper.Type.SAVE, null);
 			if(file == null) {
 				FxPopupShop.showHidePopup("cancelled", 1500);
 				return;
 			} 
-			Utils.writeTextHandled(ta.getText(), file.toPath());
-		});
-		Text t = new Text();
-		t.textProperty().bind(FxBindings.map(sp.vvalueProperty(), s -> String.valueOf((int)(s.doubleValue()*100))));
-		HBox box = new HBox(10,link, FxHBox.maxPane(), save, new Text("lines: "+lines+", chars: "+sb.length()+", scroll:"), t, new Text());
-		box.setAlignment(Pos.CENTER_RIGHT);
-		box.setStyle("-fx-font-size:0.8em;");
-
-		BorderPane root = new BorderPane(sp, box, null, null, null);
-		Font f = Editor.getFont();
-		root.setStyle(String.format("-fx-font-size:%s;-fx-font-family:%s;-fx-font-style:normal;", f.getSize(), f.getFamily(), f.getStyle()));
-
-		separator = null;
-		sb = null;
-		stage.hide();
-		stage.setScene(new Scene(root, Color.WHITE));
-		stage.show();
-		fx(System::gc);
-	}
-	private char[] separator;
-	private char[] separator(int size) {
-		if(separator.length >= size)
-			return separator;
-
-		separator = new char[size+10];
-		Arrays.fill(separator, '#');
-
-		return separator;
-	}
-	private void walk(List<TreeItem<String>> children, StringBuilder sb, String parent) {
-		for (TreeItem<String> t : children) {
-			EntryTreeItem e = (EntryTreeItem)t;
-			String tag = parent.concat(e.getTitle());
-			int n = sb.length();
-			sb.append('|').append(separator(tag.length()+3), 0, tag.length()+3).append('|').append('\n');
-			int n2 = sb.length();
-			sb.append('|').append(' ').append(tag).append(' ').append(' ').append('|').append('\n')
-			.append(sb, n, n2);
-
-			sb.append(e.getContent());
-			sb.append('\n').append('\n');
-
-			List<TreeItem<String>> list = t.getChildren();
-			if(!list.isEmpty())
-				walk(list, sb, tag.concat(" > "));
+			Utils.writeTextHandled(content.getText(), file.toPath());
 		}
+
+		public void stop() {
+			stage.hide();
+			stage.setScene(previous);
+			stage.show();
+			previous = null;
+			tab = null;
+		}
+
+		public void start() {
+			this.previous = stage.getScene();
+			this.tab = currentRoot;
+
+			StringBuilder sb = this.sb.get();
+			sb.setLength(0);
+			separator = new char[0];
+			linesCount = 0;
+			walk(bookmarks.getRoot().getChildren(), sb, "");
+
+			content.setText(sb.toString());
+			lines.setText("lines: "+linesCount+", chars: "+sb.length()+", scroll:");
+			
+			separator = null;
+			sb = null;
+			stage.hide();
+			stage.setScene(myScene);
+			stage.show();
+		}
+
+		private char[] separator;
+		private char[] separator(int size) {
+			if(separator.length >= size)
+				return separator;
+
+			separator = new char[size+10];
+			Arrays.fill(separator, '#');
+
+			return separator;
+		}
+		private void walk(List<TreeItem<String>> children, StringBuilder sb, String parent) {
+			for (TreeItem<String> t : children) {
+				EntryTreeItem e = (EntryTreeItem)t;
+				String tag = parent.concat(e.getTitle());
+				int n = sb.length();
+				sb.append('|').append(separator(tag.length()+3), 0, tag.length()+3).append('|').append('\n');
+				int n2 = sb.length();
+				sb.append('|').append(' ').append(tag).append(' ').append(' ').append('|').append('\n')
+				.append(sb, n, n2);
+
+				String s = e.getContent();
+				if(s != null) {
+					for (int i = 0; i < s.length(); i++)
+						if(s.charAt(i) == '\n')
+							linesCount++;
+				}
+				sb.append(s);
+				sb.append('\n').append('\n');
+
+				List<TreeItem<String>> list = t.getChildren();
+				if(!list.isEmpty())
+					walk(list, sb, tag.concat(" > "));
+			}
+		}
+	}
+	
+	private final WeakAndLazy<CombinedAll> combinedAll = new WeakAndLazy<>(CombinedAll::new);
+	private void combineEverything(ActionEvent e) {
+		combinedAll.get().start();
 	}
 
 	private Menu getDebugMenu() {
@@ -603,25 +629,25 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 	private final WeakAndLazy<FileChooser> fchooser = new WeakAndLazy<>(FileChooser::new);
 	@Override public FileChooser newFileChooser() { return fchooser.get(); }
-	
+
 	private class LayeredDialog implements Runnable {
 		private final BorderPane root = new BorderPane();
 		private final Group group = new Group(root);
 		private final Button close = new Button("x");
 		private final Label title = new Label();
 		private final EventHandler<ActionEvent> event = e -> run(); 
-		
+
 		public LayeredDialog() {
 			HBox top = new HBox(title, FxHBox.maxPane(), close);
 			root.setTop(top);
-			
+
 			root.setEffect(new DropShadow());
-			
+
 			FxClassHelper.setClass(root, "layered-dialog");
 			FxClassHelper.setClass(close, "close-button");
 			FxClassHelper.setClass(top, "layered-dialog-top");
 		}
-		
+
 		@Override
 		public void run() {
 			close.setOnAction(null);
@@ -631,7 +657,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		boolean set(Node node) {
 			if(root.getCenter() != null)
 				return false;
-			
+
 			close.setOnAction(event);
 			root.setCenter(node);
 			stacks.getChildren().add(group);
@@ -640,26 +666,26 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 	}
 
 	private WeakAndLazy<LayeredDialog> wlayer = new WeakAndLazy<>(LayeredDialog::new); 
-	
+
 	@Override
 	public Runnable showDialog(Node view) {
 		Objects.requireNonNull(view);
-		
+
 		if(stacks == null) {
 			stacks = new StackPane();
-			
+
 			Node node = stage.getScene().getRoot();
 			stage.getScene().setRoot(stacks);
 			stacks.getChildren().add(node);
 			node.disableProperty().bind(Bindings.size(stacks.getChildren()).isNotEqualTo(1));
 		}
-		
+
 		LayeredDialog dialog = wlayer.get();
 		if(!dialog.set(view)) {
 			dialog = new LayeredDialog();
 			dialog.set(view);
 		}
-		
+
 		return dialog;
 	}
 

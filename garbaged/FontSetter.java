@@ -17,12 +17,13 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.StringConverter;
+import sam.di.AppConfig;
 
 
 class FontSetter extends GridPane {
 	private Font font;
 	
-	public FontSetter() {
+	public FontSetter(AppConfig config) {
 		GridPane root = new GridPane();
 		root.setHgap(5);
 		root.setVgap(5);
@@ -39,7 +40,7 @@ class FontSetter extends GridPane {
 		size.getItems().addAll(36d, 48d, 72d);
 		size.setEditable(true);
 
-		Font font = Optional.of(Editor.getFont()).orElse(Font.font("Consolas"));
+		Font font = Optional.of(config.getFont()).orElse(Font.font("Consolas"));
 
 		family.setValue(font.getFamily());
 		weight.setValue(FontWeight.NORMAL);

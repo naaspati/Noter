@@ -18,6 +18,7 @@ import org.codejargon.feather.Feather;
 import org.codejargon.feather.Key;
 import org.codejargon.feather.Provides;
 
+import javafx.scene.text.Font;
 import sam.di.AppConfig;
 import sam.di.ConfigKey;
 import sam.di.Injector;
@@ -113,4 +114,4 @@ class InjectorImpl implements Injector, OnExitQueue, AppConfig {
 			onExit = Collections.synchronizedList(new ArrayList<>());
 		onExit.add(runnable);
 	}
-};
+}

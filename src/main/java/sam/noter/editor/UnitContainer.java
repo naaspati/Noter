@@ -11,6 +11,8 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import sam.di.AppConfig;
 import sam.noter.EntryTreeItem;
 import sam.reference.WeakPool;
 
@@ -45,7 +47,6 @@ class UnitContainer extends ScrollPane {
 				UnitEditor e = (UnitEditor)n;
 				e.setWordWrap(wrapText);
 				e.updateTitle();
-				e.updateFont();
 			}
 		}
 	}
@@ -65,9 +66,6 @@ class UnitContainer extends ScrollPane {
 	}
 	public UnitEditor first() {
 		return (UnitEditor) list.get(0);
-	}
-	public void updateFont() {
-		forEach(UnitEditor::updateFont);
 	}
 	public void clear() {
 		forEach(unitEditors::add);
