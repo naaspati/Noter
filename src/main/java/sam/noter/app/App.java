@@ -1,4 +1,13 @@
 package sam.noter.app;
+import static javafx.scene.input.KeyCode.F4;
+import static javafx.scene.input.KeyCode.N;
+import static javafx.scene.input.KeyCode.O;
+import static javafx.scene.input.KeyCode.S;
+import static javafx.scene.input.KeyCode.W;
+import static javafx.scene.input.KeyCombination.ALT_DOWN;
+import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
+import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
+import static sam.fx.helpers.FxKeyCodeUtils.combination;
 import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.Utils.fx;
 
@@ -15,7 +24,6 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,10 +42,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -52,6 +59,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
@@ -69,11 +77,9 @@ import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.util.Builder;
-import javafx.util.BuilderFactory;
 import sam.di.AppConfig;
+import sam.di.ConfigKey;
 import sam.fx.alert.FxAlert;
-import sam.fx.clipboard.FxClipboard;
 import sam.fx.helpers.FxBindings;
 import sam.fx.helpers.FxClassHelper;
 import sam.fx.helpers.FxFxml;
@@ -116,20 +122,21 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 	private InjectorImpl injector;
 	private BoundBooks boundBooks;
 
+	private final BorderPane main_view = new BorderPane();
+	private final StackPane main_stacks = new StackPane(main_view);
+	private final Scene main_scene = new Scene(main_stacks);
+
+	private BookmarksPane bookmarks;
+	private TabBox tabsBox;
+	private Editor editor;
+	private Actions actions;
+
 	@Override
 	public void init() throws Exception {
 		injector = new InjectorImpl(this);
 		boundBooks = injector.instance(BoundBooks.class);
 		GRAYSCALE_EFFECT.setSaturation(-1);
 	}
-
-	private StackPane stacks;
-
-	@FXML private BorderPane root;
-	@FXML private SplitPane splitPane;
-	@FXML private BookmarksPane bookmarks;
-	@FXML private TabBox tabsBox;
-	@FXML private Editor editor;
 
 	private final SimpleObjectProperty<Path> currentFile = new SimpleObjectProperty<>();
 	private final SimpleBooleanProperty searchActive = new SimpleBooleanProperty();
@@ -146,25 +153,24 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		FxPopupShop.setParent(stage);
 		FileOpenerNE.setErrorHandler((file, error) -> FxAlert.showErrorDialog(file, "failed to open file", error));
 
-		FXMLLoader loader = new FXMLLoader(ClassLoader.getSystemResource("fxml/App.fxml"));
-		loader.setBuilderFactory(new BuilderFactory() {
-			@Override
-			public Builder<?> getBuilder(Class<?> type) {
-				return () -> injector.instance(type);
-			}
-		});
-		loader.setRoot(stage);
-		loader.setController(this);
-		loader.load();
+		this.bookmarks = injector.instance(BookmarksPane.class);
+		this.tabsBox = injector.instance(TabBox.class);
+		this.editor = injector.instance(Editor.class);
 
 		currentRootEntryProperty().addListener(this);
+
+		BorderPane right = new BorderPane(editor);
+		right.setTop(tabsBox);
+		SplitPane splitPane = new SplitPane(bookmarks, right);
+
+		main_view.setCenter(splitPane);
+		main_view.setTop(getMenubar());
 
 		splitPane.setDividerPositions(0, 0.2);
 		splitPane.widthProperty().addListener((p, o, n) -> splitPane.setDividerPosition(0, 0.2));
-		currentRootEntryProperty().addListener(this);
-		root.setTop(getMenubar());
 
 		loadIcon(stage);
+		stage.setScene(main_scene);
 		showStage(stage);
 
 		addTabs(getParameters().getRaw());
@@ -259,7 +265,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 						return;
 				}
 
-				tabsBox.addTabs(files);
+				actions.addTabs(files);
 				stage.toFront();
 
 			} catch (IOException e) {
@@ -345,8 +351,8 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		MenuBar bar =  new MenuBar(
 				getFileMenu(), 
 				bookmarks.getBookmarkMenu(), 
-				//TODO getSearchMenu(), 
-				editorMenu()
+				editorMenu(),
+				getInfoMenu()
 				);
 
 		new DyanamiMenus().load(bar, editor, injector);
@@ -365,7 +371,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		private final Text scrollPercent = new Text();
 		private final Text lines = new Text();
 		private final Scene myScene;
-		
+
 		private Scene previous;
 		private IRootEntry tab;
 		private int linesCount;
@@ -379,7 +385,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 			Button save = new Button("save");
 			save.setOnAction(e1 -> save());
-			
+
 			scrollPercent.textProperty().bind(FxBindings.map(sp.vvalueProperty(), s -> String.valueOf((int)(s.doubleValue()*100))));
 			HBox box = new HBox(10,link, FxHBox.maxPane(), save, lines, scrollPercent, new Text());
 			box.setAlignment(Pos.CENTER_RIGHT);
@@ -419,7 +425,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 			content.setText(sb.toString());
 			lines.setText("lines: "+linesCount+", chars: "+sb.length()+", scroll:");
-			
+
 			separator = null;
 			sb = null;
 			stage.hide();
@@ -462,32 +468,14 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 			}
 		}
 	}
-	
+
 	private final WeakAndLazy<CombinedAll> combinedAll = new WeakAndLazy<>(CombinedAll::new);
 	private void combineEverything(ActionEvent e) {
 		combinedAll.get().start();
 	}
 
-	private Menu getDebugMenu() {
-		return new Menu("debug", null,
-				menuitem("no content bookmarks", e_e -> {
-					StringBuilder sb = new StringBuilder();
-					/* TODO
-					 * currentRoot.walk(e -> {
-							if(e.getContent() == null || e.getContent().trim().isEmpty()) {
-								e.setExpanded(true);
-								sb.append(e.toTreeString(false));							
-							}
-						});
-					 */
-					FxClipboard.setString(sb.toString());
-
-					FxAlert.alertBuilder(AlertType.INFORMATION)
-					.expandableText(sb)
-					.expanded(true)
-					.header("No Content Bookmarks")
-					.showAndWait();
-				}, currentTabNull),
+	private Menu getInfoMenu() {
+		return new Menu("info", null,
 				menuitem("ProgramName", e -> FxAlert.showMessageDialog("ManagementFactory.getRuntimeMXBean().getName()", ManagementFactory.getRuntimeMXBean().getName())),
 				menuitem("Memory usage", e -> {
 					FxAlert.alertBuilder(AlertType.INFORMATION)
@@ -498,36 +486,80 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 				})
 				);
 	}
-	/* TODO 
-	 * 	private Menu getSearchMenu() {
-		Menu menu = new Menu("_Search", null, 
-				menuitem("Search", combination(F, SHORTCUT_DOWN), e -> {
-					tabsContainer.setDisable(true);
-					tabsContainer.setEffect(GRAYSCALE_EFFECT);
-					searchActive.set(true);
+	private class RecentMenu extends Menu implements EventHandler<ActionEvent> {
+		public RecentMenu() {
+			super("_Recents", null, new MenuItem()); // first menuitem is needed to file onshowing event
 
-					SearchBox sb = weakSearchBox.get();
+			setOnShowing(e -> {
+				setOnShowing(null);
+				loadRecents();
+			});
+			
+			tabsBox.addListener(new ListChangeListener<IRootEntry>() {
 
-					if(sb == null) {
-						sb = new SearchBox(stage, bookmarks, currentRoot);
-						weakSearchBox = new WeakReference<>(sb);
-						sb.setOnHidden(e_e -> {
-							tabsContainer.setDisable(false);
-							tabsContainer.setEffect(null);
-							searchActive.set(false);
-						});
-					} else { 
-						sb.start(currentRoot);
+				@Override
+				public void onChanged(Change<? extends IRootEntry> c) {
+					while(c.next()) {
+						if(c.wasAdded()) {
+							for (IRootEntry t : c.getAddedSubList()) {
+								if(t != null && t.getJbookPath() != null)
+									remove(t.getJbookPath());	
+							}
+						} else if(c.wasRemoved()) {
+							for (IRootEntry t : c.getRemoved()) {
+								if(t != null && t.getJbookPath() != null)
+									add(t.getJbookPath(), 0);	
+							}
+						}	
 					}
+				}
+			});
+		}
 
-				}, currentTabNull)
-				);
-		menu.setDisable(true);
-		return menu;
-	} 
-	 */
+		@Override
+		public void handle(ActionEvent e) {
+			MenuItem m = (MenuItem) e.getSource();
+			actions.openTab((Path)m.getUserData());
+			remove(m);
+		}
+		private void add(Path p, int index) {
+			MenuItem mi =  menuitem(p.toString(), this);
+			mi.getStyleClass().add("recent-mi");
+			mi.setUserData(p);
 
-	private final Menu recentsMenu = new Menu("_Recents", null, new MenuItem()); // first menuitem is needed to file onshowing event
+			if(index < 0)
+				getItems().add(mi);
+			else
+				getItems().add(index, mi);
+
+		}
+		private void clear(MenuItem m) {
+			m.setOnAction(null);
+			m.setUserData(null);
+		}
+		private void remove(MenuItem m) {
+			clear(m);
+			getItems().remove(m);
+		}
+		private void remove(Path p) {
+			getItems().removeIf(m -> {
+				if(m.getUserData().equals(p)) {
+					clear(m);
+					return true;
+				} else 
+					return false;
+			});
+		}
+
+		void loadRecents() {
+			List<Path> list = injector.instance(RootEntryFactory.class)
+					.recentsFiles(); 
+
+			getItems().clear();		
+			list.forEach(t -> add(t, -1));
+		}
+	}
+
 	private Menu getFileMenu() {
 		BooleanBinding fileNull = currentFile.isNull().or(searchActive);
 		BooleanBinding tabNull = currentTabNull.or(searchActive);
@@ -541,24 +573,19 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 						);
 
 		Menu menu = new Menu("_File");
+		RecentMenu recentsMenu = new RecentMenu();
 		recentsMenu.disableProperty().bind(searchActive.or(Bindings.isEmpty(recentsMenu.getItems())));
 
-		recentsMenu.setOnShowing(e -> {
-			recentsMenu.setOnShowing(null);
-			loadRecents(recentsMenu);
-		});
-
-		/*
 		new Menu("_File", null, 
-				menuitem("_New", combination(N, SHORTCUT_DOWN, ALT_DOWN), e -> tabsBox.addBlankTab(), searchActive),
-				menuitem("_Open...", combination(O, SHORTCUT_DOWN), e -> tabsBox.open(null, recentsMenu), searchActive),
+				menuitem("_New", combination(N, SHORTCUT_DOWN, ALT_DOWN), e -> actions.addBlankTab(), searchActive),
+				menuitem("_Open...", combination(O, SHORTCUT_DOWN), e -> actions.openChoosenFileTab(), searchActive),
 				recentsMenu,
-				menuitem("Open Containing Folder", e -> currentRoot.open_containing_folder(getHostServices()), fileNull),
-				menuitem("Reload From Disk", e -> currentRoot.reload_from_disk(), fileNull),
-				menuitem("_Save", combination(S, SHORTCUT_DOWN), e -> currentRoot.save(false), fileNull),
-				menuitem("Save _As", combination(S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {currentRoot.save_as(false);updateCurrentFile();}, tabNull),
-				menuitem("Sav_e All", combination(S, SHORTCUT_DOWN, ALT_DOWN), e -> {tabsBox.saveAllTabs();updateCurrentFile();}, tabNull),
-				menuitem("Rename", e -> {currentRoot.rename(); updateCurrentFile();}, fileNull),
+				menuitem("Open Containing Folder", e -> actions.open_containing_folder(currentRoot), fileNull),
+				menuitem("Reload From Disk", e -> actions.reload_from_disk(currentRoot), fileNull),
+				menuitem("_Save", combination(S, SHORTCUT_DOWN), e -> actions.save(currentRoot, false), fileNull),
+				menuitem("Save _As", combination(S, SHORTCUT_DOWN, SHIFT_DOWN), e -> {actions.save_as(currentRoot, false);updateCurrentFile();}, tabNull),
+				menuitem("Sav_e All", combination(S, SHORTCUT_DOWN, ALT_DOWN), e -> {actions.saveAllTabs();updateCurrentFile();}, tabNull),
+				menuitem("Rename", e -> {actions.rename(currentRoot); updateCurrentFile();}, fileNull),
 				menuitem("Bind Book", e -> {boundBooks.bindBook(currentRoot);}, fileNull),
 				new SeparatorMenuItem(),
 				menuitem("_Close",combination(W, SHORTCUT_DOWN), e -> tabsBox.closeTab(currentRoot), selectedZero),
@@ -568,25 +595,11 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 				menuitem("E_xit", combination(F4, ALT_DOWN), e -> exit())
 				);
 
-				if(!OPEN_CMD_ENABLE)
+		 if(!config().getConfigBoolean(ConfigKey.OPEN_CMD_ENABLE))
 			menu.getItems().add(2,  menuitem("Open By Cmd", combination(O, SHORTCUT_DOWN, SHIFT_DOWN), e -> openByCmd(), searchActive));
-		 */
 
 		closeSpecific.disableProperty().bind(tabsBox.tabsCountProperty().lessThan(2).or(searchActive));
 		return menu;
-	}
-	private void loadRecents(Menu m) {
-		List<Path> list = injector.instance(RootEntryFactory.class)
-				.recentsFiles(); 
-
-		m.getItems().clear();		
-		list.forEach(p -> m.getItems().add(recentsMenuItem(p)));
-	}
-	private MenuItem recentsMenuItem(Path path) {
-		MenuItem mi =  menuitem(path.toString(), e -> tabsBox.open(Collections.singletonList(path), (o, f) -> recentsMenu.getItems().remove(e.getSource())));
-		mi.getStyleClass().add("recent-mi");
-		mi.setUserData(path);
-		return mi;
 	}
 
 	private void updateCurrentFile() {
@@ -611,17 +624,6 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 		setTitle(newValue);
 		currentFile.set(b ? null : newValue.getJbookPath());
-
-		if(oldValue == null) return;
-		Path p = oldValue.getJbookPath();
-		if(p == null)
-			return;
-
-		List<MenuItem> list = recentsMenu.getItems(); 
-
-		list.add(0, recentsMenuItem(p));
-		if(list.size() > 10)
-			list.subList(10, list.size()).clear();
 	}
 
 	@Override public Window stage() { return stage; }
@@ -635,7 +637,8 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		private final Group group = new Group(root);
 		private final Button close = new Button("x");
 		private final Label title = new Label();
-		private final EventHandler<ActionEvent> event = e -> run(); 
+		private final EventHandler<ActionEvent> event = e -> run();
+		private boolean[] disable = new boolean[0];
 
 		public LayeredDialog() {
 			HBox top = new HBox(title, FxHBox.maxPane(), close);
@@ -652,7 +655,11 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		public void run() {
 			close.setOnAction(null);
 			root.setCenter(null);
-			stacks.getChildren().remove(group);
+			main_stacks.getChildren().remove(group);
+
+			int n = 0;
+			for (Node d : main_stacks.getChildren()) 
+				d.setDisable(disable[n++]);
 		}
 		boolean set(Node node) {
 			if(root.getCenter() != null)
@@ -660,7 +667,15 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 			close.setOnAction(event);
 			root.setCenter(node);
-			stacks.getChildren().add(group);
+			List<Node> list = main_stacks.getChildren();
+			disable = disable.length < list.size() ?  new boolean[list.size()] : disable;
+
+			int n = 0;
+			for (Node d : main_stacks.getChildren()) {
+				disable[n++] = d.isDisable();
+				d.setDisable(true);
+			}
+			main_stacks.getChildren().add(group);
 			return true;
 		}
 	}
@@ -670,15 +685,6 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 	@Override
 	public Runnable showDialog(Node view) {
 		Objects.requireNonNull(view);
-
-		if(stacks == null) {
-			stacks = new StackPane();
-
-			Node node = stage.getScene().getRoot();
-			stage.getScene().setRoot(stacks);
-			stacks.getChildren().add(node);
-			node.disableProperty().bind(Bindings.size(stacks.getChildren()).isNotEqualTo(1));
-		}
 
 		LayeredDialog dialog = wlayer.get();
 		if(!dialog.set(view)) {

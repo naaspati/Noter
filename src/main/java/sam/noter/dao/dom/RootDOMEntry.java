@@ -91,7 +91,7 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	}
 
 	@Override public Path getJbookPath() { return jbookPath; }
-	@Override 
+	
 	public void setJbookPath(Path path) { 
 		jbookPath = path;
 		this.title = jbookPath.getFileName().toString();

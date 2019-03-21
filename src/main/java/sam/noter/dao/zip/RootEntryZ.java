@@ -72,7 +72,6 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	public Path getJbookPath() {
 		return cache.source();
 	}
-	@Override
 	public void setJbookPath(Path path) {
 		Junk.notYetImplemented();
 		/* FIXME

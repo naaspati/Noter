@@ -6,12 +6,11 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import sam.myutils.Checker;
-import sam.nopkg.Junk;
 import sam.noter.dao.Walker;
 
 public interface IRootEntry {
 	Path getJbookPath();
-	void setJbookPath(Path path);
+	// TODO void setJbookPath(Path path);
 	
 	int modCount();
 

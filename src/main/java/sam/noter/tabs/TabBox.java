@@ -8,9 +8,12 @@ import java.util.function.Consumer;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Menu;
 import javafx.scene.layout.HBox;
+import sam.nopkg.Junk;
 import sam.noter.dao.api.IRootEntry;
 
 public class TabBox extends HBox {
@@ -22,40 +25,44 @@ public class TabBox extends HBox {
 	}
 
 	public void forEach(Consumer<IRootEntry> action) {
-		root.getItems().forEach(action);
+		items().forEach(action);
 	}
 
-	public void addTabs(List<Path> files) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void open(List<Path> list, BiConsumer<Path, IRootEntry> onSuccess) {
-		// TODO Auto-generated method stub
+	public void addTab(IRootEntry entry) {
+		items().add(entry);
 	}
 
 	public boolean closeAll() {
-		// TODO Auto-generated method stub
-		return false;
+		return Junk.notYetImplemented();
+		// TODO Auto-generated method stub		
 	}
 
 	public IntegerBinding tabsCountProperty() {
 		return countProperty;
 	}
 
-	public Object closeExcept(IRootEntry currentRoot) {
+	public void closeExcept(IRootEntry t) {
 		// TODO Auto-generated method stub
-		return null;
 	}
 
-	public Object closeRightLeft(IRootEntry currentRoot, boolean b) {
+	public void closeRightLeft(IRootEntry t, boolean b) {
 		// TODO Auto-generated method stub
-		return null;
 	}
 
-	public Object closeTab(IRootEntry currentRoot) {
+	public void closeTab(IRootEntry t) {
+		items().remove(t);
+	}
+
+	public void addBlankTab() {
 		// TODO Auto-generated method stub
-		return null;
+	}
+
+	public void addListener(ListChangeListener<IRootEntry> listener) {
+		items().addListener(listener);
+	}
+
+	private ObservableList<IRootEntry> items() {
+		return this.root.getItems();
 	}
 }
 

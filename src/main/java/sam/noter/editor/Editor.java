@@ -28,14 +28,13 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.text.Font;
-import sam.di.ConfigKey;
 import sam.di.AppConfig;
+import sam.di.ConfigKey;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
-import sam.nopkg.Junk;
+import sam.nopkg.EnsureSingleton;
 import sam.noter.EntryTreeItem;
 import sam.noter.Utils;
 import sam.noter.app.Observables;
@@ -44,6 +43,11 @@ import sam.thread.DelayedActionThread;
 
 @Singleton
 public class Editor extends BorderPane {
+	private static final EnsureSingleton singleton = new EnsureSingleton();
+	{
+		singleton.init();
+	}
+	
 	@FXML private BorderPane editor;
 	@FXML private Button2 backBtn;
 	@FXML private Label maintitle;
