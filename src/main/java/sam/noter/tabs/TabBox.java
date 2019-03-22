@@ -21,11 +21,6 @@ public class TabBox extends HBox implements Iterable<IRootEntry> {
 	public ObservableValue<IRootEntry> selectedItemProperty() {
 		return root.getSelectionModel().selectedItemProperty();
 	}
-
-	@Override
-	public void forEach(Consumer<IRootEntry> action) {
-		items.forEach(action);
-	}
 	@Override
 	public Iterator<IRootEntry> iterator() {
 		return items.iterator();
