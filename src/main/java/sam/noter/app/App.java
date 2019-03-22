@@ -326,7 +326,7 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 		if(injector.onExit != null)
 			injector.onExit.forEach(Runnable::run);
 
-		if(tabsBox.closeAll()) {
+		if(actions.closeAllTabs()) {
 			try(FileChannel fc = FileChannel.open(stageSettingPath(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES * 4);
 
@@ -567,9 +567,9 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 
 		Menu closeSpecific = 
 				new Menu("Close specific", null,
-						menuitem("other tab(s)", e -> tabsBox.closeExcept(currentRoot)),
-						menuitem("tab(s) to the right", e -> tabsBox.closeRightLeft(currentRoot, true)),
-						menuitem("tab(s) to the left", e -> tabsBox.closeRightLeft(currentRoot, false))
+						menuitem("other tab(s)", e -> actions.closeTabsExcept(currentRoot)),
+						menuitem("tab(s) to the right", e -> actions.closeTabsRight(currentRoot)),
+						menuitem("tab(s) to the left", e -> actions.closeTabsLeft(currentRoot))
 						);
 
 		Menu menu = new Menu("_File");
@@ -588,8 +588,8 @@ public class App extends Application implements AppUtilsImpl, DialogHelper, Obse
 				menuitem("Rename", e -> {actions.rename(currentRoot); updateCurrentFile();}, fileNull),
 				menuitem("Bind Book", e -> {boundBooks.bindBook(currentRoot);}, fileNull),
 				new SeparatorMenuItem(),
-				menuitem("_Close",combination(W, SHORTCUT_DOWN), e -> tabsBox.closeTab(currentRoot), selectedZero),
-				menuitem("Close All",combination(W, SHORTCUT_DOWN, SHIFT_DOWN), e -> tabsBox.closeAll(), selectedZero),
+				menuitem("_Close",combination(W, SHORTCUT_DOWN), e -> actions.closeTab(currentRoot), selectedZero),
+				menuitem("Close All",combination(W, SHORTCUT_DOWN, SHIFT_DOWN), e -> actions.closeAllTabs(), selectedZero),
 				closeSpecific,
 				new SeparatorMenuItem(),
 				menuitem("E_xit", combination(F4, ALT_DOWN), e -> exit())
