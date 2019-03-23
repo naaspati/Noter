@@ -10,9 +10,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
 
-import sam.collection.MappedIterator;
+import sam.collection.IndexGetterIterator;
 import sam.functions.IOExceptionConsumer;
 import sam.io.BufferConsumer;
 import sam.io.BufferSupplier;
@@ -21,6 +21,7 @@ import sam.io.infile.DataMeta;
 import sam.io.serilizers.StringIOUtils;
 import sam.myutils.Checker;
 import sam.nopkg.Resources;
+import sam.noter.dao.zip.RootEntryZ.EZ;
 
 class IndexHelper {
 	private static final int BYTES =  
@@ -30,19 +31,22 @@ class IndexHelper {
 
 	private static final DataMeta EMPTY = new DataMeta(0, 0);
 
-	static void writeIndex(Path path, List<TempEntry> entries) throws IOException {
+	static void writeIndex(Path path, ArrayWrap<EZ> entries) throws IOException {
 		try(FileChannel fc = FileChannel.open(path, WRITE, TRUNCATE_EXISTING, CREATE);
 				Resources r = Resources.get();) {
+			
 			ByteBuffer buffer = r.buffer();
-
 			buffer.putInt(entries.size());
 
-			if(entries.isEmpty()) {
+			if(entries.size() == 0) {
 				IOUtils.write(buffer, fc, true);
 				return;
 			}
+			
+			int[] orders = new int[entries.size() + 1];
+			
 			for (int i = 0; i < entries.size(); i++) {
-				TempEntry t = entries.get(i);
+				EZ t = entries.get(i);
 
 				if(buffer.remaining() < BYTES)
 					IOUtils.write(buffer, fc, true);
@@ -54,14 +58,17 @@ class IndexHelper {
 					.putInt(-10)
 					.putLong(-10);
 				} else {
+					int parent_id = t.getParent().getId();
+					int order = orders[parent_id + 1]++;
+					
 					buffer
-					.putInt(t.id)
-					.putInt(t.parent_id)
-					.putInt(t.order)
-					.putLong(t.lastmodified);	
+					.putInt(t.getId())
+					.putInt(t.getParent().getId())
+					.putInt(order)
+					.putLong(t.getLastModified());	
 				}
 
-				DataMeta d = t == null || t.meta() == null ? EMPTY : t.meta();
+				DataMeta d = t == null || t.getMeta() == null ? EMPTY : t.getMeta();
 
 				buffer
 				.putLong(d.position)
@@ -69,21 +76,28 @@ class IndexHelper {
 			}
 			
 			IOUtils.write(buffer, fc, true);
-			StringIOUtils.writeJoining(new MappedIterator<>(entries.iterator(), t -> t == null ? "" : t.title()), "\n", BufferConsumer.of(fc, false), buffer, r.chars(), r.encoder());
+			Iterator<String> itr = new IndexGetterIterator<String>(entries.size()) {
+				@Override
+				public String at(int index) {
+					EZ e = entries.get(index);
+					return e == null ? "" : e.getTitle();
+				}
+			};
+			StringIOUtils.writeJoining(itr, "\n", BufferConsumer.of(fc, false), buffer, r.chars(), r.encoder());
 		}
 	}
 
-	static List<TempEntry> readIndex(Path path) throws IOException {
+	static void readIndex(Path path, final ArrayList<TempEntry> entries) throws IOException {
 		try(FileChannel fc = FileChannel.open(path, READ);
 				Resources r = Resources.get();) {
 			ByteBuffer buffer = r.buffer();
 			IOUtils.read(buffer, true, fc);
 
 			final int count = buffer.getInt();
-			ArrayList<TempEntry> list = new ArrayList<>(count + 10);
-
 			if(count <= 0)
-				return list;
+				return;
+			
+			entries.ensureCapacity(count + 10);
 
 			for (int i = 0; i < count; i++) {
 				if(buffer.remaining() < BYTES) {
@@ -100,11 +114,11 @@ class IndexHelper {
 				int size = buffer.getInt();
 
 				if(id < 0) {
-					list.add(null);
+					entries.add(null);
 				} else {
 					TempEntry t = new TempEntry(id, parent_id, order, lastmodified);
 					t.setMeta(new DataMeta(pos, size));
-					list.add(t);	
+					entries.add(t);	
 				} 
 			}
 
@@ -115,15 +129,14 @@ class IndexHelper {
 					if(sb.length() == 0)
 						n++;
 					else 
-						list.get(n++).setTitle(sb.toString());
+						entries.get(n++).setTitle(sb.toString());
 				}
 			};
 
 			IOUtils.compactOrClear(buffer);
 			StringIOUtils.collect0(BufferSupplier.of(fc, buffer), '\n', eater, r.decoder(), r.chars(), r.sb());
 			
-			Checker.assertTrue(list.size() == count);
-			return list;
+			Checker.assertTrue(entries.size() == count);
 		}
 	}
 }

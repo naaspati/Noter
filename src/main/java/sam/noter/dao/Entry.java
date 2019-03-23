@@ -6,6 +6,7 @@ import static sam.noter.dao.VisitResult.CONTINUE;
 import static sam.noter.dao.VisitResult.SKIP_SIBLINGS;
 import static sam.noter.dao.VisitResult.TERMINATE;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 import org.slf4j.Logger;
@@ -16,7 +17,7 @@ import sam.noter.dao.api.IEntry;
 public abstract class Entry implements IEntry {
 
 	protected final int id;
-
+	
 	protected String title; 
 	protected String content;
 	protected long lastModified = -1;

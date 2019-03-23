@@ -30,7 +30,7 @@ class Meta {
 	public void setSource(Path jbook_path) {
 		this.source = jbook_path;
 	}
-	protected void setLastModified(long lastModified) {
-		this.lastModified = lastModified;
+	public void updateLastModified() {
+		this.lastModified = source.toFile().lastModified();
 	}
 }

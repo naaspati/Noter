@@ -266,7 +266,6 @@ public class Editor extends BorderPane {
 		Menu menu = new Menu("editor", null,
 				menuitem("copy EntryTreeItem Tree", e -> Utils.copyToClipboard(Utils.toTreeString(currentItem(), true)), currentItem.isNull()),
 				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected()))
-				//TODO menuitem("Font", e -> setFont())
 				);
 		return menu;
 	}

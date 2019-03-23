@@ -3,7 +3,6 @@ package sam.noter.dao.zip;
 import static sam.noter.dao.ModifiedField.CHILDREN;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -16,6 +15,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 
 import sam.collection.Pair;
+import sam.functions.IOExceptionConsumer;
 import sam.io.infile.DataMeta;
 import sam.myutils.Checker;
 import sam.nopkg.Junk;
@@ -25,80 +25,61 @@ import sam.noter.dao.ModifiedField;
 import sam.noter.dao.api.IEntry;
 import sam.noter.dao.api.IRootEntry;
 
-class RootEntryZ extends EntryZ implements IRootEntry {
+abstract class RootEntryZ extends EntryZ implements IRootEntry {
 	private static final Logger logger = Utils.logger(RootEntryZ.class);
 	private static final boolean DEBUG  = logger.isDebugEnabled();
 
 	private ArrayWrap<EZ> entries;
 	private ModBitSet mods = new ModBitSet();
-	private Cache cache;
 	private String title;
-	private boolean modified;
 	private RootEntryZ root = this;
 	private EZ me;
 
-	public RootEntryZ(Cache cache) throws Exception {
-		super(0, null);
-		this.cache = cache;
+	public RootEntryZ() {
+		super(-1, null);
 		this.me = new EZ(-1, null);
-		reload();
 	}
+
+	protected abstract void checkClosed();
+	protected abstract String readContent(DataMeta meta);
+	protected abstract IdentityHashMap<DataMeta, DataMeta> transferFrom(RootEntryZ from, List<DataMeta> dm) throws IOException;
+	
+	protected void init(List<EZ> chidren, ArrayWrap<EZ> allEntries) {
+		this.me.children = chidren;
+		this.entries = allEntries;
+	}
+
 	@Override
 	protected Logger logger() {
 		return logger;
 	}
 	boolean isModified(int id, ModifiedField field) {
-		Checker.assertTrue(id >= 0);
-		return mods.isModified(id, field);
+		checkClosed();
+		return mods.isModified(id + 1, field);
 	}
+
 	void setModified(int id, ModifiedField field, boolean value) {
-		Checker.assertTrue(id >= 0); 
-		mods.setModified(id, field, value);
+		checkClosed();
+		mods.setModified(id + 1, field, value);
 	}
 	@Override
 	protected void setModified(ModifiedField field, boolean value) {
+		checkClosed();
 		if(field == CHILDREN)
-			modified = value;
+			me.setModified(field, value);
 	}
 	@Override
 	public boolean isModified(ModifiedField field) {
-		return modified;
+		checkClosed();
+		if(field != CHILDREN)
+			return false;
+
+		return me.isModified(field);
 	}
 	@Override
 	public int modCount() {
+		checkClosed();
 		return mods.modCount();
-	}
-	@Override
-	public Path getJbookPath() {
-		return cache.source();
-	}
-	public void setJbookPath(Path path) {
-		Junk.notYetImplemented();
-		/* FIXME
-		 * Objects.requireNonNull(path);
-		cacheDir.setSourceFile(path);
-		this.title = path.getFileName().toString();
-		 */
-	}
-
-	@Override
-	public void reload() throws Exception {
-		if(entries != null)
-			entries.clear();
-
-		if(cache.source() == null) {
-			entries = null;
-			title = null;
-		} else {
-			entries = cache.getEntries(this, entries);
-			this.title = cache.source().getFileName().toString();
-		}
-	}
-	@Override
-	public void save(Path file) throws Exception {
-		cache.save(file);
-		if(cache.source().equals(file))
-			mods.clear();
 	}
 	private EZ cast(Object e) {
 		return (EZ)e;
@@ -106,6 +87,8 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 	@Override
 	public IEntry addChild(String title, IEntry parent, int index) {
+		checkClosed();
+
 		EZ entry = new EZ(entries.nextId(), title, (EZ)parent, true);
 		put(entry);
 
@@ -114,9 +97,11 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	}
 
 	@Override
-	public List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index) {
+	public void moveChild(List<IEntry> childrenToMove, IEntry newParent, int index) {
+		checkClosed();
+
 		if(Checker.isEmpty(childrenToMove)) 
-			return Collections.emptyList();
+			return;
 
 		EZ parent = check(newParent);
 		childrenToMove.forEach(c -> {
@@ -149,11 +134,8 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 			}
 		}
 
-		/* FIXME
+		/* old code 
 		 *
-
-
-
 		childrenToMove.stream()
 		.collect(Collectors.groupingBy(IEntry::getParent))
 		.forEach((p, childrn) -> {
@@ -170,19 +152,18 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		e.setModified(CHILDREN, true);
 		return list;
 		 */
-
-		return Junk.notYetImplemented();
 	}
 
 	private void transfer(RootEntryZ root, List<Pair<EZ, EZ>> list) {
 		try {
 			List<DataMeta> dm = list.stream().map(e -> e.key.meta).filter(d -> !DataMeta.isEmpty(d)).collect(Collectors.toList());
-			IdentityHashMap<DataMeta, DataMeta> map = cache.transferFrom(root.cache, dm);
+			IdentityHashMap<DataMeta, DataMeta> map = transferFrom(root, dm);
 			list.forEach(p -> p.value.meta = map.get(p.key.meta));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
+
 	private EZ move(IEntry child, EZ parent, List<Pair<EZ, EZ>> transferQueue) {
 		if(child.getClass() == EZ.class) {
 			EZ src = (EZ) child;
@@ -255,6 +236,8 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 	@Override
 	public void addChild(IEntry child, IEntry parent, int index) {
+		checkClosed();
+
 		EZ c = check(child);
 		EZ p = check(parent);
 		ensureNotSame(p, c);
@@ -278,6 +261,8 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 
 	@Override
 	public void removeFromParent(IEntry child) {
+		checkClosed();
+
 		EZ d = check(child);
 		remove(d);
 		EZ p = castNonNull(d.getParent()); 
@@ -288,7 +273,18 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void forEachFlattened(Consumer<IEntry> consumer) {
-		Consumer c = consumer;
+		checkClosed();
+
+		IOExceptionConsumer<EZ> c = consumer::accept;
+		
+		try {
+			forEachFlattened0(c);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public void forEachFlattened0(IOExceptionConsumer<EZ> c) throws IOException {
 		entries.forEach(c);
 	}
 
@@ -304,19 +300,27 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 	@Override public String getContent() { return null; }
 	@Override public void setContent(String content) { }
 	@Override public IRootEntry root() { return this; }
-	@Override public List<? extends IEntry> getChildren() { return me.getChildren(); }
+	@Override public List<? extends IEntry> getChildren() {  return me.getChildren(); }
 	@Override public IEntry getParent() { return null; }
 	@Override protected String readContent() { return null; }
 	@Override public int indexOf(IEntry child) { return me.indexOf(child); }
+	@Override public int childrenCount() { return me.childrenCount(); }
 
-	class EZ extends EntryZ {
+	protected class EZ extends EntryZ {
 		private DataMeta meta;
 		private List<EZ> children;
 		private final EZ parent;
-		
+
 		public EZ(int id, String title) {
 			super(id, title);
 			this.parent = null;
+		}
+		public EZ(TempEntry t, EZ parent, List<EZ> children) {
+			super(t.id, t.title());
+			this.lastModified = t.lastmodified;
+			this.meta = t.meta();
+			this.children = children;
+			this.parent = parent;
 		}
 
 		public EZ(int id, String title, EZ parent, boolean isNew) {
@@ -381,7 +385,7 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		}
 		@Override
 		protected String readContent() throws IOException {
-			return cache.readContent(meta);
+			return RootEntryZ.this.readContent(meta);
 		}
 		@Override
 		public EZ getParent() {
@@ -391,5 +395,35 @@ class RootEntryZ extends EntryZ implements IRootEntry {
 		public int indexOf(IEntry child) {
 			return Checker.isEmpty(children) ? -1 : children.indexOf(child);
 		}
+	
+		@Override
+		public int childrenCount() {
+			return children == null ? 0 : children.size();
+		}
+		public DataMeta getMeta() {
+			return meta;
+		}
+	}
+
+	@Override
+	public void close() throws IOException {
+		checkClosed();
+
+		if(entries != null)
+			entries.clear();
+		this.me = null;
+	}
+
+	@Override
+	public boolean isModified() {
+		return !mods.isEmpty();
+	}
+
+	public int maxId() {
+		return entries.size() - 1;
+	}
+
+	protected ArrayWrap<EZ> getAllEntries() {
+		return entries;
 	}
 }

@@ -1,5 +1,6 @@
 package sam.noter.dao.api;
 
+import java.io.Closeable;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.function.Consumer;
 import sam.myutils.Checker;
 import sam.noter.dao.Walker;
 
-public interface IRootEntry {
+public interface IRootEntry extends Closeable {
 	Path getJbookPath();
 	// TODO void setJbookPath(Path path);
 	
@@ -42,7 +43,7 @@ public interface IRootEntry {
 	 * @param index
 	 * @return
 	 */
-	List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index);
+	void moveChild(List<IEntry> childrenToMove, IEntry newParent, int index);
 	IEntry addChild(String title, IEntry parent, int index);
 	void addChild(IEntry child, IEntry parent, int index);
 	void removeFromParent(IEntry child);
@@ -51,4 +52,6 @@ public interface IRootEntry {
 	IEntry getEntryById(int id);
 	void walk(Walker<IEntry> walker);
 	String getTitle();
+
+	boolean isModified();
 }

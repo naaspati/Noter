@@ -8,4 +8,8 @@ interface Utils {
 		while(col.size() <= index) { col.add(null); }
 	}
 
+	public static String toString(int i) {
+		return sam.noter.Utils.toString(i);
+	}
+
 }

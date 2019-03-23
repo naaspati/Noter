@@ -4,7 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -17,6 +16,7 @@ import org.xml.sax.SAXException;
 
 import sam.di.Injector;
 import sam.myutils.Checker;
+import sam.nopkg.Junk;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModBitSet;
 import sam.noter.dao.ModifiedField;
@@ -34,10 +34,23 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 	private final HashMap<Integer, IEntry> entryMap = new HashMap<>();
 	private final ModBitSet mods = new ModBitSet();
 	private final Injector injector;
+	private boolean closed;
 
 	@Override
 	public int modCount() {
 		return mods.modCount();
+	}
+	
+	@Override
+	public boolean isModified() {
+		return !mods.isEmpty();
+	}
+	@Override
+	public void close() throws IOException {
+		this.closed = true;
+		Junk.notYetImplemented();
+		// free resources, check all method call for closed. 
+		
 	}
 	
 	public RootDOMEntry(Injector injector) throws ParserConfigurationException {
@@ -112,8 +125,9 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 			throw new IllegalArgumentException("child and parent are same IEntry");
 	}
 	@Override
-	public List<IEntry> moveChild(List<IEntry> childrenToMove, IEntry newParent, int index) {
-		if(Checker.isEmpty(childrenToMove)) return Collections.emptyList();
+	public void moveChild(List<IEntry> childrenToMove, IEntry newParent, int index) {
+		if(Checker.isEmpty(childrenToMove)) 
+			return;
 
 		DOMEntry parent = check(newParent);
 
@@ -124,19 +138,19 @@ class RootDOMEntry extends DOMEntry implements IRootEntry {
 			.forEach((p, children) -> p.getChildren().removeAll(children));
 
 			parent.getChildren().addAll(index, childrenToMove);
-			return childrenToMove;
+			//return childrenToMove;
+		} else {
+			for (IEntry c : childrenToMove) {
+				if(c.getParent() != null)
+					castNonNull(c).root().removeFromParent(c);
+			}
+
+			List<IEntry> list = changeRoot(childrenToMove, (DOMEntry) newParent);
+
+			childrenToMove = null;
+			addAll(newParent, list, index);
+			// return list;
 		}
-
-		for (IEntry c : childrenToMove) {
-			if(c.getParent() != null)
-				castNonNull(c).root().removeFromParent(c);
-		}
-
-		List<IEntry> list = changeRoot(childrenToMove, (DOMEntry) newParent);
-
-		childrenToMove = null;
-		addAll(newParent, list, index);
-		return list;
 	}
 	@Override
 	public RootDOMEntry root() {

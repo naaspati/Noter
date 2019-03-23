@@ -24,4 +24,5 @@ public interface IEntry {
 	long getLastModified();
 	IEntry getParent();
 	int indexOf(IEntry child);
+	int childrenCount();
 }

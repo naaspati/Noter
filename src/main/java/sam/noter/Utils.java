@@ -48,4 +48,9 @@ public interface Utils {
 			FxAlert.showErrorDialog(path, "failed to save", e2);
 		}
 	}
+
+	public static String toString(int i) {
+		// FIXME optimize
+		return Integer.toString(i);
+	}
 }
