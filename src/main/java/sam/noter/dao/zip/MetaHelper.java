@@ -14,13 +14,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sam.collection.CollectionUtils;
 import sam.collection.MappedIterator;
 import sam.functions.IOExceptionConsumer;
 import sam.io.BufferSupplier;
@@ -28,15 +28,14 @@ import sam.io.IOUtils;
 import sam.io.serilizers.StringIOUtils;
 import sam.nopkg.Resources;
 
-final class MetaHelper {
+class MetaHelper {
 	private MetaHelper() { }
 
 	private static final Logger logger = LoggerFactory.getLogger(MetaHelper.class);
 	private static final int BYTES = Integer.BYTES + Long.BYTES;
 
-	public static void read(ArrayList<Meta> metas, Path path) throws IOException {
-		metas.clear();
-
+	@SuppressWarnings("rawtypes")
+	public static  void read(Path path, MetaMaker maker, Consumer<Meta> consumer) throws IOException {
 		try(InputStream _is = Files.newInputStream(path, READ);
 				GZIPInputStream gis = new GZIPInputStream(_is);
 				Resources r = Resources.get();
@@ -53,17 +52,17 @@ final class MetaHelper {
 
 			if(size == 0)
 				return;
-
-			metas.ensureCapacity(size + 2);
-			CollectionUtils.repeat(metas, null, size);
+			
+			int[] ids = new int[size];
+			long[] lastMod = new long[size];
 
 			for (int i = 0; i < size; i++) {
 				if(buffer.remaining() < BYTES) {
 					IOUtils.compactOrClear(buffer);
 					IOUtils.read(buffer, gis, true);
 				}
-				Meta m = new Meta(buffer.getInt(), buffer.getLong());
-				metas.set(i, m);
+				ids[i] = buffer.getInt();
+				lastMod[i] = buffer.getLong();
 			}
 
 			IOUtils.compactOrClear(buffer);
@@ -72,7 +71,8 @@ final class MetaHelper {
 				int k = 0;
 				@Override
 				public void accept(String t) {
-					metas.get(k++).setSource(Paths.get(t));
+					consumer.accept(maker.newInstance(ids[k], lastMod[k], Paths.get(t)));
+					k++;
 				}
 			};
 			StringIOUtils.collect(supplier, '\n', collector, r.decoder(), r.chars(), r.sb());
@@ -98,7 +98,7 @@ final class MetaHelper {
 			for (Meta m : metas) {
 				if(buffer.remaining() < BYTES)
 					IOUtils.write(buffer, gis, true);
-				buffer.putInt(m.id).putLong(m.lastModified());
+				buffer.putInt(m.getId()).putLong(m.getLastModified());
 			}
 
 			IOUtils.write(buffer, gis, true);

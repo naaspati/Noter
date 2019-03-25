@@ -198,32 +198,6 @@ abstract class RootEntryZ extends EntryZ implements IRootEntry {
 		if(e != null)
 			entries.set(e.getId(), null);
 	}
-	private EZ changeRoot(EZ d) {
-		return Junk.notYetImplemented();
-
-		/** FIXME 
-		 * 		RootEZ root = cast(d).getRoot(); 
-		if(root == this) return d;
-
-		EZ result = new EZ(this, entries.nextId(), d);
-		root.remove(d);
-		put(result);
-
-		if(d.getModifiableChildren().isEmpty()) 
-			return result;
-
-		result.getModifiableChildren().addAll(changeRoot(d.getModifiableChildren()));
-		result.setModified(CHILDREN, true);
-		return result;
-		 */
-
-	}
-	private List<IEntry> changeRoot(List<?> children) {
-		return children.stream()
-				.map(t -> changeRoot(castNonNull(t)))
-				.peek(this::put)
-				.collect(Collectors.toList());
-	}
 
 	private void ensureNotSame(IEntry parent, IEntry child) {
 		if(parent == child)

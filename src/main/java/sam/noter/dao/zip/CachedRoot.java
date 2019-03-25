@@ -19,17 +19,18 @@ import sam.myutils.Checker;
 import sam.nopkg.Resources;
 import sam.reference.WeakAndLazy;
 
-abstract class Cache extends RootEntryZ {
-	private static final Logger logger = LoggerFactory.getLogger(Cache.class);
+abstract class CachedRoot extends RootEntryZ {
+	private static final Logger logger = LoggerFactory.getLogger(CachedRoot.class);
 	private static final Object LOCK = new Object();
 
 	private final Path indexPath, contentPath;
 	private TextInFile content;
 	private boolean closed = false;
 
-	public Cache(Path saveDir) throws IOException {
-		this.indexPath = saveDir.resolve(id+".index");
-		this.contentPath = saveDir.resolve(id+".content");
+	public CachedRoot(Path indexPath, Path contentPath) throws IOException {
+		this.indexPath = indexPath;
+		this.contentPath = contentPath;
+		
 		load();
 	}
 
@@ -172,6 +173,6 @@ abstract class Cache extends RootEntryZ {
 	@Override
 	protected IdentityHashMap<DataMeta, DataMeta> transferFrom(RootEntryZ from, List<DataMeta> metas) throws IOException {
 		checkClosed();
-		return ((Cache)from).content.transferTo(metas, this.content);
+		return ((CachedRoot)from).content.transferTo(metas, this.content);
 	}
 }

@@ -11,8 +11,6 @@ import sam.noter.dao.Walker;
 
 public interface IRootEntry extends Closeable {
 	Path getJbookPath();
-	// TODO void setJbookPath(Path path);
-	
 	int modCount();
 
 	void reload() throws Exception;

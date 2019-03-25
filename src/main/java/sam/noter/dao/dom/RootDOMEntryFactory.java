@@ -25,6 +25,6 @@ public class RootDOMEntryFactory implements RootEntryFactory {
 	}
 	@Override
 	public List<Path> recentsFiles() {
-		return Junk.notYetImplemented(); //TODO
+		return Junk.notYetImplemented(); 
 	}
 }

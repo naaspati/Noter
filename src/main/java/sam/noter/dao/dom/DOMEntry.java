@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 
+import sam.nopkg.Junk;
 import sam.noter.Utils;
 import sam.noter.dao.Entry;
 import sam.noter.dao.ModifiedField;
@@ -90,5 +91,10 @@ class DOMEntry extends Entry {
 	@Override
 	public int indexOf(IEntry child) {
 		return children.indexOf(child);
+	}
+
+	@Override
+	public int childrenCount() {
+		return Junk.notYetImplemented();
 	}
 }
