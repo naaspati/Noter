@@ -2,26 +2,26 @@ package sam.noter.dao.zip;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
-import static java.nio.file.StandardOpenOption.*;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.nio.file.StandardOpenOption.READ;
 import static sam.noter.dao.zip.Utils.ensureIndex;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import static java.nio.file.StandardCopyOption.*;
-import static java.nio.file.StandardOpenOption.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -30,8 +30,8 @@ import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sam.collection.ArraysUtils;
 import sam.functions.IOExceptionConsumer;
-import sam.io.IOUtils;
 import sam.io.ReadableByteChannelCustom;
 import sam.io.WritableByteChannelCustom;
 import sam.io.infile.DataMeta;
@@ -44,17 +44,22 @@ import sam.noter.dao.api.IEntry;
 import sam.reference.WeakAndLazy;
 import sam.string.StringSplitIterator;
 
-class ZipExtractor {
+abstract class ZipExtractor {
 	private static final Logger logger = LoggerFactory.getLogger(ZipExtractor.class);
+	private static final WeakAndLazy<ByteBuffer> wbuffer = new WeakAndLazy<>(() -> ByteBuffer.allocate(8124));
 
 	static final int MAX_ID = 5000;
 
 	private static final String INDEX = "index";
 	private static final String CONTENT_PREFIX = "content/";
 	private static final String CONTENT_PREFIX_2 = "content\\";
+	
+	public EntryZ[] data;
+	public TextInFile content;
 
-
-	public void parseZip(Path path, TextInFile content, final ArrayList<TempEntry> entries) throws IOException {
+	public void parseZip(Path path, final ArrayList<TempEntry> entries) throws IOException {
+	    Objects.requireNonNull(content);
+	    
 		try(InputStream _is = Files.newInputStream(path, READ);
 				ZipInputStream zis = new ZipInputStream(new BufferedInputStream(_is));
 				Resources r = Resources.get();) {
@@ -147,7 +152,6 @@ class ZipExtractor {
 						iter.next() // title
 						);
 
-
 				if(t.id < 0 || t.id > MAX_ID)
 					throw new RuntimeException("bad id:("+t.id+") in line-num: "+line+", \nline: \""+sb+"\"\nentry: "+t);
 
@@ -159,19 +163,24 @@ class ZipExtractor {
 		StringIOUtils.collect0(readable, '\n', eater, r.decoder(), chars, sb);
 	}
 
-	private static final WeakAndLazy<ByteBuffer> wbuffer = new WeakAndLazy<>(() -> ByteBuffer.allocate(8124));
-
-	public void zip(Path target, RootEntryZ root, TextInFile content) throws IOException {
-		Path temp = _zip(target, root, content);
+	public void zip(Path target) throws IOException {
+	    Checker.requireNonNull("target, root, content, data", target, content, data);
+	    
+		Path temp = _zip(target);
 
 		Files.move(temp, target, REPLACE_EXISTING);
 		logger.debug("MOVED: {} -> {}", temp, target);
 	} 
 	
-	private Path _zip(Path target, RootEntryZ root, TextInFile content) throws IOException {
+	private Path _zip(Path target) throws IOException {
 		Path temp = Files.createTempFile(target.getFileName().toString(), null);
 		
-		//TODO
+		if(data.length == 0 || Checker.allMatch(Objects::isNull, data))
+		    return temp;
+		
+		int n = data.length - 1;
+		while(data[n] == null) { n--; }
+		n++;
 		
 		synchronized (wbuffer) {
 		    ByteBuffer btempbuf = wbuffer.get();
@@ -181,54 +190,78 @@ class ZipExtractor {
 		            ZipOutputStream zos = new ZipOutputStream(_is);
 	                Resources r = Resources.get();
 	                ) {
+		        putEntry(zos, INDEX);
+		        writeIndex(zos);
+		        zos.closeEntry();
+		        
+		        ByteBuffer buf = r.buffer();
+		        long pos = 0;
+		        buf.clear();
+		        content.fill(pos, buf);
+		        buf.flip();
+		        
+		        for (EntryZ e : data) {
+                    if(e == null)
+                        continue;
+                    
+                    DataMeta d = meta(e);
+                    
+                    putEntry(zos, CONTENT_PREFIX.concat(ts(e.getId())));
+                    
+                    if(d != null) {
+                        if(d.size > buf.capacity()) {
+                            buf.clear();
+                            content.writeTo(d, WritableByteChannelCustom.of(zos, buf));
+                        } else {
+                            long p = d.position - pos;
+                            
+                            if(p + d.size > buf.limit()) {
+                                buf.clear();
+                                if(content.fill(d.position, buf) < d.size)
+                                    throw new BufferUnderflowException();
 
-	            if(root.childrenCount() == 0)
-	                return temp;
-	            
-	            int[] ids = new int[root.maxId() + 1];
-	            root.forEachFlattened(new Consumer<IEntry>() {
-	                int n = 0;
-	                @Override
-	                public void accept(IEntry t) {
-	                    ids[t.getId()] = n++;
-	                }
-	            });
-	            
-	            final int[] copy = Arrays.copyOf(ids, ids.length);
-
-	            IOExceptionConsumer<String> putEntry = name -> {
-	                ZipEntry z = new ZipEntry(name);
-	                zos.putNextEntry(z);
-	            };
-
-	            putEntry.accept(INDEX);
-	            ByteBuffer buffer = r.buffer();
-	            
-	            try(WriterImpl w = new WriterImpl(BufferConsumer.of(zos, false), buffer, r.chars(), false, r.encoder())) {
-	                writeIndex(w, root.getChildren(), -1, ids);
-	            }
-	            zos.closeEntry();
-	            
-	            Checker.assertTrue(Arrays.equals(ids, copy));
-	            buffer.clear();
-	            BufferConsumer consumer = BufferConsumer.of(zos, false);
-	            
-	            root.forEachFlattened0(e -> {
-	                DataMeta d = e.getMeta();
-	                if(DataMeta.isEmpty(d))
-	                    return;
-
-	                putEntry.accept(CONTENT_PREFIX.concat(ts(ids[e.getId()])));
-	                buffer.clear();
-	                content.writeTo(d, consumer, buffer);
-	                zos.closeEntry();   
-	            });
-	            
-	            Checker.assertTrue(Arrays.equals(ids, copy));
+                                pos = d.position;
+                                p = 0;
+                            }
+                            zos.write(buf.array(), (int)p, d.size);
+                        }
+                    }
+                    
+                    zos.closeEntry();
+                }
+		        
 	        }    
         }
 		return temp;
 	}
+
+    protected abstract DataMeta meta(EntryZ e);
+
+    private ZipEntry putEntry(ZipOutputStream zos, String name) throws IOException {
+        ZipEntry z = new ZipEntry(name);
+        zos.putNextEntry(z);
+        return z;
+    }
+
+    private void writeIndex(ZipOutputStream zos) throws IOException {
+        OutputStreamWriter w = new OutputStreamWriter(zos, "utf-8");
+        int[] orders = new int[data.length];
+        
+        for (EntryZ e : data) {
+            if(e == null)
+                continue;
+            
+            int parent = e.getParent().getId();
+            
+            w.append(ts(e.getId())).append(' ')
+            .append(ts(parent)).append(' ')
+            .append(ts(orders[parent]++)).append(' ')
+            .append(Long.toString(e.getLastModified())).append(' ')
+            .append(e.getTitle()).append('\n');
+        }
+        
+        w.flush();
+    }
 
     private void writeIndex(WriterImpl w, Collection<? extends IEntry> children, int parent_id, int[] ids) throws IOException {
 		if(Checker.isEmpty(children))
