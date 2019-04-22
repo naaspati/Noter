@@ -9,21 +9,18 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
-import sam.collection.CollectionUtils;
-import sam.di.AppConfig;
 import sam.io.fileutils.FilesUtilsIO;
-import sam.myutils.Checker;
 import sam.myutils.ThrowException;
 import sam.nopkg.EnsureSingleton;
 import sam.nopkg.Junk;
 import sam.noter.Utils;
+import sam.noter.api.Configs;
 import sam.noter.dao.RootEntryFactory;
 
 @Singleton
@@ -38,7 +35,7 @@ public class RootEntryZFactory implements RootEntryFactory {
 	private final IdentityHashMap<Meta, CachedRoot> active = new IdentityHashMap<>();
 
 	@Inject
-	public RootEntryZFactory(AppConfig config) throws IOException {
+	public RootEntryZFactory(Configs config) throws IOException {
 		this.mydir = config.tempDir().resolve(getClass().getName());
 		this.metasPath = mydir.resolve("app.index");
 

@@ -14,13 +14,12 @@ import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sam.di.AppConfig;
-import sam.di.ConfigKey;
 import sam.di.Injector;
 import sam.io.fileutils.FileOpenerNE;
 import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
-import sam.noter.app.FileChooserHelper;
+import sam.noter.api.Configs;
+import sam.noter.api.FileChooser2;
 import sam.noter.dao.api.IRootEntry;
 import sam.tsv.TsvMap;
 
@@ -47,8 +46,8 @@ public class BoundBooks {
 		if(path != null)
 			return;
 
-		AppConfig config = injector.instance(AppConfig.class);
-		this.path = config.appDir().resolve("boundBooks.txt");
+		Configs config = injector.instance(Configs.class);
+		this.path = config.appDataDir().resolve("boundBooks.txt");
 
 		if(Files.notExists(path)) 
 			return;
@@ -82,10 +81,10 @@ public class BoundBooks {
 			parent = null;
 		} 
 		
-		FileChooserHelper fc = injector.instance(FileChooserHelper.class);
-		fc.chooseFile("Book for: "+tab.getTitle(), parent, file == null ? null : file.getName(), FileChooserHelper.Type.OPEN, f -> {
+		FileChooser2 fc = injector.instance(FileChooser2.class);
+		fc.chooseFile("Book for: "+tab.getTitle(), parent, file == null ? null : file.getName(), FileChooser2.Type.OPEN, f -> {
 			boundBooks.put(tab.getJbookPath().toString(), f.toString());
-			injector.instance(AppConfig.class).setConfig(ConfigKey.RECENT_DIR, f.getParent());
+			injector.instance(Configs.class).setString("RECENT_DIR", f.getParent());
 			FileOpenerNE.openFile(f);
 			modified = true;	
 		});

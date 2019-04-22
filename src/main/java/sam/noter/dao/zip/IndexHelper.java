@@ -31,14 +31,14 @@ class IndexHelper {
 
 	private static final DataMeta EMPTY = new DataMeta(0, 0);
 
-	static void writeIndex(Path path, ArrayWrap<EZ> entries) throws IOException {
+	static void writeIndex(Path path, ArrayWrap<EZ> data) throws IOException {
 		try(FileChannel fc = FileChannel.open(path, WRITE, TRUNCATE_EXISTING, CREATE);
 				Resources r = Resources.get();) {
 			
 			ByteBuffer buffer = r.buffer();
-			buffer.putInt(entries.size());
+			buffer.putInt(data.size());
 
-			if(entries.size() == 0) {
+			if(data.isEmpty()) {
 				IOUtils.write(buffer, fc, true);
 				return;
 			}

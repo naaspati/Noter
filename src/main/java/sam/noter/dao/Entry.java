@@ -6,7 +6,6 @@ import static sam.noter.dao.VisitResult.CONTINUE;
 import static sam.noter.dao.VisitResult.SKIP_SIBLINGS;
 import static sam.noter.dao.VisitResult.TERMINATE;
 
-import java.util.Arrays;
 import java.util.Collection;
 
 import org.slf4j.Logger;

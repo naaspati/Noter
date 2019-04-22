@@ -1,10 +1,10 @@
 package sam.noter.bookmark;
 
 import static sam.fx.helpers.FxClassHelper.addClass;
+import static sam.noter.EntryTreeItem.cast;
 import static sam.noter.Utils.fx;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
 import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
-import static sam.noter.EntryTreeItem.cast;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;

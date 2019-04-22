@@ -1,12 +1,6 @@
 package sam.noter.bookmark;
-import static javafx.scene.input.KeyCombination.ALT_DOWN;
-import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
-import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
-import static sam.fx.helpers.FxKeyCodeUtils.combination;
-import static sam.fx.helpers.FxMenu.menuitem;
 import static sam.noter.bookmark.BookmarkType.CHILD;
 import static sam.noter.bookmark.BookmarkType.RELATIVE;
-import static sam.noter.bookmark.BookmarkType.RELATIVE_TO_PARENT;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -20,21 +14,18 @@ import javax.inject.Singleton;
 
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Menu;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView.EditEvent;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -152,7 +143,7 @@ public class BookmarksPane extends BorderPane {
 	private BookmarkAddeder adderCreate() {
 		return injector.instance(BookmarkAddeder.class);
 	}
-	private void addNewBookmark(BookmarkType bookMarkType) {
+	void addNewBookmark(BookmarkType bookMarkType) {
 		adder.get().showDialog(bookMarkType, tree);
 	}
 	private void expandBookmarks(List<TreeItem<String>> children, boolean expanded) {
@@ -164,24 +155,7 @@ public class BookmarksPane extends BorderPane {
 			expandBookmarks(t.getChildren(), expanded);
 		}
 	}
-
-	public Menu getBookmarkMenu() {
-		return new Menu("_Bookmark",
-				null,
-				menuitem("Add Bookmark", combination(KeyCode.N, SHORTCUT_DOWN), e -> addNewBookmark(RELATIVE), tabIsNull),
-				menuitem("Add Child Bookmark", combination(KeyCode.N, SHORTCUT_DOWN, SHIFT_DOWN), e -> addNewBookmark(CHILD), selectedItemNull),
-				menuitem("Add Bookmark Relative to Parent", combination(KeyCode.N, ALT_DOWN, SHIFT_DOWN), e -> addNewBookmark(RELATIVE_TO_PARENT), selectedItemNull),
-				new SeparatorMenuItem(),
-				menuitem("Remove bookmark", this::removeAction, selectedItemNull),
-				//FIXME menuitem("Undo Removed bookmark", e -> remover().undoRemoveBookmark(tab), undoDeleteSize.isEqualTo(0)),
-				new SeparatorMenuItem()
-				//FIXME , menuitem("Move bookmark", e -> mover().moveBookmarks(tree.model()), selectedItemNull)
-				);
-	}
-	@FXML
-	private void removeAction(ActionEvent e) {
-		//FIXME remover().removeAction(tree.model(), tab);
-	}
+	
 	/** FIXME
 	 * 	private BookmarkRemover remover; 
 	private final SimpleIntegerProperty undoDeleteSize = new SimpleIntegerProperty();
@@ -226,8 +200,8 @@ public class BookmarksPane extends BorderPane {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public ObservableValue<EntryTreeItem> selectedItemProperty() {
-		ObservableValue o = tree.getSelectionModel().selectedItemProperty();
+	public ReadOnlyObjectProperty<EntryTreeItem> selectedEntryProperty() {
+		ReadOnlyObjectProperty o = tree.getSelectionModel().selectedItemProperty();
 		return o;
 	}
 }

@@ -2,17 +2,20 @@ package sam.noter.app;
 
 import java.io.File;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Window;
-import sam.di.AppConfig;
-import sam.di.ConfigKey;
 import sam.fx.popup.FxPopupShop;
 import sam.myutils.Checker;
+import sam.noter.api.Configs;
+import sam.noter.api.FileChooser2;
 
-interface AppUtilsImpl extends FileChooserHelper {
+interface FileChooser2Impl extends FileChooser2 {
+    static final String KEY = FileChooser2Impl.class.getName().concat("last_visited");
+    
 	@Override
 	default File chooseFile(String title, File expectedDir, String expectedFilename, Type type, Consumer<File> onSelect, ExtensionFilter...filters) {
 		Objects.requireNonNull(type);
@@ -26,7 +29,7 @@ interface AppUtilsImpl extends FileChooserHelper {
 			chooser.getExtensionFilters().setAll(filters);
 
 		if(expectedDir == null || !expectedDir.isDirectory())
-			expectedDir = new File(config().getConfig(ConfigKey.LAST_VISITED));
+			expectedDir = Optional.ofNullable(config().getString(KEY)).map(File::new).filter(File::isDirectory).orElse(null);
 
 		if(expectedDir != null && expectedDir.isDirectory())
 			chooser.setInitialDirectory(expectedDir);
@@ -39,7 +42,7 @@ interface AppUtilsImpl extends FileChooserHelper {
 		if(file == null)
 			FxPopupShop.showHidePopup("cancelled", 1500);
 		else {
-			config().setConfig(ConfigKey.LAST_VISITED, file.getParent());
+			config().setString(KEY, file.getParent());
 			if(onSelect != null)
 				onSelect.accept(file);
 		}
@@ -49,5 +52,5 @@ interface AppUtilsImpl extends FileChooserHelper {
 
 	FileChooser newFileChooser();
 	Window stage();
-	AppConfig config();
+	Configs config();
 }

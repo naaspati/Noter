@@ -90,4 +90,8 @@ class ArrayWrap<E> {
 		}
 		return index;
 	}
+
+	public boolean isEmpty() {
+		return size() == 0;
+	}
 }

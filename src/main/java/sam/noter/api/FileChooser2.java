@@ -1,4 +1,4 @@
-package sam.noter.app;
+package sam.noter.api;
 
 import java.io.File;
 import java.util.function.Consumer;
@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 import javafx.stage.FileChooser.ExtensionFilter;
 
 
-public interface FileChooserHelper {
+public interface FileChooser2 {
 	public static final ExtensionFilter JBOOK_FILTER = new ExtensionFilter("jbook file", "*.jbook"); 
 	
 	public enum Type {

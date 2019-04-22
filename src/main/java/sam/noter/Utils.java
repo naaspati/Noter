@@ -10,9 +10,10 @@ import javafx.application.Platform;
 import sam.fx.alert.FxAlert;
 import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
-import sam.io.serilizers.StringWriter2;
+import sam.io.serilizers.StringIOUtils;
 import sam.noter.dao.api.IEntry;
 import sam.reference.WeakAndLazy;
+import sam.string.StringWriter2;
 
 public interface Utils {
 	public static Logger logger(@SuppressWarnings("rawtypes") Class cls) {
@@ -43,7 +44,7 @@ public interface Utils {
 	}
 	public static void writeTextHandled(String text, Path path) {
 		try {
-			new StringWriter2().write(text, path);	
+		    StringIOUtils.write(text, path);
 		} catch (IOException e2) {
 			FxAlert.showErrorDialog(path, "failed to save", e2);
 		}

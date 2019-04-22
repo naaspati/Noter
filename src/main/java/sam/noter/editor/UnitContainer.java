@@ -11,8 +11,6 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
-import sam.di.AppConfig;
 import sam.noter.EntryTreeItem;
 import sam.reference.WeakPool;
 

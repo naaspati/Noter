@@ -18,7 +18,6 @@ import sam.collection.Pair;
 import sam.functions.IOExceptionConsumer;
 import sam.io.infile.DataMeta;
 import sam.myutils.Checker;
-import sam.nopkg.Junk;
 import sam.noter.Utils;
 import sam.noter.dao.ModBitSet;
 import sam.noter.dao.ModifiedField;

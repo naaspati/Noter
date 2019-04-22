@@ -15,18 +15,15 @@ import sam.reference.WeakAndLazy;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 @Singleton
-public class Actions {
-	private static final EnsureSingleton singleton = new EnsureSingleton();
-	{ singleton.init(); }
-
-	private final Injector injector;
-	private TabBox tabbox;
-
-	@Inject
-	public Actions(Injector injector) {
-		this.injector = injector;
-	}
-
+class Actions {
+    private final TabBox tabbox;
+    
+    @Inject
+    public Actions(TabBox tabBox) {
+        this.tabbox = tabBox;
+    }
+    
+    
 	public void addBlankTab() {
 		// TODO Auto-generated method stub
 	}

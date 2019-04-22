@@ -22,16 +22,23 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCombination;
-import sam.di.AppConfig;
 import sam.di.ConfigKey;
 import sam.fx.alert.FxAlert;
+import sam.noter.api.Configs;
+import sam.noter.api.MenusProvider;
 import sam.noter.editor.Editor;
-public class DyanamiMenus {
-	private final Logger logger = Utils.logger(DyanamiMenus.class);
+public class DyanamicMenus implements MenusProvider {
+	private final Logger logger = Utils.logger(DyanamicMenus.class);
 	private MenuBar bar;
 	private Editor editor;
+	
+	@Override
+	public Menu create() {
+	    // TODO Auto-generated method stub
+	    return null;
+	}
 
-	public void load(MenuBar bar, Editor editor, AppConfig config) throws JSONException, IOException {
+	public void load(MenuBar bar, Editor editor, Configs config) throws JSONException, IOException {
 		this.bar = bar;
 		this.editor = editor;
 		String s = config.getConfig(ConfigKey.DYNAMIC_MENUS_FILE);

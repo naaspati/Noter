@@ -8,7 +8,9 @@ import javax.inject.Singleton;
 import org.slf4j.Logger;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.IntegerBinding;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -34,10 +36,15 @@ public class TabBox extends HBox implements Iterable<IRootEntry> {
 	private final ChoiceBox<IRootEntry> root = new ChoiceBox<>();
 	private final IntegerBinding countProperty = Bindings.size(root.getItems());
 	private final ObservableList<IRootEntry> items = this.root.getItems();
+	private final BooleanBinding tabIsNull = selectedRootProperty().isNull();
 
-	public ObservableValue<IRootEntry> selectedItemProperty() {
+	public ReadOnlyObjectProperty<IRootEntry> selectedRootProperty() {
 		return root.getSelectionModel().selectedItemProperty();
 	}
+	public BooleanBinding selectedRootIsNull() {
+        return tabIsNull;
+    }
+	
 	@Override
 	public Iterator<IRootEntry> iterator() {
 		return items.iterator();
@@ -128,5 +135,8 @@ public class TabBox extends HBox implements Iterable<IRootEntry> {
 	public void addListener(ListChangeListener<IRootEntry> listener) {
 		items.addListener(listener);
 	}
+    public IRootEntry selectedRoot() {
+        return root.getSelectionModel().getSelectedItem();
+    }
 }
 

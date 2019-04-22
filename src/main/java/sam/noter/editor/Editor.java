@@ -1,7 +1,5 @@
 package sam.noter.editor;
 
-import static sam.fx.helpers.FxMenu.menuitem;
-import static sam.fx.helpers.FxMenu.radioMenuitem;
 import static sam.noter.Utils.fx;
 import static sam.noter.editor.ViewType.CENTER;
 import static sam.noter.editor.ViewType.COMBINED_CHILDREN;
@@ -12,7 +10,6 @@ import static sam.noter.editor.ViewType.PREVIOUS;
 import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Consumer;
 
@@ -24,20 +21,16 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
-import sam.di.AppConfig;
-import sam.di.ConfigKey;
 import sam.fx.helpers.FxFxml;
 import sam.fx.popup.FxPopupShop;
 import sam.fxml.Button2;
 import sam.myutils.Checker;
 import sam.nopkg.EnsureSingleton;
 import sam.noter.EntryTreeItem;
-import sam.noter.Utils;
-import sam.noter.app.Observables;
+import sam.noter.api.Configs;
+import sam.noter.bookmark.BookmarksPane;
 import sam.reference.WeakAndLazy;
 import sam.thread.DelayedActionThread;
 
@@ -61,7 +54,6 @@ public class Editor extends BorderPane {
 
 	private final SimpleObjectProperty<EntryTreeItem> currentItem = new SimpleObjectProperty<>();
 	private final IdentityHashMap<EntryTreeItem, Stack<ViewType>> history0 = new IdentityHashMap<>();
-	private final AppConfig configManager;
 
 	private final DelayedActionThread<Object> delay;
 	private static final Object SKIP_CHANGE = new Object();
@@ -70,14 +62,13 @@ public class Editor extends BorderPane {
 	private volatile ViewType view;
 
 	@Inject
-	public Editor(AppConfig configManager, Observables observables) throws IOException {
+	public Editor(BookmarksPane bookmarks, Configs configs) throws IOException {
 		FxFxml.load(this, true);
-		this.configManager = configManager;
 
-		observables.currentItemProperty()
+		bookmarks.selectedEntryProperty()
 		.addListener((p, o, n) -> changed(n, PREVIOUS));
 
-		delay = new DelayedActionThread<>(Optional.ofNullable(configManager.getConfig(ConfigKey.EDITOR_CHANGE_DELAY)).map(Integer::parseInt).orElse(1000), this::delayedChange);
+		delay = new DelayedActionThread<>(configs.getInt("EDITOR_CHANGE_DELAY", 1000), this::delayedChange);
 	}
 
 	@FXML
@@ -95,7 +86,10 @@ public class Editor extends BorderPane {
 		changed(currentItem(), PREVIOUS);
 	}
 
-	private EntryTreeItem currentItem() {
+	SimpleObjectProperty<EntryTreeItem> currentItemProperty() {
+        return currentItem;
+    }
+	EntryTreeItem currentItem() {
 		return currentItem.get();
 	}
 
@@ -260,13 +254,5 @@ public class Editor extends BorderPane {
 			else
 				maintitle.setText(u.first().getItemTitle());
 		}
-	}
-
-	public Menu getEditorMenu() {
-		Menu menu = new Menu("editor", null,
-				menuitem("copy EntryTreeItem Tree", e -> Utils.copyToClipboard(Utils.toTreeString(currentItem(), true)), currentItem.isNull()),
-				radioMenuitem("Text wrap", e -> setWordWrap(((RadioMenuItem)e.getSource()).isSelected()))
-				);
-		return menu;
 	}
 }

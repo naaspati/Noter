@@ -1,4 +1,4 @@
-package sam.noter;
+package sam.noter.app;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,19 +18,23 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 
-import sam.di.ConfigKey;
-import sam.di.AppConfig;
+import sam.di.Injector;
 import sam.myutils.Checker;
+import sam.noter.Utils;
+import sam.noter.api.Configs;
 
-public class FilesLookup {
+class FilesLookup {
+    private static final String DEFAULT_SAVE_DIR = "DEFAULT_SAVE_DIR";
+    private static final String ENABLE_FILE_LOOKUP_OPEN_CACHE = "ENABLE_FILE_LOOKUP_OPEN_CACHE";
+    
 	private final Logger logger = Utils.logger(FilesLookup.class);
-	private AppConfig config;
+	private Configs config;
 
-	public List<Path> parse(AppConfig config, List<String> args) throws IOException {
+	public List<Path> parse(List<String> args) throws IOException {
 		if(args.isEmpty()) 
 			return Collections.emptyList();
-		openCacheDir =  config.appDir().resolve("open_cache");
-		this.config = config;
+		openCacheDir =  config.appDataDir().resolve("open_cache");
+		this.config = Injector.getInstance().instance(Configs.class);
 
 		if(args.size() == 1) {
 			File p = find(args.get(0));
@@ -57,7 +61,7 @@ public class FilesLookup {
 	private Path openCacheDir; 
 
 	private File find(final String string) throws UnsupportedEncodingException, IOException {
-		File f = config.getConfigBoolean(ConfigKey.ENABLE_FILE_LOOKUP_OPEN_CACHE) ? openCacheLookup(string) : null;
+		File f = config.getBoolean(ENABLE_FILE_LOOKUP_OPEN_CACHE) ? openCacheLookup(string) : null;
 
 		if(f != null) return f;
 
@@ -124,15 +128,15 @@ public class FilesLookup {
 	}
 
 	private Path defaultDir() {
-		String s = config.getConfig(ConfigKey.DEFAULT_SAVE_DIR);
+		String s = config.getString(DEFAULT_SAVE_DIR);
 		if(s == null)
-			return Optional.ofNullable(config.getConfig(ConfigKey.DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
+			return Optional.ofNullable(config.getString(DEFAULT_SAVE_DIR)).map(Paths::get).orElse(null);
 		else 
 			return Paths.get(s);
 	}
 
 	private void save(String key, Path path) throws IOException {
-		if(!config.getConfigBoolean(ConfigKey.ENABLE_FILE_LOOKUP_OPEN_CACHE)) return;
+		if(!config.getBoolean(ENABLE_FILE_LOOKUP_OPEN_CACHE)) return;
 
 		Path p = openCacheDir.resolve( key);
 		Files.createDirectories(p.getParent());
