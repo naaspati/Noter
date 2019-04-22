@@ -7,8 +7,6 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import sam.di.Injector;
-import sam.nopkg.EnsureSingleton;
 import sam.noter.dao.api.IRootEntry;
 import sam.noter.tabs.TabBox;
 import sam.reference.WeakAndLazy;

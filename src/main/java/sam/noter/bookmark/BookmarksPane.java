@@ -12,7 +12,6 @@ import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.When;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -55,8 +54,6 @@ public class BookmarksPane extends BorderPane {
 	@FXML private RadioButton expandCollpase;  
 	@FXML private Button2 showHideButton;
 	private final Map<Path, Integer> selectedEntry = new HashMap<>();
-	
-	private BooleanBinding selectedItemNull;
 
 	private final Button2 show = new Button2("show","Chevron Right_20px.png", null) ;
 	private final VBox showBox = new VBox(show);

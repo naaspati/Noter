@@ -35,7 +35,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import sam.di.ConfigKey;
 import sam.io.fileutils.FilesUtilsIO;
 import sam.noter.Utils;
 import sam.noter.api.Configs;
@@ -58,6 +57,9 @@ class DOMLoader {
 	private static final String CHILDREN = "children";
 	private static final String ENTRY = "entry";
 	private static final String LAST_MODIFIED = "lastmodified";
+	
+	
+    private static final String CONFIG_BACKUP_SCHEDULE = "BACKUP_SCHEDULE";
 
 	private Document doc;
 
@@ -68,19 +70,19 @@ class DOMLoader {
 	private static Path backupDir;
 
 	@Inject
-	DOMLoader(Configs configManager, OnExitQueue exitQueue) throws ParserConfigurationException {
+	DOMLoader(Configs configs, OnExitQueue exitQueue) throws ParserConfigurationException {
 
 		if(!exitAdded) {
 			exitAdded = true;
 
-			backupDir = configManager.backupDir();
+			backupDir = configs.backupDir();
 			backupDir.toFile().mkdirs();
 
 			try {
-				Long value = Optional.ofNullable(configManager.getConfig(ConfigKey.BACKUP_SCHEDULE)).map(Long::parseLong).orElse(null);
+				Long value = Optional.ofNullable(configs.getString(CONFIG_BACKUP_SCHEDULE)).map(Long::parseLong).orElse(null);
 
 				if(value == null || value >= System.currentTimeMillis()) {
-					configManager.setConfig(ConfigKey.BACKUP_SCHEDULE, String.valueOf(System.currentTimeMillis()+Duration.ofDays(7).toMillis()));
+					configs.setString(CONFIG_BACKUP_SCHEDULE, String.valueOf(System.currentTimeMillis()+Duration.ofDays(7).toMillis()));
 					exitQueue.runOnExist(() -> backupClean());
 				}
 			} catch (Exception e) {

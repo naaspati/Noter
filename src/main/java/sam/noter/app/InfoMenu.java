@@ -4,9 +4,9 @@ import static sam.fx.helpers.FxMenu.menuitem;
 
 import java.lang.management.ManagementFactory;
 
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Menu;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.Alert.AlertType;
 import javafx.stage.Stage;
 import sam.di.Injector;
 import sam.fx.alert.FxAlert;

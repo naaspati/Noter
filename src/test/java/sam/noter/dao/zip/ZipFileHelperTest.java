@@ -26,7 +26,7 @@ class ZipFileHelperTest {
 
 	@Test
 	void testParseZip() throws IOException {
-		ZipFileHelper zip = new ZipFileHelper();
+		ZipExtractor zip = new ZipExtractor();
 		Path temp = Files.createTempFile("ZipFileHelperTest", null);
 		try {
 			Path zippath = Paths.get("java_temp/Android.jbook");
@@ -56,8 +56,8 @@ class ZipFileHelperTest {
 					bos.reset();
 					IOUtils.pipe(zis, bos, bytes);
 					
-					int id = ZipFileHelper.contentId(z.getName());
-					if(id < ZipFileHelper.MAX_ID) {
+					int id = ZipExtractor.contentId(z.getName());
+					if(id < ZipExtractor.MAX_ID) {
 						TempEntry e = entries.get(id);
 						
 						sb.setLength(0);

@@ -13,7 +13,6 @@ import sam.fx.popup.FxPopupShop;
 import sam.io.serilizers.StringIOUtils;
 import sam.noter.dao.api.IEntry;
 import sam.reference.WeakAndLazy;
-import sam.string.StringWriter2;
 
 public interface Utils {
 	public static Logger logger(@SuppressWarnings("rawtypes") Class cls) {

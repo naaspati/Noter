@@ -60,7 +60,8 @@ abstract class CachedRoot extends RootEntryZ {
 		checkClosed();
 
 		entries.clear();
-		new ZipFileHelper().parseZip(getJbookPath(), content, entries);
+		ZipExtractor z = new ZipExtractor();
+		z.parseZip(getJbookPath(), content, entries);
 		updateLastModified();
 		saveMeta();
 	}
@@ -151,7 +152,7 @@ abstract class CachedRoot extends RootEntryZ {
 	public void save(Path file) throws IOException {
 		if(!isModified()) return;
 
-		ZipFileHelper z = new ZipFileHelper();
+		ZipExtractor z = new ZipExtractor();
 		z.zip(file, this, content);
 		IndexHelper.writeIndex(indexPath, this.getAllEntries());
 	}

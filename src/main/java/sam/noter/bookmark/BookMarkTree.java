@@ -24,7 +24,6 @@ import sam.reference.ReferenceUtils;
 
 class BookMarkTree extends TreeView<String> {
 	private static final Logger logger = Utils.logger(BookMarkTree.class);
-	private static int etm_count, cache_add, cache_remove;
 
 	private final MultipleSelectionModel<TreeItem<String>> model;
 	private final ETM root = new ETM();
@@ -141,8 +140,6 @@ class BookMarkTree extends TreeView<String> {
 
 	private ETM newETM() {
 		while(!cache.isEmpty()) {
-			cache_remove++;
-			
 			ETM e = ReferenceUtils.get(cache.remove(cache.size() - 1));
 			if(e != null)
 				return e;
@@ -155,8 +152,6 @@ class BookMarkTree extends TreeView<String> {
 			e.forEach(this::addToCache);
 	}
 	private void addToCache(TreeItem<String> e) {
-		cache_add++;
-		
 		ETM f = (ETM)e;
 		f.setEntry(null);
 		cache.add(new WeakReference<>(f));
@@ -208,8 +203,6 @@ class BookMarkTree extends TreeView<String> {
 		private final ObservableList<TreeItem<String>> unmod;
 
 		public ETM() {
-			etm_count++;
-
 			this.list = super.getChildren();
 			this.unmod = FXCollections.unmodifiableObservableList(list);
 		}
