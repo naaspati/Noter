@@ -61,7 +61,8 @@ abstract class CachedRoot extends RootEntryZ {
 
 		entries.clear();
 		ZipExtractor z = new ZipExtractor();
-		z.parseZip(getJbookPath(), content, entries);
+		z.content = content;
+		z.parseZip(getJbookPath(), entries);
 		updateLastModified();
 		saveMeta();
 	}
@@ -75,8 +76,6 @@ abstract class CachedRoot extends RootEntryZ {
 		Files.deleteIfExists(indexPath);
 		Files.deleteIfExists(contentPath);
 	}
-
-	private static final WeakAndLazy<ArrayList<TempEntry>> wbuffer = new WeakAndLazy<>(ArrayList::new);
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	private void load() throws IOException {

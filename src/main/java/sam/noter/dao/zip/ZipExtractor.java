@@ -18,11 +18,9 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -30,23 +28,19 @@ import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sam.collection.ArraysUtils;
 import sam.functions.IOExceptionConsumer;
 import sam.io.ReadableByteChannelCustom;
 import sam.io.WritableByteChannelCustom;
 import sam.io.infile.DataMeta;
 import sam.io.infile.TextInFile;
 import sam.io.serilizers.StringIOUtils;
-import sam.io.serilizers.WriterImpl;
 import sam.myutils.Checker;
 import sam.nopkg.Resources;
-import sam.noter.dao.api.IEntry;
 import sam.reference.WeakAndLazy;
 import sam.string.StringSplitIterator;
 
-abstract class ZipExtractor {
+class ZipExtractor {
 	private static final Logger logger = LoggerFactory.getLogger(ZipExtractor.class);
-	private static final WeakAndLazy<ByteBuffer> wbuffer = new WeakAndLazy<>(() -> ByteBuffer.allocate(8124));
 
 	static final int MAX_ID = 5000;
 
@@ -55,6 +49,7 @@ abstract class ZipExtractor {
 	private static final String CONTENT_PREFIX_2 = "content\\";
 	
 	public EntryZ[] data;
+	public Function<EntryZ, DataMeta> mapper;
 	public TextInFile content;
 
 	public void parseZip(Path path, final ArrayList<TempEntry> entries) throws IOException {
@@ -164,7 +159,7 @@ abstract class ZipExtractor {
 	}
 
 	public void zip(Path target) throws IOException {
-	    Checker.requireNonNull("target, root, content, data", target, content, data);
+	    Checker.requireNonNull("target, root, content, data, mapper", target, content, data, mapper);
 	    
 		Path temp = _zip(target);
 
@@ -204,7 +199,7 @@ abstract class ZipExtractor {
                     if(e == null)
                         continue;
                     
-                    DataMeta d = meta(e);
+                    DataMeta d = mapper.apply(e);
                     
                     putEntry(zos, CONTENT_PREFIX.concat(ts(e.getId())));
                     
@@ -235,8 +230,6 @@ abstract class ZipExtractor {
 		return temp;
 	}
 
-    protected abstract DataMeta meta(EntryZ e);
-
     private ZipEntry putEntry(ZipOutputStream zos, String name) throws IOException {
         ZipEntry z = new ZipEntry(name);
         zos.putNextEntry(z);
@@ -262,39 +255,6 @@ abstract class ZipExtractor {
         
         w.flush();
     }
-
-    private void writeIndex(WriterImpl w, Collection<? extends IEntry> children, int parent_id, int[] ids) throws IOException {
-		if(Checker.isEmpty(children))
-			return ;
-		
-		/* 
-		 * id
-		 * parent_id
-		 * order
-		 * lastmodified
-		 * title
-		 */
-		
-		int order = 0;
-		boolean has = false;
-		for (IEntry e : children) {
-			w.append(ts(ids[e.getId()])).append(' ')
-			.append(ts(parent_id)).append(' ')
-			.append(ts(order++)).append(' ')
-			.append(Long.toString(e.getLastModified())).append(' ')
-			.append(e.getTitle()).append('\n');
-			
-			has = has || e.childrenCount() != 0;
-		}
-		
-		if(has) {
-			for (IEntry e : children) {
-				if(e.childrenCount() != 0)
-					writeIndex(w, e.getChildren(), ids[e.getId()], ids);
-			}
-		}
-	}
-
     private String ts(int i) {
         return Utils.toString(i);
     }
